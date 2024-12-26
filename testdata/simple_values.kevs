@@ -1,0 +1,14 @@
+# boolean
+b1 = true;
+b2 = false;
+
+# integer
+i1 = 1;
+i2 = +2;
+i3 = -3;
+i4 = 0x04;
+i5 = 0o5;
+i6 = 0b110;
+
+# string
+s1 = "string";

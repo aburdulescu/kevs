@@ -1,0 +1,32 @@
+# strings
+x = "aa";
+
+# multi-line strings
+x = `aa
+bb
+cc
+`;
+
+# numbers: integer, hex, oct, bin
+x = 42;
+x = +42;
+x = -42;
+x = 0x42;
+x = 0o52;
+x = 0b101010;
+
+# boolean
+x = true;
+
+# list
+x = [1; 2; 3;];
+
+# table
+x = {x = "aa"; y = false; z = 42;};
+
+# combined
+x = [
+  {s = "1"; i = 1; b = true; l = ["a"; "b"; "c";];};
+  {s = "2"; i = 2; b = false; l = ["m"; "n"; "o";];};
+  {s = "3"; i = 3; b = true; l = ["x"; "y"; "z";];};
+];

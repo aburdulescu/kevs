@@ -1,0 +1,21 @@
+v = [
+  {aa = "aa"; bb = "bb"; cc = "cc";};
+  {xx = "xx"; yy = "yy"; zz = "zz";};
+
+  {
+    v11 = "11";
+    v22 = "22";
+    v33 = "33";
+  };
+
+  {
+    x = [
+      {aa = "aa"; bb = "bb"; cc = "cc";};
+      {xx = "xx"; yy = "yy"; zz = "zz";};
+    ];
+    y = [
+      {aa = "aa"; bb = "bb"; cc = "cc";};
+      {xx = "xx"; yy = "yy"; zz = "zz";};
+    ];
+  };
+];

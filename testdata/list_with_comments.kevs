@@ -1,0 +1,7 @@
+v = [
+  # this is a comment
+  1234;
+
+  # another comment
+  4321;
+];

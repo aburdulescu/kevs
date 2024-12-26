@@ -1,0 +1,7 @@
+v = {
+  # this is a comment
+  x = 1234;
+
+  # another comment
+  y = 4321;
+};
