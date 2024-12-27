@@ -129,6 +129,30 @@ kevs_test(
 )
 
 kevs_test(
+  NAME missing_semicolon_after_string
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_semicolon_after_string.kevs
+  PASS_REGEX "scan: value does not end with semicolon"
+)
+
+kevs_test(
+  NAME missing_semicolon_after_multiline_string
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_semicolon_after_multiline_string.kevs
+  PASS_REGEX "scan: value does not end with semicolon"
+)
+
+kevs_test(
+  NAME missing_semicolon_after_list
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_semicolon_after_list.kevs
+  PASS_REGEX "scan: value does not end with semicolon"
+)
+
+kevs_test(
+  NAME missing_semicolon_after_table
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_semicolon_after_table.kevs
+  PASS_REGEX "scan: value does not end with semicolon"
+)
+
+kevs_test(
   NAME key_not_valid
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/key_not_valid.kevs
   PASS_REGEX "parse: key is not a valid identifier"

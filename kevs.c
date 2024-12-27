@@ -590,11 +590,15 @@ static bool scan_key_value(Scanner *self) {
   if (!scan_key(self)) {
     return false;
   }
-  if (!scan_delim(self, kKeyValSep)) {
-    scan_errorf(self, "missing separator between key and value");
+
+  // separator check done in scan_key, no need to check again
+  scanner_add_delim(self);
+
+  if (!scan_value(self)) {
     return false;
   }
-  return scan_value(self);
+
+  return true;
 }
 
 static bool scan(Context ctx, Str file, Str content, Tokens *tokens) {
