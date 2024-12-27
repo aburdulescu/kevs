@@ -639,7 +639,6 @@ static void list_dump(List self);
 static void list_free(List *self) {
   for (size_t i = 0; i < self->len; i++) {
     switch (self->ptr[i].tag) {
-
     case kValueTagList: {
       list_free(&self->ptr[i].data.list);
     } break;
@@ -671,7 +670,6 @@ static void list_dump(List self) {
     const Value v = self.ptr[i];
 
     switch (v.tag) {
-
     case kValueTagTable: {
       INFO("%s", valuetag_str(v.tag));
       table_dump(v.data.table);
@@ -706,7 +704,6 @@ static void list_dump(List self) {
 static void table_free(Table *self) {
   for (size_t i = 0; i < self->len; i++) {
     switch (self->ptr[i].val.tag) {
-
     case kValueTagTable: {
       table_free(&self->ptr[i].val.data.table);
     } break;
@@ -740,7 +737,6 @@ static void table_dump(Table self) {
     String k = string_from_str(kv.key);
 
     switch (kv.val.tag) {
-
     case kValueTagTable: {
       INFO("%s %s", k.ptr, valuetag_str(kv.val.tag));
       table_dump(kv.val.data.table);
