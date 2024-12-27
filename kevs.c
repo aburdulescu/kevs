@@ -462,7 +462,7 @@ static bool scan_delim(Scanner *l, char c) {
 static bool scan_string_value(Scanner *l) {
   int end = str_index_char(str_slice_low(l->content, 1), kStringBegin);
   if (end == -1) {
-    scan_errorf(l, "invalid syntax: string value does not end '%c'",
+    scan_errorf(l, "invalid syntax: string value does not end with '%c'",
                 kStringBegin);
     return false;
   }
@@ -475,7 +475,7 @@ static bool scan_string_value(Scanner *l) {
 static bool scan_multiline_string_value(Scanner *l) {
   int end = str_index_char(str_slice_low(l->content, 1), kMultilineStringBegin);
   if (end == -1) {
-    scan_errorf(l, "invalid syntax: string value does not end '%c'",
+    scan_errorf(l, "invalid syntax: multiline string value does not end with '%c'",
                 kMultilineStringBegin);
     return false;
   }
@@ -487,7 +487,7 @@ static bool scan_multiline_string_value(Scanner *l) {
 static bool scan_int_or_bool_value(Scanner *l) {
   int end = str_index_char(l->content, kKeyValEnd);
   if (end == -1) {
-    scan_errorf(l, "invalid syntax: value does not end with semicolon");
+    scan_errorf(l, "invalid syntax: integer or boolean value does not end with semicolon");
     return false;
   }
   scanner_add(l, kTokenValue, end);

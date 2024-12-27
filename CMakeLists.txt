@@ -62,6 +62,12 @@ function(kevs_test)
   endif()
 endfunction()
 
+add_custom_target(
+  cov
+  COMMAND ${CMAKE_SOURCE_DIR}/cov-merge.py ${CMAKE_BINARY_DIR}/*.profraw
+  COMMAND ${CMAKE_SOURCE_DIR}/cov-show.py ${CMAKE_BINARY_DIR}/kevs ${CMAKE_BINARY_DIR}/kevs_test
+)
+
 kevs_test(NAME unittests COMMAND kevs_test)
 kevs_test(NAME comments COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/comments.kevs)
 kevs_test(NAME simple_values COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/simple_values.kevs)
@@ -84,11 +90,29 @@ kevs_test(
 kevs_test(
   NAME missing_kv_separator
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_kv_separator.kevs
-  PASS_REGEX "invalid syntax: key-value pair is missing separator"
+  PASS_REGEX "invalid syntax: key-value pair is missing separator '='"
 )
 
-add_custom_target(
-  cov
-  COMMAND ${CMAKE_SOURCE_DIR}/cov-merge.py ${CMAKE_BINARY_DIR}/*.profraw
-  COMMAND ${CMAKE_SOURCE_DIR}/cov-show.py ${CMAKE_BINARY_DIR}/kevs ${CMAKE_BINARY_DIR}/kevs_test
+kevs_test(
+  NAME missing_string_end
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_string_end.kevs
+  PASS_REGEX "invalid syntax: string value does not end with '\"'"
+)
+
+kevs_test(
+  NAME missing_multiline_string_end
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_multiline_string_end.kevs
+  PASS_REGEX "invalid syntax: multiline string value does not end with '`'"
+)
+
+kevs_test(
+  NAME missing_semicolon_after_int
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_semicolon_after_int.kevs
+  PASS_REGEX "invalid syntax: integer or boolean value does not end with semicolon"
+)
+
+kevs_test(
+  NAME missing_semicolon_after_bool
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_semicolon_after_bool.kevs
+  PASS_REGEX "invalid syntax: integer or boolean value does not end with semicolon"
 )
