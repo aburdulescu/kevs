@@ -30,7 +30,7 @@ enable_testing()
 
 function(kevs_test)
   set(options )
-  set(oneValueArgs NAME)
+  set(oneValueArgs NAME PASS_REGEX)
   set(multiValueArgs COMMAND)
   cmake_parse_arguments(arg "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
@@ -45,6 +45,13 @@ function(kevs_test)
     NAME ${arg_NAME}
     COMMAND ${arg_COMMAND}
   )
+
+  if(arg_PASS_REGEX)
+    set_property(
+      TEST ${arg_NAME}
+      PROPERTY
+      PASS_REGULAR_EXPRESSION ${arg_PASS_REGEX})
+  endif()
 
   if(COV)
     set_property(
@@ -67,6 +74,18 @@ kevs_test(NAME table_with_comments COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testd
 kevs_test(NAME table_list_table COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/table_list_table.kevs)
 kevs_test(NAME nested COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/nested.kevs)
 kevs_test(NAME example COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/example.kevs)
+
+kevs_test(
+  NAME comment_without_newline
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/comment_without_newline.kevs
+  PASS_REGEX "invalid syntax: comment does not end with newline"
+)
+
+kevs_test(
+  NAME missing_kv_separator
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_kv_separator.kevs
+  PASS_REGEX "invalid syntax: key-value pair is missing separator"
+)
 
 add_custom_target(
   cov
