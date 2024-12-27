@@ -369,221 +369,229 @@ typedef struct {
   Context ctx;
 } Scanner;
 
-static bool scan_key_value(Scanner *l);
-static bool scan_value(Scanner *l);
+static bool scan_key_value(Scanner *self);
+static bool scan_value(Scanner *self);
 
-static void scan_errorf(const Scanner *l, const char *fmt, ...) {
+static void scan_errorf(const Scanner *self, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  fprintf(stdout, "%s:%d: error: ", l->file.ptr, l->line);
+  fprintf(stdout, "%s:%d: error: ", self->file.ptr, self->line);
   vfprintf(stdout, fmt, args);
   fprintf(stdout, "\n");
   va_end(args);
-  if (l->ctx.abort_on_error) {
+  if (self->ctx.abort_on_error) {
     abort();
   }
 }
 
-static bool scanner_expect(Scanner *l, char c) {
-  return l->content.ptr[0] == c;
+static bool scanner_expect(Scanner *self, char c) {
+  return self->content.ptr[0] == c;
 }
 
-static void scanner_advance(Scanner *l, size_t n) {
-  l->content = str_slice_low(l->content, n);
+static void scanner_advance(Scanner *self, size_t n) {
+  self->content = str_slice_low(self->content, n);
 }
 
-static void scanner_trim_space(Scanner *l) {
-  l->content = str_trim_left(l->content, str_from_cstring(spaces));
+static void scanner_trim_space(Scanner *self) {
+  self->content = str_trim_left(self->content, str_from_cstring(spaces));
 }
 
-static void scanner_add(Scanner *l, TokenType type, size_t end) {
-  Str val = str_slice(l->content, 0, end);
+static void scanner_add(Scanner *self, TokenType type, size_t end) {
+  Str val = str_slice(self->content, 0, end);
   val = str_trim_right(val, str_from_cstring(spaces));
 
   const Token t = {
       .type = type,
       .value = val,
-      .position.line = l->line,
+      .position.line = self->line,
   };
 
-  tokens_add(l->tb, t);
+  tokens_add(self->tb, t);
 
-  scanner_advance(l, end);
+  scanner_advance(self, end);
 }
 
-static void scanner_add_delim(Scanner *l) {
+static void scanner_add_delim(Scanner *self) {
   const Token t = {
       .type = kTokenDelim,
-      .value = str_slice(l->content, 0, 1),
-      .position.line = l->line,
+      .value = str_slice(self->content, 0, 1),
+      .position.line = self->line,
   };
-  tokens_add(l->tb, t);
-  scanner_advance(l, 1);
+  tokens_add(self->tb, t);
+  scanner_advance(self, 1);
 }
 
-static bool scan_newline(Scanner *l) {
-  l->line++;
-  scanner_advance(l, 1);
+static bool scan_newline(Scanner *self) {
+  self->line++;
+  scanner_advance(self, 1);
   return true;
 }
 
-static bool scan_comment(Scanner *l) {
-  int newline = str_index_char(l->content, '\n');
+static bool scan_comment(Scanner *self) {
+  int newline = str_index_char(self->content, '\n');
   if (newline == -1) {
-    scan_errorf(l, "invalid syntax: comment does not end with newline");
+    scan_errorf(self, "invalid syntax: comment does not end with newline");
     return false;
   }
-  scanner_advance(l, newline);
+  scanner_advance(self, newline);
   return true;
 }
 
-static bool scan_key(Scanner *l) {
-  int end = str_index_char(l->content, kKeyValSep);
+static bool scan_key(Scanner *self) {
+  int end = str_index_char(self->content, kKeyValSep);
   if (end == -1) {
-    scan_errorf(l, "invalid syntax: key-value pair is missing separator '%c'",
+    scan_errorf(self,
+                "invalid syntax: key-value pair is missing separator '%c'",
                 kKeyValSep);
     return false;
   }
-  scanner_add(l, kTokenKey, end);
+  scanner_add(self, kTokenKey, end);
   return true;
 }
 
-static bool scan_delim(Scanner *l, char c) {
-  if (!scanner_expect(l, c)) {
-    scan_errorf(l, "expected '%c', have '%c'", c, l->content.ptr[0]);
+static bool scan_delim(Scanner *self, char c) {
+  if (!scanner_expect(self, c)) {
     return false;
   }
-  scanner_add_delim(l);
-
+  scanner_add_delim(self);
   return true;
 }
 
 // TODO: handle escapes and unicode
-static bool scan_string_value(Scanner *l) {
-  int end = str_index_char(str_slice_low(l->content, 1), kStringBegin);
+static bool scan_string_value(Scanner *self) {
+  int end = str_index_char(str_slice_low(self->content, 1), kStringBegin);
   if (end == -1) {
-    scan_errorf(l, "invalid syntax: string value does not end with '%c'",
+    scan_errorf(self, "invalid syntax: string value does not end with '%c'",
                 kStringBegin);
     return false;
   }
   end += 2; // for leading and trailing quotes
-  scanner_add(l, kTokenValue, end);
+  scanner_add(self, kTokenValue, end);
   return true;
 }
 
 // TODO: handle escapes and unicode
-static bool scan_multiline_string_value(Scanner *l) {
-  int end = str_index_char(str_slice_low(l->content, 1), kMultilineStringBegin);
+static bool scan_multiline_string_value(Scanner *self) {
+  int end =
+      str_index_char(str_slice_low(self->content, 1), kMultilineStringBegin);
   if (end == -1) {
-    scan_errorf(l, "invalid syntax: multiline string value does not end with '%c'",
+    scan_errorf(self,
+                "invalid syntax: multiline string value does not end with '%c'",
                 kMultilineStringBegin);
     return false;
   }
   end += 2; // for leading and trailing quotes
-  scanner_add(l, kTokenValue, end);
+  scanner_add(self, kTokenValue, end);
   return true;
 }
 
-static bool scan_int_or_bool_value(Scanner *l) {
-  int end = str_index_char(l->content, kKeyValEnd);
+static bool scan_int_or_bool_value(Scanner *self) {
+  int end = str_index_char(self->content, kKeyValEnd);
   if (end == -1) {
-    scan_errorf(l, "invalid syntax: integer or boolean value does not end with semicolon");
+    scan_errorf(
+        self,
+        "invalid syntax: integer or boolean value does not end with semicolon");
     return false;
   }
-  scanner_add(l, kTokenValue, end);
+  scanner_add(self, kTokenValue, end);
   return true;
 }
 
-static bool scan_list_value(Scanner *l) {
-  scanner_add_delim(l);
+static bool scan_list_value(Scanner *self) {
+  scanner_add_delim(self);
   while (true) {
-    scanner_trim_space(l);
-    if (scanner_expect(l, '\n')) {
-      if (!scan_newline(l)) {
+    scanner_trim_space(self);
+    if (scanner_expect(self, '\n')) {
+      if (!scan_newline(self)) {
         return false;
       }
       continue;
     }
-    if (scanner_expect(l, kCommentBegin)) {
-      if (!scan_comment(l)) {
+    if (scanner_expect(self, kCommentBegin)) {
+      if (!scan_comment(self)) {
         return false;
       }
       continue;
     }
-    if (scanner_expect(l, kListEnd)) {
-      scanner_add_delim(l);
+    if (scanner_expect(self, kListEnd)) {
+      scanner_add_delim(self);
       return true;
     }
-    if (!scan_value(l)) {
+    if (!scan_value(self)) {
       return false;
     }
-    if (scanner_expect(l, kListEnd)) {
-      scanner_add_delim(l);
+    if (scanner_expect(self, kListEnd)) {
+      scanner_add_delim(self);
       return true;
     }
   }
   return true;
 }
 
-static bool scan_table_value(Scanner *l) {
-  scanner_add_delim(l);
+static bool scan_table_value(Scanner *self) {
+  scanner_add_delim(self);
   while (true) {
-    scanner_trim_space(l);
-    if (scanner_expect(l, '\n')) {
-      if (!scan_newline(l)) {
+    scanner_trim_space(self);
+    if (scanner_expect(self, '\n')) {
+      if (!scan_newline(self)) {
         return false;
       }
       continue;
     }
-    if (scanner_expect(l, kCommentBegin)) {
-      if (!scan_comment(l)) {
+    if (scanner_expect(self, kCommentBegin)) {
+      if (!scan_comment(self)) {
         return false;
       }
       continue;
     }
-    if (scanner_expect(l, kTableEnd)) {
-      scanner_add_delim(l);
+    if (scanner_expect(self, kTableEnd)) {
+      scanner_add_delim(self);
       return true;
     }
-    if (!scan_key_value(l)) {
+    if (!scan_key_value(self)) {
       return false;
     }
-    if (scanner_expect(l, kTableEnd)) {
-      scanner_add_delim(l);
+    if (scanner_expect(self, kTableEnd)) {
+      scanner_add_delim(self);
       return true;
     }
   }
   return true;
 }
 
-static bool scan_value(Scanner *l) {
-  scanner_trim_space(l);
+static bool scan_value(Scanner *self) {
+  scanner_trim_space(self);
   bool ok = false;
-  if (scanner_expect(l, kListBegin)) {
-    ok = scan_list_value(l);
-  } else if (scanner_expect(l, kTableBegin)) {
-    ok = scan_table_value(l);
-  } else if (scanner_expect(l, kStringBegin)) {
-    ok = scan_string_value(l);
-  } else if (scanner_expect(l, kMultilineStringBegin)) {
-    ok = scan_multiline_string_value(l);
+  if (scanner_expect(self, kListBegin)) {
+    ok = scan_list_value(self);
+  } else if (scanner_expect(self, kTableBegin)) {
+    ok = scan_table_value(self);
+  } else if (scanner_expect(self, kStringBegin)) {
+    ok = scan_string_value(self);
+  } else if (scanner_expect(self, kMultilineStringBegin)) {
+    ok = scan_multiline_string_value(self);
   } else {
-    ok = scan_int_or_bool_value(l);
+    ok = scan_int_or_bool_value(self);
   }
   if (!ok) {
     return false;
   }
-  return scan_delim(l, kKeyValEnd);
+  if (!scan_delim(self, kKeyValEnd)) {
+    scan_errorf(self, "value does not end with semicolon");
+    return false;
+  }
+  return true;
 }
 
-static bool scan_key_value(Scanner *l) {
-  if (!scan_key(l)) {
+static bool scan_key_value(Scanner *self) {
+  if (!scan_key(self)) {
     return false;
   }
-  if (!scan_delim(l, kKeyValSep)) {
+  if (!scan_delim(self, kKeyValSep)) {
+    scan_errorf(self, "missing separator between key and value");
     return false;
   }
-  return scan_value(l);
+  return scan_value(self);
 }
 
 static bool scan(Context ctx, Str file, Str content, Tokens *tokens) {
@@ -779,69 +787,72 @@ typedef struct {
   Context ctx;
 } Parser;
 
-static bool parse_value(Parser *p, Value *out);
-static bool parse_key_value(Parser *p, KeyValue *out);
+static bool parse_value(Parser *self, Value *out);
+static bool parse_key_value(Parser *self, KeyValue *out);
 
-static Token parser_get(const Parser *p) { return p->tokens.ptr[p->i]; }
+static Token parser_get(const Parser *self) {
+  return self->tokens.ptr[self->i];
+}
 
-static void parser_errorf(const Parser *p, const char *fmt, ...) {
+static void parser_errorf(const Parser *self, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  fprintf(stdout, "%s:%d: error: ", p->file.ptr, parser_get(p).position.line);
+  fprintf(stdout, "%s:%d: error: ", self->file.ptr,
+          parser_get(self).position.line);
   vfprintf(stdout, fmt, args);
   fprintf(stdout, "\n");
   va_end(args);
-  if (p->ctx.abort_on_error) {
+  if (self->ctx.abort_on_error) {
     abort();
   }
 }
 
-static bool parser_expect(const Parser *p, TokenType t) {
-  if (p->i >= p->tokens.len) {
-    parser_errorf(p, "expected token '%s', have nothing", tokentype_str(t));
+static bool parser_expect(const Parser *self, TokenType t) {
+  if (self->i >= self->tokens.len) {
+    parser_errorf(self, "expected token '%s', have nothing", tokentype_str(t));
     return false;
   }
-  return parser_get(p).type == t;
+  return parser_get(self).type == t;
 }
 
-static bool parser_expect_delim(const Parser *p, char delim) {
-  if (!parser_expect(p, kTokenDelim)) {
+static bool parser_expect_delim(const Parser *self, char delim) {
+  if (!parser_expect(self, kTokenDelim)) {
     return false;
   }
-  return str_equals_char(parser_get(p).value, delim);
+  return str_equals_char(parser_get(self).value, delim);
 }
 
-static Token parser_pop(Parser *p) {
-  Token t = parser_get(p);
-  p->i++;
+static Token parser_pop(Parser *self) {
+  Token t = parser_get(self);
+  self->i++;
   return t;
 }
 
-static bool parse_delim(Parser *p, char c) {
-  if (!parser_expect_delim(p, c)) {
+static bool parse_delim(Parser *self, char c) {
+  if (!parser_expect_delim(self, c)) {
     return false;
   }
-  parser_pop(p);
+  parser_pop(self);
   return true;
 }
 
-static bool parse_list_value(Parser *p, Value *out) {
+static bool parse_list_value(Parser *self, Value *out) {
   out->tag = kValueTagList;
 
-  parser_pop(p);
+  parser_pop(self);
 
   while (true) {
-    if (parse_delim(p, kListEnd)) {
+    if (parse_delim(self, kListEnd)) {
       return true;
     }
 
     Value v = {};
-    if (!parse_value(p, &v)) {
+    if (!parse_value(self, &v)) {
       return false;
     }
     list_add(&out->data.list, v);
 
-    if (parse_delim(p, kListEnd)) {
+    if (parse_delim(self, kListEnd)) {
       return true;
     }
   }
@@ -849,23 +860,23 @@ static bool parse_list_value(Parser *p, Value *out) {
   return true;
 }
 
-static bool parse_table_value(Parser *p, Value *out) {
+static bool parse_table_value(Parser *self, Value *out) {
   out->tag = kValueTagTable;
 
-  parser_pop(p);
+  parser_pop(self);
 
   while (true) {
-    if (parse_delim(p, kTableEnd)) {
+    if (parse_delim(self, kTableEnd)) {
       return true;
     }
 
     KeyValue kv = {};
-    if (!parse_key_value(p, &kv)) {
+    if (!parse_key_value(self, &kv)) {
       return false;
     }
     table_add(&out->data.table, kv);
 
-    if (parse_delim(p, kTableEnd)) {
+    if (parse_delim(self, kTableEnd)) {
       return true;
     }
   }
@@ -873,13 +884,13 @@ static bool parse_table_value(Parser *p, Value *out) {
   return true;
 }
 
-static bool parse_simple_value(Parser *p, Value *out) {
-  if (!parser_expect(p, kTokenValue)) {
-    parser_errorf(p, "expected value token");
+static bool parse_simple_value(Parser *self, Value *out) {
+  if (!parser_expect(self, kTokenValue)) {
+    parser_errorf(self, "expected value token");
     return false;
   }
 
-  const Str val = parser_get(p).value;
+  const Str val = parser_get(self).value;
 
   bool ok = true;
 
@@ -898,7 +909,7 @@ static bool parse_simple_value(Parser *p, Value *out) {
       StrToIntResult res = str_to_int(val);
       if (res.err != NULL) {
         String s = string_from_str(val);
-        parser_errorf(p, "value '%s' is not an integer: %s", s.ptr, res.err);
+        parser_errorf(self, "value '%s' is not an integer: %s", s.ptr, res.err);
         string_free(&s);
         ok = false;
       } else {
@@ -908,25 +919,25 @@ static bool parse_simple_value(Parser *p, Value *out) {
     }
   }
 
-  parser_pop(p);
+  parser_pop(self);
 
   return ok;
 }
 
-static bool parse_value(Parser *p, Value *out) {
+static bool parse_value(Parser *self, Value *out) {
   bool ok = false;
-  if (parser_expect_delim(p, kListBegin)) {
-    ok = parse_list_value(p, out);
-  } else if (parser_expect_delim(p, kTableBegin)) {
-    ok = parse_table_value(p, out);
+  if (parser_expect_delim(self, kListBegin)) {
+    ok = parse_list_value(self, out);
+  } else if (parser_expect_delim(self, kTableBegin)) {
+    ok = parse_table_value(self, out);
   } else {
-    ok = parse_simple_value(p, out);
+    ok = parse_simple_value(self, out);
   }
   if (!ok) {
     return false;
   }
 
-  if (!parse_delim(p, kKeyValEnd)) {
+  if (!parse_delim(self, kKeyValEnd)) {
     ERROR("missing key value end");
     return false;
   }
@@ -947,38 +958,38 @@ static bool key_is_valid(Str key) {
   return true;
 }
 
-static bool parse_key(Parser *p, Str *key) {
-  if (!parser_expect(p, kTokenKey)) {
-    parser_errorf(p, "expected key token");
+static bool parse_key(Parser *self, Str *key) {
+  if (!parser_expect(self, kTokenKey)) {
+    parser_errorf(self, "expected key token");
     return false;
   }
-  if (parser_get(p).value.len == 0) {
-    parser_errorf(p, "empty key");
+  if (parser_get(self).value.len == 0) {
+    parser_errorf(self, "empty key");
     return false;
   }
-  if (!key_is_valid(parser_get(p).value)) {
-    String s = string_from_str(parser_get(p).value);
-    parser_errorf(p, "key '%s' is not valid", s.ptr);
+  if (!key_is_valid(parser_get(self).value)) {
+    String s = string_from_str(parser_get(self).value);
+    parser_errorf(self, "key '%s' is not valid", s.ptr);
     string_free(&s);
     return false;
   }
-  *key = parser_pop(p).value;
+  *key = parser_pop(self).value;
   return true;
 }
 
-static bool parse_key_value(Parser *p, KeyValue *out) {
+static bool parse_key_value(Parser *self, KeyValue *out) {
   Str key = {};
-  if (!parse_key(p, &key)) {
+  if (!parse_key(self, &key)) {
     return false;
   }
 
-  if (!parse_delim(p, kKeyValSep)) {
+  if (!parse_delim(self, kKeyValSep)) {
     ERROR("missing key value separator");
     return false;
   }
 
   Value val = {};
-  if (!parse_value(p, &val)) {
+  if (!parse_value(self, &val)) {
     return false;
   }
 
