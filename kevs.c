@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+static Context global_ctx = {};
+
 static void kevs_logf(const char *level, const char *fn, int ln,
                       const char *fmt, ...) {
   assert(level != NULL);
@@ -22,8 +24,15 @@ static void kevs_logf(const char *level, const char *fn, int ln,
   va_end(args);
 }
 
-#define INFO(...) kevs_logf("INFO ", __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ERROR(...) kevs_logf("ERROR", __FUNCTION__, __LINE__, __VA_ARGS__)
+#define INFO(...)                                                              \
+  if (global_ctx.with_logs) {                                                  \
+    kevs_logf("INFO ", __FUNCTION__, __LINE__, __VA_ARGS__);                   \
+  }
+
+#define ERROR(...)                                                             \
+  if (global_ctx.with_logs) {                                                  \
+    kevs_logf("ERROR", __FUNCTION__, __LINE__, __VA_ARGS__);                   \
+  }
 
 static inline bool is_digit(char c) { return c >= '0' && c <= '9'; }
 
@@ -1020,6 +1029,8 @@ bool parse(Context ctx, Str file, Tokens tokens, Table *table) {
 }
 
 bool kevs_parse(Context ctx, Str file, Str content, Table *table) {
+  global_ctx = ctx;
+
   bool ok = false;
 
   Tokens tokens = {};
