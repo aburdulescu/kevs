@@ -79,87 +79,87 @@ add_custom_target(
 )
 
 kevs_test(NAME unittests COMMAND kevs_test)
-kevs_test(NAME comments COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/comments.kevs)
-kevs_test(NAME simple_values COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/simple_values.kevs)
-kevs_test(NAME multiline_string COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/multiline_string.kevs)
-kevs_test(NAME list_one_line COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/list_one_line.kevs)
-kevs_test(NAME table_one_line COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/table_one_line.kevs)
-kevs_test(NAME one_line_kv COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/one_line_kv.kevs)
-kevs_test(NAME list_with_comments COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/list_with_comments.kevs)
-kevs_test(NAME table_with_comments COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/table_with_comments.kevs)
-kevs_test(NAME table_list_table COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/table_list_table.kevs)
-kevs_test(NAME nested COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/nested.kevs)
-kevs_test(NAME empty_values COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/empty_values.kevs)
-kevs_test(NAME example COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/example.kevs)
+kevs_test(NAME valid/comments COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/comments.kevs)
+kevs_test(NAME valid/simple_values COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/simple_values.kevs)
+kevs_test(NAME valid/multiline_string COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/multiline_string.kevs)
+kevs_test(NAME valid/list_one_line COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/list_one_line.kevs)
+kevs_test(NAME valid/table_one_line COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/table_one_line.kevs)
+kevs_test(NAME valid/one_line_kv COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/one_line_kv.kevs)
+kevs_test(NAME valid/list_with_comments COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/list_with_comments.kevs)
+kevs_test(NAME valid/table_with_comments COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/table_with_comments.kevs)
+kevs_test(NAME valid/table_list_table COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/table_list_table.kevs)
+kevs_test(NAME valid/nested COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/nested.kevs)
+kevs_test(NAME valid/empty_values COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/empty_values.kevs)
+kevs_test(NAME valid/example COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/example.kevs)
 
 kevs_test(
-  NAME comment_without_newline
+  NAME not_valid/comment_without_newline
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/comment_without_newline.kevs
   PASS_REGEX "scan: comment does not end with newline"
 )
 
 kevs_test(
-  NAME missing_kv_separator
+  NAME not_valid/missing_kv_separator
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_kv_separator.kevs
   PASS_REGEX "scan: key-value pair is missing separator '='"
 )
 
 kevs_test(
-  NAME missing_string_end
+  NAME not_valid/missing_string_end
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_string_end.kevs
   PASS_REGEX "scan: string value does not end with '\"'"
 )
 
 kevs_test(
-  NAME missing_multiline_string_end
+  NAME not_valid/missing_multiline_string_end
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_multiline_string_end.kevs
   PASS_REGEX "scan: multiline string value does not end with '`'"
 )
 
 kevs_test(
-  NAME missing_semicolon_after_int
+  NAME not_valid/missing_semicolon_after_int
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_semicolon_after_int.kevs
   PASS_REGEX "scan: integer or boolean value does not end with semicolon"
 )
 
 kevs_test(
-  NAME missing_semicolon_after_bool
+  NAME not_valid/missing_semicolon_after_bool
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_semicolon_after_bool.kevs
   PASS_REGEX "scan: integer or boolean value does not end with semicolon"
 )
 
 kevs_test(
-  NAME missing_semicolon_after_string
+  NAME not_valid/missing_semicolon_after_string
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_semicolon_after_string.kevs
   PASS_REGEX "scan: value does not end with semicolon"
 )
 
 kevs_test(
-  NAME missing_semicolon_after_multiline_string
+  NAME not_valid/missing_semicolon_after_multiline_string
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_semicolon_after_multiline_string.kevs
   PASS_REGEX "scan: value does not end with semicolon"
 )
 
 kevs_test(
-  NAME missing_semicolon_after_list
+  NAME not_valid/missing_semicolon_after_list
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_semicolon_after_list.kevs
   PASS_REGEX "scan: value does not end with semicolon"
 )
 
 kevs_test(
-  NAME missing_semicolon_after_table
+  NAME not_valid/missing_semicolon_after_table
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_semicolon_after_table.kevs
   PASS_REGEX "scan: value does not end with semicolon"
 )
 
 kevs_test(
-  NAME key_not_valid
+  NAME not_valid/key_not_valid
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/key_not_valid.kevs
   PASS_REGEX "parse: key is not a valid identifier"
 )
 
 kevs_test(
-  NAME integer_not_valid
+  NAME not_valid/integer_not_valid
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/integer_not_valid.kevs
   PASS_REGEX "parse: value is not an integer"
 )
