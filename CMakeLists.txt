@@ -17,13 +17,22 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(COV "Code coverage" OFF)
 
-string(APPEND CMAKE_C_FLAGS " -std=c11 -g -Wall -Wextra -fsanitize=address,undefined -fno-sanitize-recover=all")
+string(APPEND CMAKE_C_FLAGS " -std=c11 -g -Wall -Wextra -Werror")
+
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
+  string(APPEND CMAKE_C_FLAGS " -fsanitize=address,undefined -fno-sanitize-recover=all")
+endif()
 
 if(COV)
   string(APPEND CMAKE_C_FLAGS " -fprofile-instr-generate -fcoverage-mapping")
 endif()
 
 add_executable(kevs kevs_cli.c kevs.c)
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+  message(STATUS "static bin")
+  target_link_libraries(kevs PUBLIC -static)
+endif()
+
 add_executable(kevs_test kevs_test.c kevs.c)
 
 enable_testing()

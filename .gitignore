@@ -3,5 +3,4 @@
 /compile_commands.json
 /perf.data*
 /venv/
-/coverage.profdata
-/coverage-out/
+/default.profraw
