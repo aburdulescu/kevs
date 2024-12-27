@@ -67,3 +67,9 @@ kevs_test(NAME table_with_comments COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testd
 kevs_test(NAME table_list_table COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/table_list_table.kevs)
 kevs_test(NAME nested COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/nested.kevs)
 kevs_test(NAME example COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/example.kevs)
+
+add_custom_target(
+  cov
+  COMMAND ${CMAKE_SOURCE_DIR}/cov-merge.py ${CMAKE_BINARY_DIR}/*.profraw
+  COMMAND ${CMAKE_SOURCE_DIR}/cov-show.py ${CMAKE_BINARY_DIR}/kevs ${CMAKE_BINARY_DIR}/kevs_test
+)
