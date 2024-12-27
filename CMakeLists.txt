@@ -163,3 +163,8 @@ kevs_test(
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/integer_not_valid.kevs
   PASS_REGEX "parse: value is not an integer"
 )
+
+kevs_test(
+  NAME bugs/table_kv_missing_semicolon
+  COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/bugs/table_kv_missing_semicolon.kevs
+)
