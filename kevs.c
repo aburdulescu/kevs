@@ -384,7 +384,7 @@ static bool scan_value(Scanner *self);
 static void scan_errorf(const Scanner *self, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  fprintf(stdout, "%s:%d: error: ", self->file.ptr, self->line);
+  fprintf(stdout, "%s:%d: error: scan: ", self->file.ptr, self->line);
   vfprintf(stdout, fmt, args);
   fprintf(stdout, "\n");
   va_end(args);
@@ -439,7 +439,7 @@ static bool scan_newline(Scanner *self) {
 static bool scan_comment(Scanner *self) {
   int newline = str_index_char(self->content, '\n');
   if (newline == -1) {
-    scan_errorf(self, "invalid syntax: comment does not end with newline");
+    scan_errorf(self, "comment does not end with newline");
     return false;
   }
   scanner_advance(self, newline);
@@ -449,9 +449,7 @@ static bool scan_comment(Scanner *self) {
 static bool scan_key(Scanner *self) {
   int end = str_index_char(self->content, kKeyValSep);
   if (end == -1) {
-    scan_errorf(self,
-                "invalid syntax: key-value pair is missing separator '%c'",
-                kKeyValSep);
+    scan_errorf(self, "key-value pair is missing separator '%c'", kKeyValSep);
     return false;
   }
   scanner_add(self, kTokenKey, end);
@@ -470,8 +468,7 @@ static bool scan_delim(Scanner *self, char c) {
 static bool scan_string_value(Scanner *self) {
   int end = str_index_char(str_slice_low(self->content, 1), kStringBegin);
   if (end == -1) {
-    scan_errorf(self, "invalid syntax: string value does not end with '%c'",
-                kStringBegin);
+    scan_errorf(self, "string value does not end with '%c'", kStringBegin);
     return false;
   }
   end += 2; // for leading and trailing quotes
@@ -484,8 +481,7 @@ static bool scan_multiline_string_value(Scanner *self) {
   int end =
       str_index_char(str_slice_low(self->content, 1), kMultilineStringBegin);
   if (end == -1) {
-    scan_errorf(self,
-                "invalid syntax: multiline string value does not end with '%c'",
+    scan_errorf(self, "multiline string value does not end with '%c'",
                 kMultilineStringBegin);
     return false;
   }
@@ -497,9 +493,7 @@ static bool scan_multiline_string_value(Scanner *self) {
 static bool scan_int_or_bool_value(Scanner *self) {
   int end = str_index_char(self->content, kKeyValEnd);
   if (end == -1) {
-    scan_errorf(
-        self,
-        "invalid syntax: integer or boolean value does not end with semicolon");
+    scan_errorf(self, "integer or boolean value does not end with semicolon");
     return false;
   }
   scanner_add(self, kTokenValue, end);
@@ -806,7 +800,7 @@ static Token parser_get(const Parser *self) {
 static void parser_errorf(const Parser *self, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  fprintf(stdout, "%s:%d: error: ", self->file.ptr,
+  fprintf(stdout, "%s:%d: error: parse: ", self->file.ptr,
           parser_get(self).position.line);
   vfprintf(stdout, fmt, args);
   fprintf(stdout, "\n");
@@ -918,7 +912,7 @@ static bool parse_simple_value(Parser *self, Value *out) {
       StrToIntResult res = str_to_int(val);
       if (res.err != NULL) {
         String s = string_from_str(val);
-        parser_errorf(self, "value '%s' is not an integer: %s", s.ptr, res.err);
+        parser_errorf(self, "value is not an integer: %s", res.err);
         string_free(&s);
         ok = false;
       } else {
@@ -978,7 +972,7 @@ static bool parse_key(Parser *self, Str *key) {
   }
   if (!key_is_valid(parser_get(self).value)) {
     String s = string_from_str(parser_get(self).value);
-    parser_errorf(self, "key '%s' is not valid", s.ptr);
+    parser_errorf(self, "key is not a valid identifier", s.ptr);
     string_free(&s);
     return false;
   }
@@ -1028,6 +1022,8 @@ bool parse(Context ctx, Str file, Tokens tokens, Table *table) {
   return true;
 }
 
+// TODO: check that keys are unique for each table
+// TODO: values in a list have the same type? Or leave it to the user?
 bool kevs_parse(Context ctx, Str file, Str content, Table *table) {
   global_ctx = ctx;
 
