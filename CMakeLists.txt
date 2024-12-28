@@ -101,19 +101,19 @@ kevs_test(
 kevs_test(
   NAME not_valid/missing_kv_separator
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_kv_separator.kevs
-  PASS_REGEX "scan: key-value pair is missing separator '='"
+  PASS_REGEX "scan: key-value pair is missing separator"
 )
 
 kevs_test(
   NAME not_valid/missing_string_end
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_string_end.kevs
-  PASS_REGEX "scan: string value does not end with '\"'"
+  PASS_REGEX "scan: string value does not end with quote"
 )
 
 kevs_test(
   NAME not_valid/missing_multiline_string_end
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_multiline_string_end.kevs
-  PASS_REGEX "scan: multiline string value does not end with '`'"
+  PASS_REGEX "scan: multiline string value does not end with quote"
 )
 
 kevs_test(
@@ -168,4 +168,10 @@ kevs_test(
   NAME not_valid/table_kv_missing_semicolon
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/table_kv_missing_semicolon.kevs
   PASS_REGEX "scan: table: integer or boolean value does not end with semicolon"
+)
+
+kevs_test(
+  NAME not_valid/kv_in_middle_of_table_misses_separator.kevs
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/kv_in_middle_of_table_misses_separator.kevs
+  PASS_REGEX "scan: key-value pair is missing separator"
 )

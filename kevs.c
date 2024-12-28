@@ -460,7 +460,7 @@ static bool scan_comment(Scanner *self) {
 static bool scan_key(Scanner *self) {
   const int end = str_index_char(self->content, kKeyValSep);
   if (end == -1) {
-    scan_errorf(self, "key-value pair is missing separator '%c'", kKeyValSep);
+    scan_errorf(self, "key-value pair is missing separator");
     return false;
   }
   scanner_add(self, kTokenKey, end);
@@ -479,7 +479,7 @@ static bool scan_delim(Scanner *self, char c) {
 static bool scan_string_value(Scanner *self) {
   const int end = str_index_char(str_slice_low(self->content, 1), kStringBegin);
   if (end == -1) {
-    scan_errorf(self, "string value does not end with '%c'", kStringBegin);
+    scan_errorf(self, "string value does not end with quote");
     return false;
   }
   // +2 for leading and trailing quotes
@@ -492,8 +492,7 @@ static bool scan_multiline_string_value(Scanner *self) {
   const int end =
       str_index_char(str_slice_low(self->content, 1), kMultilineStringBegin);
   if (end == -1) {
-    scan_errorf(self, "multiline string value does not end with '%c'",
-                kMultilineStringBegin);
+    scan_errorf(self, "multiline string value does not end with quote");
     return false;
   }
   // +2 for leading and trailing quotes
