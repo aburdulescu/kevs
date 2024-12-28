@@ -458,8 +458,9 @@ static bool scan_comment(Scanner *self) {
 }
 
 static bool scan_key(Scanner *self) {
-  const int end = str_index_char(self->content, kKeyValSep);
-  if (end == -1) {
+  char c = 0;
+  const int end = str_index_any(self->content, str_from_cstring("=\n"), &c);
+  if (end == -1 || c != kKeyValSep) {
     scan_errorf(self, "key-value pair is missing separator");
     return false;
   }
@@ -501,20 +502,13 @@ static bool scan_multiline_string_value(Scanner *self) {
 }
 
 static bool scan_int_or_bool_value(Scanner *self) {
+  // search for semicolon or new newline
+  // if semicolon is not found or newline is found => error
+  // TODO: maybe check for other delimiters? i.e. ] }
   char c = 0;
-  const int end = str_index_any(self->content, str_from_cstring("]};"), &c);
-  if (end == -1) {
+  const int end = str_index_any(self->content, str_from_cstring(";\n"), &c);
+  if (end == -1 || c != kKeyValEnd) {
     scan_errorf(self, "integer or boolean value does not end with semicolon");
-    return false;
-  }
-  if (c == kListEnd) {
-    scan_errorf(self,
-                "list: integer or boolean value does not end with semicolon");
-    return false;
-  }
-  if (c == kTableEnd) {
-    scan_errorf(self,
-                "table: integer or boolean value does not end with semicolon");
     return false;
   }
   scanner_add(self, kTokenValue, end);
