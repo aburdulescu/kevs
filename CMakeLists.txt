@@ -177,7 +177,7 @@ kevs_test(
 )
 
 kevs_test(
-  NAME not_valid/kv_in_middle_of_table_misses_separator.kevs
+  NAME not_valid/kv_in_middle_of_table_misses_separator
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/kv_in_middle_of_table_misses_separator.kevs
   PASS_REGEX "scan: key-value pair is missing separator"
 )
