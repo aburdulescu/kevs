@@ -82,6 +82,17 @@ int str_index_chars(Str self, Str chars) {
   return -1;
 }
 
+int str_index_any(Str self, Str chars, char *c) {
+  for (size_t i = 0; i < self.len; i++) {
+    const int j = str_index_char(chars, self.ptr[i]);
+    if (j != -1) {
+      *c = chars.ptr[j];
+      return (int)i;
+    }
+  }
+  return -1;
+}
+
 bool str_equals(Str self, Str other) {
   if (self.len != other.len) {
     return false;
@@ -437,7 +448,7 @@ static bool scan_newline(Scanner *self) {
 }
 
 static bool scan_comment(Scanner *self) {
-  int newline = str_index_char(self->content, '\n');
+  const int newline = str_index_char(self->content, '\n');
   if (newline == -1) {
     scan_errorf(self, "comment does not end with newline");
     return false;
@@ -447,7 +458,7 @@ static bool scan_comment(Scanner *self) {
 }
 
 static bool scan_key(Scanner *self) {
-  int end = str_index_char(self->content, kKeyValSep);
+  const int end = str_index_char(self->content, kKeyValSep);
   if (end == -1) {
     scan_errorf(self, "key-value pair is missing separator '%c'", kKeyValSep);
     return false;
@@ -466,34 +477,45 @@ static bool scan_delim(Scanner *self, char c) {
 
 // TODO: handle escapes and unicode
 static bool scan_string_value(Scanner *self) {
-  int end = str_index_char(str_slice_low(self->content, 1), kStringBegin);
+  const int end = str_index_char(str_slice_low(self->content, 1), kStringBegin);
   if (end == -1) {
     scan_errorf(self, "string value does not end with '%c'", kStringBegin);
     return false;
   }
-  end += 2; // for leading and trailing quotes
-  scanner_add(self, kTokenValue, end);
+  // +2 for leading and trailing quotes
+  scanner_add(self, kTokenValue, end + 2);
   return true;
 }
 
 // TODO: handle escapes and unicode
 static bool scan_multiline_string_value(Scanner *self) {
-  int end =
+  const int end =
       str_index_char(str_slice_low(self->content, 1), kMultilineStringBegin);
   if (end == -1) {
     scan_errorf(self, "multiline string value does not end with '%c'",
                 kMultilineStringBegin);
     return false;
   }
-  end += 2; // for leading and trailing quotes
-  scanner_add(self, kTokenValue, end);
+  // +2 for leading and trailing quotes
+  scanner_add(self, kTokenValue, end + 2);
   return true;
 }
 
 static bool scan_int_or_bool_value(Scanner *self) {
-  int end = str_index_char(self->content, kKeyValEnd);
+  char c = 0;
+  const int end = str_index_any(self->content, str_from_cstring("]};"), &c);
   if (end == -1) {
     scan_errorf(self, "integer or boolean value does not end with semicolon");
+    return false;
+  }
+  if (c == kListEnd) {
+    scan_errorf(self,
+                "list: integer or boolean value does not end with semicolon");
+    return false;
+  }
+  if (c == kTableEnd) {
+    scan_errorf(self,
+                "table: integer or boolean value does not end with semicolon");
     return false;
   }
   scanner_add(self, kTokenValue, end);

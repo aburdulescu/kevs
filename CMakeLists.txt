@@ -165,6 +165,7 @@ kevs_test(
 )
 
 kevs_test(
-  NAME bugs/table_kv_missing_semicolon
-  COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/bugs/table_kv_missing_semicolon.kevs
+  NAME not_valid/table_kv_missing_semicolon
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/table_kv_missing_semicolon.kevs
+  PASS_REGEX "scan: table: integer or boolean value does not end with semicolon"
 )
