@@ -74,7 +74,7 @@ endfunction()
 add_custom_target(
   cov
   COMMENT "Generate coverage report"
-  COMMAND ${CMAKE_SOURCE_DIR}/cov-merge.py ${CMAKE_BINARY_DIR}/*.profraw
+  COMMAND ${CMAKE_SOURCE_DIR}/cov-merge.py ${CMAKE_BINARY_DIR}/*.profraw ${CMAKE_BINARY_DIR}/valid/*.profraw ${CMAKE_BINARY_DIR}/not_valid/*.profraw
   COMMAND ${CMAKE_SOURCE_DIR}/cov-show.py ${CMAKE_BINARY_DIR}/kevs ${CMAKE_BINARY_DIR}/kevs_test -s ${CMAKE_SOURCE_DIR}/kevs.c
 )
 
