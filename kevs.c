@@ -43,6 +43,7 @@ static inline bool is_letter(char c) {
 }
 
 Str str_from_cstring(const char *s) {
+  assert(s != NULL);
   Str self = {
       .ptr = s,
       .len = strlen(s),
@@ -135,6 +136,8 @@ Str str_slice(Str self, size_t low, size_t high) {
 }
 
 Str str_trim_left(Str self, Str cutset) {
+  assert(self.ptr != NULL);
+  assert(self.len != 0);
   size_t i = 0;
   for (; i < self.len; i++) {
     if (str_index_char(cutset, self.ptr[i]) == -1) {
@@ -147,6 +150,8 @@ Str str_trim_left(Str self, Str cutset) {
 }
 
 Str str_trim_right(Str self, Str cutset) {
+  assert(self.ptr != NULL);
+  assert(self.len != 0);
   for (int i = (int)self.len - 1; i >= 0; i--) {
     if (str_index_char(cutset, self.ptr[i]) == -1) {
       break;
@@ -290,7 +295,7 @@ StrToIntResult str_to_int(Str self) {
 }
 
 void string_reserve(String *self, size_t cap) {
-  self->ptr = (char *)malloc(sizeof(char) * cap + 1);
+  self->ptr = realloc(self->ptr, sizeof(char) * cap + 1);
   self->cap = cap;
   self->ptr[self->len] = 0;
 }
@@ -307,7 +312,7 @@ void string_free(String *self) {
 
 String string_from_str(Str s) {
   String self = {
-      .ptr = (char *)malloc(s.len + 1),
+      .ptr = malloc(s.len + 1),
       .cap = s.len,
       .len = s.len,
   };
