@@ -159,6 +159,12 @@ kevs_test(
 )
 
 kevs_test(
+  NAME not_valid/key_not_valid_2
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/key_not_valid_2.kevs
+  PASS_REGEX "parse: key is not a valid identifier"
+)
+
+kevs_test(
   NAME not_valid/integer_not_valid
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/integer_not_valid.kevs
   PASS_REGEX "parse: value is not an integer"

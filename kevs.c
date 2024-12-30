@@ -982,7 +982,7 @@ static bool parse_key(Parser *self, Str *key) {
   }
   if (!key_is_valid(parser_get(self).value)) {
     String s = string_from_str(parser_get(self).value);
-    parser_errorf(self, "key is not a valid identifier", s.ptr);
+    parser_errorf(self, "key is not a valid identifier: '%s'", s.ptr);
     string_free(&s);
     return false;
   }
