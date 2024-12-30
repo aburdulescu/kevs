@@ -945,10 +945,12 @@ static bool parse_value(Parser *self, Value *out) {
     ok = parse_simple_value(self, out);
   }
   if (!ok) {
+    value_free(out);
     return false;
   }
 
   if (!parse_delim(self, kKeyValEnd)) {
+    value_free(out);
     ERROR("missing key value end");
     return false;
   }
@@ -1001,7 +1003,6 @@ static bool parse_key_value(Parser *self, KeyValue *out) {
 
   Value val = {};
   if (!parse_value(self, &val)) {
-    value_free(&val);
     return false;
   }
 
