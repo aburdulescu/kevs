@@ -6,7 +6,7 @@ temp_corpus_dir=${fuzz_out_dir}/corpus
 coverage_dir=${fuzz_out_dir}/coverage-out
 coverage_raw_profile=${fuzz_out_dir}/coverage.profraw
 coverage_profile=${fuzz_out_dir}/coverage.data
-max_time=30
+max_time=60
 
 set -ex
 
