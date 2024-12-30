@@ -5,5 +5,3 @@
 /venv/
 /default.profraw
 /corpus/
-/leak-*
-/crash-*

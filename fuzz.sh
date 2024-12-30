@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -ex
+set -x
 
 # add testdata to corpus
 mkdir -p testdata/corpus
@@ -13,7 +13,7 @@ mkdir corpus
 cp -r testdata/corpus/* corpus/
 
 # run fuzzer
-./b/kevs_fuzz -max_total_time=10 corpus
+./b/kevs_fuzz -max_total_time=60 corpus
 
 # generate coverage
 rm -rf coverage.data coverage-out
