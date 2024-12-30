@@ -188,6 +188,18 @@ kevs_test(
   PASS_REGEX "scan: key-value pair is missing separator"
 )
 
+kevs_test(
+  NAME not_valid/empty_list_without_end
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/empty_list_without_end.kevs
+  PASS_REGEX "scan: end of input without list end"
+)
+
+kevs_test(
+  NAME not_valid/empty_table_without_end
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/empty_table_without_end.kevs
+  PASS_REGEX "scan: end of input without table end"
+)
+
 add_executable(kevs_fuzz kevs_fuzz.c kevs.c)
 target_compile_options(kevs_fuzz
   PUBLIC

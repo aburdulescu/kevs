@@ -523,6 +523,10 @@ static bool scan_list_value(Scanner *self) {
   scanner_add_delim(self);
   while (true) {
     scanner_trim_space(self);
+    if (self->content.len == 0) {
+      scan_errorf(self, "end of input without list end");
+      return false;
+    }
     if (scanner_expect(self, '\n')) {
       if (!scan_newline(self)) {
         return false;
@@ -554,6 +558,10 @@ static bool scan_table_value(Scanner *self) {
   scanner_add_delim(self);
   while (true) {
     scanner_trim_space(self);
+    if (self->content.len == 0) {
+      scan_errorf(self, "end of input without table end");
+      return false;
+    }
     if (scanner_expect(self, '\n')) {
       if (!scan_newline(self)) {
         return false;
