@@ -25,12 +25,12 @@ static void kevs_logf(const char *level, const char *fn, int ln,
 }
 
 #define INFO(...)                                                              \
-  if (global_ctx.with_logs) {                                                  \
+  if (global_ctx.enable_logs) {                                                \
     kevs_logf("INFO ", __FUNCTION__, __LINE__, __VA_ARGS__);                   \
   }
 
 #define ERROR(...)                                                             \
-  if (global_ctx.with_logs) {                                                  \
+  if (global_ctx.enable_logs) {                                                \
     kevs_logf("ERROR", __FUNCTION__, __LINE__, __VA_ARGS__);                   \
   }
 
@@ -1050,14 +1050,12 @@ bool kevs_parse(Context ctx, Str file, Str content, Table *table) {
     string_free(&v);
   }
 
-  if (!ctx.no_parse) {
-    if (ok) {
-      ok = parse(ctx, file, tokens, table);
-      if (!ok) {
-        ERROR("parser failed");
-      }
-      table_dump(*table);
+  if (ok) {
+    ok = parse(ctx, file, tokens, table);
+    if (!ok) {
+      ERROR("parser failed");
     }
+    table_dump(*table);
   }
 
   tokens_free(&tokens);

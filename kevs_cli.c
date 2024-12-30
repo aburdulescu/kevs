@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
   char **args = argv + 1;
 
   if (nargs < 1) {
-    printf("usage: ./kevs [-abort] [-with-logs] [-no-parse] [file]\n");
+    printf("usage: ./kevs [-abort] [-logs] [file]\n");
     return 1;
   }
 
@@ -69,11 +69,8 @@ int main(int argc, char **argv) {
     if (strcmp(args[args_index], "-abort") == 0) {
       ctx.abort_on_error = true;
       args_index++;
-    } else if (strcmp(args[args_index], "-with-logs") == 0) {
-      ctx.with_logs = true;
-      args_index++;
-    } else if (strcmp(args[args_index], "-no-parse") == 0) {
-      ctx.no_parse = true;
+    } else if (strcmp(args[args_index], "-logs") == 0) {
+      ctx.enable_logs = true;
       args_index++;
     } else {
       break;
@@ -82,9 +79,9 @@ int main(int argc, char **argv) {
 
   Str file = str_from_cstring(args[args_index]);
 
-  if (ctx.with_logs) {
-    printf("file=%s, abort=%d, with-logs=%d, no-parse=%d\n", file.ptr,
-           ctx.abort_on_error, ctx.with_logs, ctx.no_parse);
+  if (ctx.enable_logs) {
+    printf("file=%s, abort=%d, logs=%d\n", file.ptr, ctx.abort_on_error,
+           ctx.enable_logs);
   }
 
   ReadFileResult result = read_file(file);

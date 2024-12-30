@@ -70,8 +70,7 @@ typedef struct KeyValue {
 
 typedef struct {
   bool abort_on_error;
-  bool with_logs;
-  bool no_parse;
+  bool enable_logs;
 } Context;
 
 // Str
