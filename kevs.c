@@ -964,7 +964,7 @@ static bool key_is_valid(Str key) {
     return false;
   }
   for (size_t i = 1; i < key.len; i++) {
-    if (!is_digit(c) && !is_letter(c)) {
+    if (!is_digit(key.ptr[i]) && !is_letter(key.ptr[i]) && key.ptr[i] != '_') {
       return false;
     }
   }
