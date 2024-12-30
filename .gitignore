@@ -4,4 +4,4 @@
 /perf.data*
 /venv/
 /default.profraw
-/corpus/
+/fuzz-out/
