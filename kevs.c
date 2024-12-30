@@ -669,20 +669,26 @@ static void table_dump(Table self);
 static void list_free(List *self);
 static void list_dump(List self);
 
+static void value_free(Value *self) {
+  switch (self->tag) {
+  case kValueTagList: {
+    list_free(&self->data.list);
+  } break;
+
+  case kValueTagTable: {
+    kevs_free(&self->data.table);
+  } break;
+
+  default:
+    break;
+  }
+
+  *self = (Value){};
+}
+
 static void list_free(List *self) {
   for (size_t i = 0; i < self->len; i++) {
-    switch (self->ptr[i].tag) {
-    case kValueTagList: {
-      list_free(&self->ptr[i].data.list);
-    } break;
-
-    case kValueTagTable: {
-      kevs_free(&self->ptr[i].data.table);
-    } break;
-
-    default:
-      break;
-    }
+    value_free(&self->ptr[i]);
   }
 
   free(self->ptr);
@@ -732,26 +738,6 @@ static void list_dump(List self) {
     } break;
     }
   }
-}
-
-void kevs_free(Table *self) {
-  for (size_t i = 0; i < self->len; i++) {
-    switch (self->ptr[i].val.tag) {
-    case kValueTagTable: {
-      kevs_free(&self->ptr[i].val.data.table);
-    } break;
-
-    case kValueTagList: {
-      list_free(&self->ptr[i].val.data.list);
-    } break;
-
-    default:
-      break;
-    }
-  }
-
-  free(self->ptr);
-  *self = (Table){};
 }
 
 static void table_add(Table *self, KeyValue v) {
@@ -1015,6 +1001,7 @@ static bool parse_key_value(Parser *self, KeyValue *out) {
 
   Value val = {};
   if (!parse_value(self, &val)) {
+    value_free(&val);
     return false;
   }
 
@@ -1075,4 +1062,13 @@ bool kevs_parse(Context ctx, Str file, Str content, Table *table) {
   tokens_free(&tokens);
 
   return ok;
+}
+
+void kevs_free(Table *self) {
+  for (size_t i = 0; i < self->len; i++) {
+    value_free(&self->ptr[i].val);
+  }
+
+  free(self->ptr);
+  *self = (Table){};
 }
