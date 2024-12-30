@@ -136,8 +136,6 @@ Str str_slice(Str self, size_t low, size_t high) {
 }
 
 Str str_trim_left(Str self, Str cutset) {
-  assert(self.ptr != NULL);
-  assert(self.len != 0);
   size_t i = 0;
   for (; i < self.len; i++) {
     if (str_index_char(cutset, self.ptr[i]) == -1) {
@@ -150,8 +148,6 @@ Str str_trim_left(Str self, Str cutset) {
 }
 
 Str str_trim_right(Str self, Str cutset) {
-  assert(self.ptr != NULL);
-  assert(self.len != 0);
   for (int i = (int)self.len - 1; i >= 0; i--) {
     if (str_index_char(cutset, self.ptr[i]) == -1) {
       break;
@@ -410,6 +406,9 @@ static void scan_errorf(const Scanner *self, const char *fmt, ...) {
 }
 
 static bool scanner_expect(Scanner *self, char c) {
+  if (self->content.len == 0) {
+    return false;
+  }
   return self->content.ptr[0] == c;
 }
 
@@ -665,7 +664,6 @@ static const char *valuetag_str(ValueTag v) {
   }
 }
 
-static void table_free(Table *self);
 static void table_dump(Table self);
 
 static void list_free(List *self);
@@ -679,7 +677,7 @@ static void list_free(List *self) {
     } break;
 
     case kValueTagTable: {
-      table_free(&self->ptr[i].data.table);
+      kevs_free(&self->ptr[i].data.table);
     } break;
 
     default:
@@ -736,11 +734,11 @@ static void list_dump(List self) {
   }
 }
 
-static void table_free(Table *self) {
+void kevs_free(Table *self) {
   for (size_t i = 0; i < self->len; i++) {
     switch (self->ptr[i].val.tag) {
     case kValueTagTable: {
-      table_free(&self->ptr[i].val.data.table);
+      kevs_free(&self->ptr[i].val.data.table);
     } break;
 
     case kValueTagList: {
@@ -1072,7 +1070,6 @@ bool kevs_parse(Context ctx, Str file, Str content, Table *table) {
       }
       table_dump(*table);
     }
-    table_free(table);
   }
 
   tokens_free(&tokens);

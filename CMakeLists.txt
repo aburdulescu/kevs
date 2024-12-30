@@ -181,3 +181,16 @@ kevs_test(
   COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/kv_in_middle_of_table_misses_separator.kevs
   PASS_REGEX "scan: key-value pair is missing separator"
 )
+
+add_executable(kevs_fuzz kevs_fuzz.c kevs.c)
+target_compile_options(kevs_fuzz
+  PUBLIC
+  -fsanitize=undefined,address,fuzzer
+  -fno-sanitize-recover=all
+  -fprofile-instr-generate
+  -fcoverage-mapping
+)
+target_link_options(kevs_fuzz
+  PUBLIC
+  -fsanitize=undefined,address,fuzzer
+)

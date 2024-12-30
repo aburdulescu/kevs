@@ -101,6 +101,8 @@ int main(int argc, char **argv) {
     rc = 1;
   }
 
+  kevs_free(&table);
+
   string_free(&result.val);
 
   return rc;

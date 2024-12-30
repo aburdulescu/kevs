@@ -4,3 +4,6 @@
 /perf.data*
 /venv/
 /default.profraw
+/corpus/
+/leak-*
+/crash-*
