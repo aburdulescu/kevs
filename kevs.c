@@ -673,9 +673,11 @@ static const char *valuetag_str(ValueTag v) {
 }
 
 static void table_dump(Table self);
+static bool table_check(Table self);
 
 static void list_free(List *self);
 static void list_dump(List self);
+static bool list_check(List self);
 
 static void value_free(Value *self) {
   switch (self->tag) {
@@ -692,6 +694,17 @@ static void value_free(Value *self) {
   }
 
   *self = (Value){};
+}
+
+static bool value_check(Value self) {
+  switch (self.tag) {
+  case kValueTagList:
+    return list_check(self.data.list);
+  case kValueTagTable:
+    return table_check(self.data.table);
+  default:
+    return true;
+  }
 }
 
 static void list_free(List *self) {
@@ -746,6 +759,38 @@ static void list_dump(List self) {
     } break;
     }
   }
+}
+
+// check that the list elements have the same type
+static bool list_check(List self) {
+  if (self.len == 0) {
+    return true;
+  }
+  // TODO: test with nested lists/tables
+  ValueTag t = self.ptr[0].tag;
+  for (size_t i = 1; i < self.len; i++) {
+    if (self.ptr[i].tag != t) {
+      ERROR("first element is %s, element #%zu is %s", valuetag_str(t), i,
+            valuetag_str(self.ptr[i].tag));
+      return false;
+    }
+    if (self.ptr[i].tag == kValueTagList || self.ptr[i].tag == kValueTagTable) {
+      if (!value_check(self.ptr[i])) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+static bool table_check(Table self) {
+  for (size_t i = 0; i < self.len; i++) {
+    // TODO: check if key is unique
+    if (!value_check(self.ptr[i].val)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 static void table_add(Table *self, KeyValue v) {
@@ -1064,6 +1109,9 @@ bool kevs_parse(Context ctx, Str file, Str content, Table *table) {
       ERROR("parser failed");
     }
     table_dump(*table);
+    if (!table_check(*table)) {
+      ERROR("type check failed");
+    }
   }
 
   tokens_free(&tokens);
