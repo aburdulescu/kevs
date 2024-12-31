@@ -84,6 +84,7 @@ func run() error {
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
 
+	fmt.Println("run tests:")
 	for _, test := range tests {
 		fmt.Fprintf(w, "%s\t", test.name)
 		start := time.Now()
@@ -102,13 +103,14 @@ func run() error {
 
 	w.Flush()
 
-	fmt.Printf("\nsummary: ran %d tests in %s, %d failed\n", len(tests), total, len(failed))
+	fmt.Printf("\nsummary:\nran %d tests in %s, %d failed\n", len(tests), total, len(failed))
 
 	if len(failed) != 0 {
 		fmt.Println("\nfailures:")
 
 		for _, r := range failed {
-			fmt.Println("  ", r.name, r.err)
+			fmt.Println(r.name)
+			fmt.Println(" ", r.err)
 		}
 		fmt.Print("\n")
 
