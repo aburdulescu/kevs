@@ -58,13 +58,14 @@ int main(int argc, char **argv) {
   char **args = argv + 1;
 
   if (nargs < 1) {
-    printf("usage: ./kevs [-abort] [-logs] [-dump] file\n");
+    printf("usage: ./kevs [-abort] [-logs] [-dump] [-no-err] file\n");
     return 1;
   }
 
   Context ctx = {};
 
   bool dump = false;
+  bool pass_on_error = false;
 
   int args_index = 0;
   while (args_index < nargs) {
@@ -77,6 +78,9 @@ int main(int argc, char **argv) {
     } else if (strcmp(args[args_index], "-dump") == 0) {
       dump = true;
       args_index++;
+    } else if (strcmp(args[args_index], "-no-err") == 0) {
+      pass_on_error = true;
+      args_index++;
     } else {
       break;
     }
@@ -85,8 +89,8 @@ int main(int argc, char **argv) {
   Str file = str_from_cstring(args[args_index]);
 
   if (ctx.enable_logs) {
-    printf("file=%s, abort=%d, logs=%d\n", file.ptr, ctx.abort_on_error,
-           ctx.enable_logs);
+    printf("file=%s, abort=%d, logs=%d, dump=%d, no-err=%d\n", file.ptr,
+           ctx.abort_on_error, ctx.enable_logs, dump, pass_on_error);
   }
 
   ReadFileResult result = read_file(file);
@@ -100,7 +104,9 @@ int main(int argc, char **argv) {
   Table table = {};
   const bool ok = kevs_parse(ctx, file, str_from_string(result.val), &table);
   if (!ok) {
-    rc = 1;
+    if (!pass_on_error) {
+      rc = 1;
+    }
   }
 
   if (dump) {
