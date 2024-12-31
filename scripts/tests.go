@@ -13,6 +13,11 @@ import (
 	"time"
 )
 
+// TODO: run unittests
+// TODO: collect and generate coverage
+// TODO: run fuzzer
+// TODO: use run CLI on fuzzer corpus?
+
 var (
 	buildDir = flag.String("b", "b", "Path to build directory")
 	update   = flag.Bool("update", false, "Update expected output")
