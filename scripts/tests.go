@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"text/tabwriter"
 	"time"
 )
 
@@ -78,30 +77,33 @@ func run() error {
 		return err
 	}
 
+	maxName := 0
+	for _, test := range tests {
+		if len(test.name) > maxName {
+			maxName = len(test.name)
+		}
+	}
+
 	var total time.Duration
 
 	var failed []TestResult
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
-
-	fmt.Println("run tests:")
+	fmt.Println("tests:")
 	for _, test := range tests {
-		fmt.Fprintf(w, "%s\t", test.name)
+		fmt.Printf("%s %s ", test.name, strings.Repeat(".", maxName-len(test.name)))
 		start := time.Now()
 		err := test.run()
 		end := time.Now()
 		if err != nil {
-			fmt.Fprint(w, "failed")
+			fmt.Print("failed")
 			failed = append(failed, TestResult{name: test.name, err: err})
 		} else {
-			fmt.Fprint(w, "passed")
+			fmt.Print("passed")
 		}
 		e := end.Sub(start)
 		total += e
-		fmt.Fprintf(w, "\t%s\n", e)
+		fmt.Printf("  %s\n", e)
 	}
-
-	w.Flush()
 
 	fmt.Printf("\nsummary:\nran %d tests in %s, %d failed\n", len(tests), total, len(failed))
 
