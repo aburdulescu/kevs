@@ -1,0 +1,9 @@
+b1 boolean true
+b2 boolean false
+i1 integer 1
+i2 integer 2
+i3 integer -3
+i4 integer 4
+i5 integer 5
+i6 integer 6
+s1 string 'string'

@@ -1,0 +1,32 @@
+v list
+table
+aa string 'aa'
+bb string 'bb'
+cc string 'cc'
+table
+xx string 'xx'
+yy string 'yy'
+zz string 'zz'
+table
+v11 string '11'
+v22 string '22'
+v33 string '33'
+table
+x list
+table
+aa string 'aa'
+bb string 'bb'
+cc string 'cc'
+table
+xx string 'xx'
+yy string 'yy'
+zz string 'zz'
+y list
+table
+aa string 'aa'
+bb string 'bb'
+cc string 'cc'
+table
+xx string 'xx'
+yy string 'yy'
+zz string 'zz'
