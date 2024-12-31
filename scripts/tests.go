@@ -9,13 +9,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"text/tabwriter"
+	"time"
 )
 
 var (
-	buildDir       = flag.String("build-dir", "b", "Path to build directory")
-	skipNotValid   = flag.Bool("skip-not-valid", false, "Skip not valid tests")
-	skipValid      = flag.Bool("skip-valid", false, "Skip valid tests")
-	updateExpected = flag.Bool("update", false, "Update expected output")
+	buildDir = flag.String("b", "b", "Path to build directory")
+	update   = flag.Bool("update", false, "Update expected output")
+	verbose  = flag.Bool("v", false, "Print test output")
 )
 
 func main() {
@@ -30,23 +31,11 @@ func mainErr() error {
 
 	*buildDir, _ = filepath.Abs(*buildDir)
 
-	if !*skipValid {
-		if err := runValid(); err != nil {
-			return err
-		}
-	}
-
-	if !*skipNotValid {
-
+	if err := runValid(); err != nil {
+		return err
 	}
 
 	return nil
-}
-
-type Test struct {
-	name     string
-	input    string
-	expected string
 }
 
 func runValid() error {
@@ -63,10 +52,10 @@ func runValid() error {
 			return nil
 		}
 
-		name := strings.TrimSuffix(filepath.Base(path), ".kevs")
-		expected := filepath.Join("testdata", "valid", name+".out")
+		name := strings.TrimSuffix(path, ".kevs")
+		expected := name + ".out"
 
-		if !*updateExpected {
+		if !*update {
 			if _, err := os.Stat(expected); err != nil {
 				return fmt.Errorf("cannot find file with expected output for '%s'", path)
 			}
@@ -84,49 +73,72 @@ func runValid() error {
 		return err
 	}
 
-	out := new(bytes.Buffer)
+	var total time.Duration
+	var nfailed int
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
 
 	for _, test := range tests {
-		fmt.Println(test.name)
-
-		exe := filepath.Join(*buildDir, "kevs")
-
-		out.Reset()
-
-		cmd := exec.Command(exe, "-abort", "-dump", test.input)
-		cmd.Stdout = out
-
-		if err := cmd.Run(); err != nil {
-			fmt.Println("error:", err)
-			continue
-		}
-
-		if *updateExpected {
-			err := os.WriteFile(test.expected, out.Bytes(), 0600)
-			if err != nil {
-				fmt.Println("error:", err)
-				continue
-			}
+		fmt.Fprintf(w, "%s\t", test.name)
+		start := time.Now()
+		err := test.run()
+		end := time.Now()
+		if err != nil {
+			fmt.Fprint(w, "failed")
+			nfailed++
 		} else {
-			data, err := os.ReadFile(test.expected)
-			if err != nil {
-				fmt.Println("error:", err)
-				continue
-			}
-			haveLines := strings.Split(out.String(), "\n")
-			wantLines := strings.Split(string(data), "\n")
-			if len(haveLines) != len(wantLines) {
-				fmt.Printf("error: want %d lines, have %d lines\n", len(wantLines), len(haveLines))
-				continue
-			}
-			for i := range wantLines {
-				if haveLines[i] != wantLines[i] {
-					fmt.Printf("error: line %d: want '%s', have '%s'\n", i+1, wantLines[i], haveLines[i])
-					continue
-				}
+			fmt.Fprint(w, "passed")
+		}
+		e := end.Sub(start)
+		total += e
+		fmt.Fprintf(w, "\t%s\n", e)
+	}
+
+	w.Flush()
+
+	fmt.Printf("summary: ran %d tests in %s, %d failed\n", len(tests), total, nfailed)
+
+	if nfailed != 0 {
+		return fmt.Errorf("tests failed")
+	}
+
+	return nil
+}
+
+type Test struct {
+	name     string
+	input    string
+	expected string
+}
+
+func (t Test) run() error {
+	exe := filepath.Join(*buildDir, "kevs")
+	out := new(bytes.Buffer)
+	cmd := exec.Command(exe, "-abort", "-dump", t.input)
+	cmd.Stdout = out
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run command: %w", err)
+	}
+	if *update {
+		err := os.WriteFile(t.expected, out.Bytes(), 0600)
+		if err != nil {
+			return fmt.Errorf("failed to write output file: %w", err)
+		}
+	} else {
+		data, err := os.ReadFile(t.expected)
+		if err != nil {
+			return fmt.Errorf("failed to read expected output file: %w", err)
+		}
+		haveLines := strings.Split(out.String(), "\n")
+		wantLines := strings.Split(string(data), "\n")
+		if len(haveLines) != len(wantLines) {
+			return fmt.Errorf("error: want %d lines, have %d lines\n", len(wantLines), len(haveLines))
+		}
+		for i := range wantLines {
+			if haveLines[i] != wantLines[i] {
+				return fmt.Errorf("error: line %d: want '%s', have '%s'\n", i+1, wantLines[i], haveLines[i])
 			}
 		}
 	}
-
 	return nil
 }
