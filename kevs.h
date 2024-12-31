@@ -99,5 +99,6 @@ String string_from_str(Str s);
 // kevs
 bool kevs_parse(Context ctx, Str file, Str content, Table *table);
 void kevs_free(Table *self);
+void kevs_dump(Table self);
 
 #endif

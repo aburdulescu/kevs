@@ -675,7 +675,6 @@ static const char *valuetag_str(ValueTag v) {
   }
 }
 
-static void table_dump(Table self);
 static bool table_check(Table self);
 
 static void list_free(List *self);
@@ -734,31 +733,32 @@ static void list_dump(List self) {
 
     switch (v.tag) {
     case kValueTagTable: {
-      INFO("%s", valuetag_str(v.tag));
-      table_dump(v.data.table);
+      printf("%s\n", valuetag_str(v.tag));
+      kevs_dump(v.data.table);
     } break;
 
     case kValueTagList: {
-      INFO("%s", valuetag_str(v.tag));
+      printf("%s\n", valuetag_str(v.tag));
       list_dump(v.data.list);
     } break;
 
     case kValueTagString: {
       String s = string_from_str(v.data.string);
-      INFO("%s '%s'", valuetag_str(v.tag), s.ptr);
+      printf("%s '%s'\n", valuetag_str(v.tag), s.ptr);
       string_free(&s);
     } break;
 
     case kValueTagBoolean: {
-      INFO("%s %s", valuetag_str(v.tag), (v.data.boolean ? "true" : "false"));
+      printf("%s %s\n", valuetag_str(v.tag),
+             (v.data.boolean ? "true" : "false"));
     } break;
 
     case kValueTagInteger: {
-      INFO("%s %ld", valuetag_str(v.tag), v.data.integer);
+      printf("%s %ld\n", valuetag_str(v.tag), v.data.integer);
     } break;
 
     default: {
-      INFO("%s", valuetag_str(v.tag));
+      printf("%s\n", valuetag_str(v.tag));
     } break;
     }
   }
@@ -803,47 +803,6 @@ static void table_add(Table *self, KeyValue v) {
   }
   memcpy(self->ptr + self->len, &v, sizeof(v));
   self->len += 1;
-}
-
-static void table_dump(Table self) {
-  for (size_t i = 0; i < self.len; i++) {
-    const KeyValue kv = self.ptr[i];
-
-    String k = string_from_str(kv.key);
-
-    switch (kv.val.tag) {
-    case kValueTagTable: {
-      INFO("%s %s", k.ptr, valuetag_str(kv.val.tag));
-      table_dump(kv.val.data.table);
-    } break;
-
-    case kValueTagList: {
-      INFO("%s %s", k.ptr, valuetag_str(kv.val.tag));
-      list_dump(kv.val.data.list);
-    } break;
-
-    case kValueTagString: {
-      String s = string_from_str(kv.val.data.string);
-      INFO("%s %s '%s'", k.ptr, valuetag_str(kv.val.tag), s.ptr);
-      string_free(&s);
-    } break;
-
-    case kValueTagBoolean: {
-      INFO("%s %s %s", k.ptr, valuetag_str(kv.val.tag),
-           (kv.val.data.boolean ? "true" : "false"));
-    } break;
-
-    case kValueTagInteger: {
-      INFO("%s %s %ld", k.ptr, valuetag_str(kv.val.tag), kv.val.data.integer);
-    } break;
-
-    default: {
-      INFO("%s %s", k.ptr, valuetag_str(kv.val.tag));
-    } break;
-    }
-
-    string_free(&k);
-  }
 }
 
 typedef struct {
@@ -1107,7 +1066,6 @@ bool kevs_parse(Context ctx, Str file, Str content, Table *table) {
     if (!ok) {
       ERROR("parser failed");
     }
-    table_dump(*table);
     if (!table_check(*table)) {
       ERROR("type check failed");
     }
@@ -1125,4 +1083,46 @@ void kevs_free(Table *self) {
 
   free(self->ptr);
   *self = (Table){};
+}
+
+void kevs_dump(Table self) {
+  for (size_t i = 0; i < self.len; i++) {
+    const KeyValue kv = self.ptr[i];
+
+    String k = string_from_str(kv.key);
+
+    switch (kv.val.tag) {
+    case kValueTagTable: {
+      printf("%s %s\n", k.ptr, valuetag_str(kv.val.tag));
+      kevs_dump(kv.val.data.table);
+    } break;
+
+    case kValueTagList: {
+      printf("%s %s\n", k.ptr, valuetag_str(kv.val.tag));
+      list_dump(kv.val.data.list);
+    } break;
+
+    case kValueTagString: {
+      String s = string_from_str(kv.val.data.string);
+      printf("%s %s '%s'\n", k.ptr, valuetag_str(kv.val.tag), s.ptr);
+      string_free(&s);
+    } break;
+
+    case kValueTagBoolean: {
+      printf("%s %s %s\n", k.ptr, valuetag_str(kv.val.tag),
+             (kv.val.data.boolean ? "true" : "false"));
+    } break;
+
+    case kValueTagInteger: {
+      printf("%s %s %ld\n", k.ptr, valuetag_str(kv.val.tag),
+             kv.val.data.integer);
+    } break;
+
+    default: {
+      printf("%s %s\n", k.ptr, valuetag_str(kv.val.tag));
+    } break;
+    }
+
+    string_free(&k);
+  }
 }

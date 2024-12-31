@@ -58,11 +58,13 @@ int main(int argc, char **argv) {
   char **args = argv + 1;
 
   if (nargs < 1) {
-    printf("usage: ./kevs [-abort] [-logs] file\n");
+    printf("usage: ./kevs [-abort] [-logs] [-dump] file\n");
     return 1;
   }
 
   Context ctx = {};
+
+  bool dump = false;
 
   int args_index = 0;
   while (args_index < nargs) {
@@ -71,6 +73,9 @@ int main(int argc, char **argv) {
       args_index++;
     } else if (strcmp(args[args_index], "-logs") == 0) {
       ctx.enable_logs = true;
+      args_index++;
+    } else if (strcmp(args[args_index], "-dump") == 0) {
+      dump = true;
       args_index++;
     } else {
       break;
@@ -96,6 +101,10 @@ int main(int argc, char **argv) {
   const bool ok = kevs_parse(ctx, file, str_from_string(result.val), &table);
   if (!ok) {
     rc = 1;
+  }
+
+  if (dump) {
+    kevs_dump(table);
   }
 
   kevs_free(&table);
