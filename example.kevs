@@ -1,7 +1,7 @@
 # strings
 x = "aa";
 
-# multi-line strings
+# raw strings
 x = `aa
 bb
 cc

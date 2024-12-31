@@ -81,7 +81,7 @@ add_custom_target(
 kevs_test(NAME unittests COMMAND kevs_test)
 kevs_test(NAME valid/comments COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/comments.kevs)
 kevs_test(NAME valid/simple_values COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/simple_values.kevs)
-kevs_test(NAME valid/multiline_string COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/multiline_string.kevs)
+kevs_test(NAME valid/raw_string COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/raw_string.kevs)
 kevs_test(NAME valid/list_one_line COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/list_one_line.kevs)
 kevs_test(NAME valid/table_one_line COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/table_one_line.kevs)
 kevs_test(NAME valid/one_line_kv COMMAND kevs -abort ${CMAKE_SOURCE_DIR}/testdata/valid/one_line_kv.kevs)
@@ -111,9 +111,9 @@ kevs_test(
 )
 
 kevs_test(
-  NAME not_valid/missing_multiline_string_end
-  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_multiline_string_end.kevs
-  PASS_REGEX "scan: multiline string value does not end with quote"
+  NAME not_valid/missing_raw_string_end
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_raw_string_end.kevs
+  PASS_REGEX "scan: raw string value does not end with backtick"
 )
 
 kevs_test(
@@ -135,8 +135,8 @@ kevs_test(
 )
 
 kevs_test(
-  NAME not_valid/missing_semicolon_after_multiline_string
-  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_semicolon_after_multiline_string.kevs
+  NAME not_valid/missing_semicolon_after_raw_string
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/missing_semicolon_after_raw_string.kevs
   PASS_REGEX "scan: value does not end with semicolon"
 )
 

@@ -343,7 +343,7 @@ static const char kKeyValSep = '=';
 static const char kKeyValEnd = ';';
 static const char kCommentBegin = '#';
 static const char kStringBegin = '"';
-static const char kMultilineStringBegin = '`';
+static const char kRawStringBegin = '`';
 static const char kListBegin = '[';
 static const char kListEnd = ']';
 static const char kTableBegin = '{';
@@ -492,12 +492,11 @@ static bool scan_string_value(Scanner *self) {
   return true;
 }
 
-// TODO: handle escapes and unicode
-static bool scan_multiline_string_value(Scanner *self) {
+static bool scan_raw_string(Scanner *self) {
   const int end =
-      str_index_char(str_slice_low(self->content, 1), kMultilineStringBegin);
+      str_index_char(str_slice_low(self->content, 1), kRawStringBegin);
   if (end == -1) {
-    scan_errorf(self, "multiline string value does not end with quote");
+    scan_errorf(self, "raw string value does not end with backtick");
     return false;
   }
   // +2 for leading and trailing quotes
@@ -598,8 +597,8 @@ static bool scan_value(Scanner *self) {
     ok = scan_table_value(self);
   } else if (scanner_expect(self, kStringBegin)) {
     ok = scan_string_value(self);
-  } else if (scanner_expect(self, kMultilineStringBegin)) {
-    ok = scan_multiline_string_value(self);
+  } else if (scanner_expect(self, kRawStringBegin)) {
+    ok = scan_raw_string(self);
   } else {
     ok = scan_int_or_bool_value(self);
   }
@@ -959,7 +958,7 @@ static bool parse_simple_value(Parser *self, Value *out) {
   bool ok = true;
 
   if (str_starts_with_char(val, kStringBegin) ||
-      str_starts_with_char(val, kMultilineStringBegin)) {
+      str_starts_with_char(val, kRawStringBegin)) {
     out->tag = kValueTagString;
     out->data.string = str_slice(val, 1, val.len - 1);
   } else {

@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
   char **args = argv + 1;
 
   if (nargs < 1) {
-    printf("usage: ./kevs [-abort] [-logs] [file]\n");
+    printf("usage: ./kevs [-abort] [-logs] file\n");
     return 1;
   }
 
