@@ -24,8 +24,8 @@ cp -r ${main_corpus_dir}/* ${temp_corpus_dir}/
 LLVM_PROFILE_FILE=${coverage_raw_profile} ./b/kevs_fuzz -max_total_time=${max_time} -create_missing_dirs=1 -artifact_prefix=${fuzz_out_dir} ${temp_corpus_dir}
 
 # generate coverage
-./cov-merge.py ${coverage_raw_profile} -o ${coverage_profile}
-./cov-show.py b/kevs_fuzz -p ${coverage_profile} -s kevs.c -o ${coverage_dir}
+./scripts/cov-merge.py ${coverage_raw_profile} -o ${coverage_profile}
+./scripts/cov-show.py b/kevs_fuzz -p ${coverage_profile} -s kevs.c -o ${coverage_dir}
 
 # merge corpus
 rm -rf ${main_corpus_dir}
