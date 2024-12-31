@@ -385,7 +385,7 @@ static void tokens_add(Tokens *self, Token v) {
 typedef struct {
   Str file;
   Str content;
-  Tokens *tb;
+  Tokens *tokens;
   int line;
   Context ctx;
 } Scanner;
@@ -430,7 +430,7 @@ static void scanner_add(Scanner *self, TokenType type, size_t end) {
       .position.line = self->line,
   };
 
-  tokens_add(self->tb, t);
+  tokens_add(self->tokens, t);
 
   scanner_advance(self, end);
 }
@@ -441,7 +441,7 @@ static void scanner_add_delim(Scanner *self) {
       .value = str_slice(self->content, 0, 1),
       .position.line = self->line,
   };
-  tokens_add(self->tb, t);
+  tokens_add(self->tokens, t);
   scanner_advance(self, 1);
 }
 
@@ -469,6 +469,10 @@ static bool scan_key(Scanner *self) {
     return false;
   }
   scanner_add(self, kTokenKey, end);
+  if (self->tokens->ptr[self->tokens->len - 1].value.len == 0) {
+    scan_errorf(self, "empty key");
+    return false;
+  }
   return true;
 }
 
@@ -631,7 +635,7 @@ static bool scan(Context ctx, Str file, Str content, Tokens *tokens) {
   Scanner s = {
       .file = file,
       .content = content,
-      .tb = tokens,
+      .tokens = tokens,
       .line = 1,
       .ctx = ctx,
   };
@@ -857,7 +861,7 @@ static Token parser_get(const Parser *self) {
   return self->tokens.ptr[self->i];
 }
 
-static void parser_errorf(const Parser *self, const char *fmt, ...) {
+static void parse_errorf(const Parser *self, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   fprintf(stdout, "%s:%d: error: parse: ", self->file.ptr,
@@ -872,7 +876,7 @@ static void parser_errorf(const Parser *self, const char *fmt, ...) {
 
 static bool parser_expect(const Parser *self, TokenType t) {
   if (self->i >= self->tokens.len) {
-    parser_errorf(self, "expected token '%s', have nothing", tokentype_str(t));
+    parse_errorf(self, "expected token '%s', have nothing", tokentype_str(t));
     return false;
   }
   return parser_get(self).type == t;
@@ -949,7 +953,7 @@ static bool parse_table_value(Parser *self, Value *out) {
 
 static bool parse_simple_value(Parser *self, Value *out) {
   if (!parser_expect(self, kTokenValue)) {
-    parser_errorf(self, "expected value token");
+    parse_errorf(self, "expected value token");
     return false;
   }
 
@@ -972,7 +976,7 @@ static bool parse_simple_value(Parser *self, Value *out) {
       StrToIntResult res = str_to_int(val);
       if (res.err != NULL) {
         String s = string_from_str(val);
-        parser_errorf(self, "value is not an integer: %s", res.err);
+        parse_errorf(self, "value is not an integer: %s", res.err);
         string_free(&s);
         ok = false;
       } else {
@@ -1025,16 +1029,12 @@ static bool key_is_valid(Str key) {
 
 static bool parse_key(Parser *self, Str *key) {
   if (!parser_expect(self, kTokenKey)) {
-    parser_errorf(self, "expected key token");
-    return false;
-  }
-  if (parser_get(self).value.len == 0) {
-    parser_errorf(self, "empty key");
+    parse_errorf(self, "expected key token");
     return false;
   }
   if (!key_is_valid(parser_get(self).value)) {
     String s = string_from_str(parser_get(self).value);
-    parser_errorf(self, "key is not a valid identifier: '%s'", s.ptr);
+    parse_errorf(self, "key is not a valid identifier: '%s'", s.ptr);
     string_free(&s);
     return false;
   }

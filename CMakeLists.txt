@@ -200,6 +200,12 @@ kevs_test(
   PASS_REGEX "scan: end of input without table end"
 )
 
+kevs_test(
+  NAME not_valid/empty_key
+  COMMAND kevs ${CMAKE_SOURCE_DIR}/testdata/not_valid/empty_key.kevs
+  PASS_REGEX "scan: empty key"
+)
+
 add_executable(kevs_fuzz kevs_fuzz.c kevs.c)
 target_compile_options(kevs_fuzz
   PUBLIC
