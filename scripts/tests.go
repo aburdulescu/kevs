@@ -18,7 +18,7 @@ import (
 // TODO: use run CLI on fuzzer corpus?
 
 const (
-	outDir = "tests-out"
+	testsOutDir = "tests-out"
 )
 
 var (
@@ -39,14 +39,14 @@ func mainErr() error {
 
 	*buildDir, _ = filepath.Abs(*buildDir)
 
-	if err := run(); err != nil {
+	if err := runIntegrationTests(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func run() error {
+func runIntegrationTests() error {
 	var tests []IntegrationTest
 	err := filepath.WalkDir("testdata", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -93,7 +93,7 @@ func run() error {
 
 	var failed []TestResult
 
-	fmt.Println("tests:")
+	fmt.Println("integration tests:")
 	for _, test := range tests {
 		fmt.Printf("%s %s ", test.name, strings.Repeat(".", maxName-len(test.name)))
 		start := time.Now()
@@ -122,6 +122,27 @@ func run() error {
 		fmt.Print("\n")
 
 		return fmt.Errorf("tests failed")
+	}
+
+	if *coverage {
+		var profiles []string
+		profilesDir := filepath.Join(testsOutDir, "int", "coverage-out", "profraw")
+		err := filepath.WalkDir(profilesDir, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			profiles = append(profiles, path)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		bins := []string{filepath.Join(*buildDir, "kevs")}
+		out := filepath.Join(testsOutDir, "int", "coverage-out")
+		if err := generateCoverage(out, profiles, bins); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -155,7 +176,7 @@ func (t IntegrationTest) runValid() error {
 	cmd := exec.Command(exe, "-abort", "-dump", t.input)
 	cmd.Stdout = out
 	if *coverage {
-		covProfile := filepath.Join(outDir, "int", "coverage-out", "profraw", t.name) + ".profraw"
+		covProfile := filepath.Join(testsOutDir, "int", "coverage-out", "profraw", t.name) + ".profraw"
 		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 	}
 
@@ -197,7 +218,7 @@ func (t IntegrationTest) runNotValid() error {
 	cmd := exec.Command(exe, "-no-err", t.input)
 	cmd.Stdout = out
 	if *coverage {
-		covProfile := filepath.Join(outDir, "int", "coverage-out", "profraw", t.name) + ".profraw"
+		covProfile := filepath.Join(testsOutDir, "int", "coverage-out", "profraw", t.name) + ".profraw"
 		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 	}
 
@@ -220,4 +241,44 @@ func (t IntegrationTest) runNotValid() error {
 	}
 
 	return fmt.Errorf("error: output does not contain '%s'\n", want)
+}
+
+func generateCoverage(outDir string, profiles []string, binaries []string) error {
+	dataFile := filepath.Join(outDir, "coverage.data")
+
+	// merge raw profiles
+	{
+		args := []string{"merge", "-o", dataFile, "-sparse"}
+		args = append(args, profiles...)
+		cmd := exec.Command("llvm-profdata-14", args...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+	}
+
+	// generate HTML report
+	{
+		reportDir := filepath.Join(outDir, "html")
+		args := []string{
+			"show",
+			"-instr-profile", dataFile,
+			"-output-dir", reportDir,
+			"-format=html",
+			"-show-branches=percent",
+			"-show-line-counts=true",
+			"-show-regions=false",
+		}
+		args = append(args, binaries...)
+		args = append(args, "kevs.c")
+		cmd := exec.Command("llvm-cov-14", args...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
