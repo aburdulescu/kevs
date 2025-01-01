@@ -17,10 +17,14 @@ import (
 // TODO: run fuzzer
 // TODO: use run CLI on fuzzer corpus?
 
+const (
+	outDir = "tests-out"
+)
+
 var (
 	buildDir = flag.String("b", "b", "Path to build directory")
-	update   = flag.Bool("update", false, "Update expected output")
-	verbose  = flag.Bool("v", false, "Print test output")
+	update   = flag.Bool("update", false, "Update expected output for integration tests with valid input")
+	coverage = flag.Bool("coverage", false, "Generate code coverage")
 )
 
 func main() {
@@ -43,7 +47,7 @@ func mainErr() error {
 }
 
 func run() error {
-	var tests []Test
+	var tests []IntegrationTest
 	err := filepath.WalkDir("testdata", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -57,7 +61,8 @@ func run() error {
 		}
 
 		name := strings.TrimSuffix(path, ".kevs")
-		expected := name + ".out"
+		name = strings.TrimPrefix(name, "testdata/")
+		expected := filepath.Join("testdata", name+".out")
 
 		if !*update {
 			if _, err := os.Stat(expected); err != nil {
@@ -65,7 +70,7 @@ func run() error {
 			}
 		}
 
-		tests = append(tests, Test{
+		tests = append(tests, IntegrationTest{
 			name:     name,
 			input:    path,
 			expected: expected,
@@ -127,28 +132,32 @@ type TestResult struct {
 	err  error
 }
 
-type Test struct {
+type IntegrationTest struct {
 	name     string
 	input    string
 	expected string
 }
 
-func (t Test) run() error {
-	if strings.HasPrefix(t.name, "testdata/valid") {
+func (t IntegrationTest) run() error {
+	if strings.HasPrefix(t.name, "valid") {
 		return t.runValid()
-	} else if strings.HasPrefix(t.name, "testdata/not_valid") {
+	} else if strings.HasPrefix(t.name, "not_valid") {
 		return t.runNotValid()
 	} else {
 		return fmt.Errorf("unexpected test name: %s", t.name)
 	}
 }
 
-func (t Test) runValid() error {
+func (t IntegrationTest) runValid() error {
 	exe := filepath.Join(*buildDir, "kevs")
 	out := new(bytes.Buffer)
 
 	cmd := exec.Command(exe, "-abort", "-dump", t.input)
 	cmd.Stdout = out
+	if *coverage {
+		covProfile := filepath.Join(outDir, "int", "coverage-out", "profraw", t.name) + ".profraw"
+		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
+	}
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run command: %w", err)
@@ -181,12 +190,16 @@ func (t Test) runValid() error {
 	return nil
 }
 
-func (t Test) runNotValid() error {
+func (t IntegrationTest) runNotValid() error {
 	exe := filepath.Join(*buildDir, "kevs")
 	out := new(bytes.Buffer)
 
 	cmd := exec.Command(exe, "-no-err", t.input)
 	cmd.Stdout = out
+	if *coverage {
+		covProfile := filepath.Join(outDir, "int", "coverage-out", "profraw", t.name) + ".profraw"
+		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
+	}
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run command: %w", err)

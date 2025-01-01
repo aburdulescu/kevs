@@ -5,3 +5,4 @@
 /venv/
 /default.profraw
 /fuzz-out/
+/tests-out/
