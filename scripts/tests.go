@@ -88,6 +88,7 @@ func runIntegrationTests() error {
 			maxName = len(test.name)
 		}
 	}
+	maxName += 2 // for 2 dots
 
 	var total time.Duration
 
