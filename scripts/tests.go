@@ -39,7 +39,80 @@ func mainErr() error {
 
 	*buildDir, _ = filepath.Abs(*buildDir)
 
+	if err := runUnitTests(); err != nil {
+		return err
+	}
+
 	if err := runIntegrationTests(); err != nil {
+		return err
+	}
+
+	globalResult.summary()
+
+	return nil
+}
+
+type GlobalResult struct {
+	total    int
+	failed   []TestResult
+	duration time.Duration
+}
+
+func (g *GlobalResult) add(name string, err error, dur time.Duration) {
+	g.total++
+	if err != nil {
+		g.failed = append(g.failed, TestResult{name: name, err: err})
+	}
+	g.duration += dur
+}
+
+func (g GlobalResult) summary() {
+	fmt.Printf("\nsummary:\nran %d tests in %s, %d failed\n", g.total, g.duration, len(g.failed))
+	if len(g.failed) != 0 {
+		fmt.Println("\nfailures:")
+		for _, r := range g.failed {
+			fmt.Println(r.name)
+			fmt.Println(" ", r.err)
+		}
+		fmt.Print("\n")
+	}
+}
+
+var globalResult GlobalResult
+
+func runUnitTests() error {
+	// run
+	exe := filepath.Join(*buildDir, "kevs_test")
+	out := new(bytes.Buffer)
+	covProfile := filepath.Join(testsOutDir, "unit", "coverage", "coverage.profraw")
+
+	cmd := exec.Command(exe)
+	cmd.Stdout = out
+	if *coverage {
+		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
+	}
+
+	fmt.Print("unit tests .. ")
+
+	start := time.Now()
+	err := cmd.Run()
+	end := time.Now()
+	dur := end.Sub(start)
+
+	if err == nil {
+		fmt.Print("passed")
+	} else {
+		fmt.Print("failed")
+	}
+	fmt.Printf(" %s\n\n", dur)
+
+	globalResult.add("unittests", err, dur)
+
+	// coverage
+	profiles := []string{covProfile}
+	bins := []string{filepath.Join(*buildDir, "kevs_test")}
+	coverageOut := filepath.Join(testsOutDir, "unit", "coverage")
+	if err := generateCoverage(coverageOut, profiles, bins); err != nil {
 		return err
 	}
 
@@ -90,44 +163,25 @@ func runIntegrationTests() error {
 	}
 	maxName += 2 // for 2 dots
 
-	var total time.Duration
-
-	var failed []TestResult
-
 	fmt.Println("integration tests:")
 	for _, test := range tests {
 		fmt.Printf("%s %s ", test.name, strings.Repeat(".", maxName-len(test.name)))
 		start := time.Now()
 		err := test.run()
 		end := time.Now()
+		dur := end.Sub(start)
+		globalResult.add(test.name, err, dur)
 		if err != nil {
 			fmt.Print("failed")
-			failed = append(failed, TestResult{name: test.name, err: err})
 		} else {
 			fmt.Print("passed")
 		}
-		e := end.Sub(start)
-		total += e
-		fmt.Printf("  %s\n", e)
-	}
-
-	fmt.Printf("\nsummary:\nran %d tests in %s, %d failed\n", len(tests), total, len(failed))
-
-	if len(failed) != 0 {
-		fmt.Println("\nfailures:")
-
-		for _, r := range failed {
-			fmt.Println(r.name)
-			fmt.Println(" ", r.err)
-		}
-		fmt.Print("\n")
-
-		return fmt.Errorf("tests failed")
+		fmt.Printf("  %s\n", dur)
 	}
 
 	if *coverage {
 		var profiles []string
-		profilesDir := filepath.Join(testsOutDir, "int", "coverage-out", "profraw")
+		profilesDir := filepath.Join(testsOutDir, "int", "coverage", "profraw")
 		err := filepath.WalkDir(profilesDir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
@@ -140,7 +194,7 @@ func runIntegrationTests() error {
 		}
 
 		bins := []string{filepath.Join(*buildDir, "kevs")}
-		out := filepath.Join(testsOutDir, "int", "coverage-out")
+		out := filepath.Join(testsOutDir, "int", "coverage")
 		if err := generateCoverage(out, profiles, bins); err != nil {
 			return err
 		}
@@ -177,7 +231,7 @@ func (t IntegrationTest) runValid() error {
 	cmd := exec.Command(exe, "-abort", "-dump", t.input)
 	cmd.Stdout = out
 	if *coverage {
-		covProfile := filepath.Join(testsOutDir, "int", "coverage-out", "profraw", t.name) + ".profraw"
+		covProfile := filepath.Join(testsOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
 		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 	}
 
@@ -219,7 +273,7 @@ func (t IntegrationTest) runNotValid() error {
 	cmd := exec.Command(exe, "-no-err", t.input)
 	cmd.Stdout = out
 	if *coverage {
-		covProfile := filepath.Join(testsOutDir, "int", "coverage-out", "profraw", t.name) + ".profraw"
+		covProfile := filepath.Join(testsOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
 		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 	}
 
