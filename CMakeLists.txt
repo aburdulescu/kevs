@@ -35,51 +35,6 @@ endif()
 
 add_executable(kevs_test kevs_test.c kevs.c)
 
-enable_testing()
-
-function(kevs_test)
-  set(options )
-  set(oneValueArgs NAME PASS_REGEX)
-  set(multiValueArgs COMMAND)
-  cmake_parse_arguments(arg "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-
-  if(NOT arg_NAME)
-    message(FATAL_ERROR "Need NAME")
-  endif()
-  if(NOT arg_COMMAND)
-    message(FATAL_ERROR "Need COMMAND")
-  endif()
-
-  add_test(
-    NAME ${arg_NAME}
-    COMMAND ${arg_COMMAND}
-  )
-
-  if(arg_PASS_REGEX)
-    set_property(
-      TEST ${arg_NAME}
-      PROPERTY
-      PASS_REGULAR_EXPRESSION ${arg_PASS_REGEX})
-  endif()
-
-  if(COV)
-    set_property(
-      TEST ${arg_NAME}
-      PROPERTY
-      ENVIRONMENT "LLVM_PROFILE_FILE=${CMAKE_CURRENT_BINARY_DIR}/${arg_NAME}.profraw"
-    )
-  endif()
-endfunction()
-
-add_custom_target(
-  cov
-  COMMENT "Generate coverage report"
-  COMMAND ${CMAKE_SOURCE_DIR}/scripts/cov-merge.py ${CMAKE_BINARY_DIR}/*.profraw
-  COMMAND ${CMAKE_SOURCE_DIR}/scripts/cov-show.py ${CMAKE_BINARY_DIR}/kevs_test -s ${CMAKE_SOURCE_DIR}/kevs.c
-)
-
-kevs_test(NAME unittests COMMAND kevs_test)
-
 add_executable(kevs_fuzz kevs_fuzz.c kevs.c)
 target_compile_options(kevs_fuzz
   PUBLIC
