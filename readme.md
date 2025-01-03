@@ -1,4 +1,4 @@
-# `k=v;` -> kevs -> key equals value semicolon
+# `k = v;` -> kevs -> key equals value semicolon
 
 ## DISCLAIMER!!!
 
