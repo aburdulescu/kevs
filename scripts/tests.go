@@ -12,10 +12,8 @@ import (
 	"time"
 )
 
-// TODO: run unittests
-// TODO: collect and generate coverage
-// TODO: run fuzzer
-// TODO: use run CLI on fuzzer corpus?
+// TODO: run fuzzer?
+// TODO: run CLI on fuzzer corpus?
 
 const (
 	testsOutDir = "tests-out"

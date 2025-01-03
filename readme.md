@@ -1,4 +1,4 @@
-# KEVS/`k=v;`/Key Equals Value Semicolon
+# `k=v;` -> kevs -> key equals value semicolon
 
 ## DISCLAIMER!!!
 
@@ -87,7 +87,7 @@ y = [1; 2; 3; ];
 ```
 x = {
   a = 23;
-  b = "42"";
+  b = "42";
 };
 
 y = {foo = true; bar = 0xcafe; };
