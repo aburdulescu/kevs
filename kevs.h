@@ -76,11 +76,7 @@ typedef struct {
 // Str
 Str str_from_cstring(const char *s);
 Str str_from_string(String s);
-bool str_starts_with_char(Str self, char c);
 int str_index_char(Str self, char c);
-int str_index_chars(Str self, Str chars);
-bool str_equals(Str self, Str other);
-bool str_equals_char(Str self, char c);
 Str str_slice_low(Str self, size_t low);
 Str str_slice_high(Str self, size_t high);
 Str str_slice(Str self, size_t low, size_t high);
@@ -91,10 +87,8 @@ StrToUintResult str_to_uint(Str self);
 StrToIntResult str_to_int(Str self);
 
 // String
-void string_reserve(String *self, size_t cap);
 void string_resize(String *self, size_t len);
 void string_free(String *self);
-String string_from_str(Str s);
 
 // kevs
 bool kevs_parse(Context ctx, Str file, Str content, Table *table);

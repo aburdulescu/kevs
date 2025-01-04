@@ -59,7 +59,7 @@ Str str_from_string(String s) {
   return self;
 }
 
-bool str_starts_with_char(Str self, char c) {
+static bool str_starts_with_char(Str self, char c) {
   if (self.len < 1) {
     return false;
   }
@@ -74,13 +74,14 @@ int str_index_char(Str self, char c) {
   return (int)(ptr - self.ptr);
 }
 
-int str_index_chars(Str self, Str chars) {
+static size_t str_count_char(Str self, char c) {
+  size_t count = 0;
   for (size_t i = 0; i < self.len; i++) {
-    if (str_index_char(chars, self.ptr[i]) != -1) {
-      return (int)i;
+    if (self.ptr[i] == c) {
+      count++;
     }
   }
-  return -1;
+  return count;
 }
 
 int str_index_any(Str self, Str chars, char *c) {
@@ -94,14 +95,14 @@ int str_index_any(Str self, Str chars, char *c) {
   return -1;
 }
 
-bool str_equals(Str self, Str other) {
+static bool str_equals(Str self, Str other) {
   if (self.len != other.len) {
     return false;
   }
   return memcmp(self.ptr, other.ptr, self.len) == 0;
 }
 
-bool str_equals_char(Str self, char c) {
+static bool str_equals_char(Str self, char c) {
   if (self.len != 1) {
     return false;
   }
@@ -290,7 +291,7 @@ StrToIntResult str_to_int(Str self) {
   return result;
 }
 
-void string_reserve(String *self, size_t cap) {
+static void string_reserve(String *self, size_t cap) {
   self->ptr = realloc(self->ptr, sizeof(char) * cap + 1);
   self->cap = cap;
   self->ptr[self->len] = 0;
@@ -306,7 +307,7 @@ void string_free(String *self) {
   *self = (String){};
 }
 
-String string_from_str(Str s) {
+static String string_from_str(Str s) {
   String self = {
       .ptr = malloc(s.len + 1),
       .cap = s.len,
@@ -503,8 +504,14 @@ static bool scan_raw_string(Scanner *self) {
     scan_errorf(self, "raw string value does not end with backtick");
     return false;
   }
+
   // +2 for leading and trailing quotes
   scanner_add(self, kTokenValue, end + 2);
+
+  // count newlines in raw string to keep line count accurate
+  self->line +=
+      (int)str_count_char(self->tokens->ptr[self->tokens->len - 1].value, '\n');
+
   return true;
 }
 
