@@ -935,7 +935,7 @@ static bool parse_simple_value(Parser *self, Value *out) {
       StrToIntResult res = str_to_int(val);
       if (res.err != NULL) {
         String s = string_from_str(val);
-        parse_errorf(self, "value is not an integer: %s", res.err);
+        parse_errorf(self, "value '%s' is not an integer: %s", s.ptr, res.err);
         string_free(&s);
         ok = false;
       } else {

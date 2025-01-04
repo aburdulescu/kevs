@@ -7,22 +7,32 @@ bb
 cc
 `;
 
-# numbers: integer, hex, oct, bin
-x = 42;
-x = +42;
-x = -42;
-x = 0x42;
-x = 0o52;
-x = 0b101010;
+# numbers
+x = 42;        # integer
+x = +42;       # positive integer
+x = -42;       # negative integer
+x = 0x42;      # hex
+x = 0o52;      # octal
+x = 0b101010;  # binary
 
 # boolean
 x = true;
+x = false;
 
 # list
 x = [1; 2; 3;];
+x = [
+  "one";
+  "two";
+  "three";
+];
 
 # table
 x = {x = "aa"; y = false; z = 42;};
+person = {
+  name = "John";
+  age = 23;
+};
 
 # combined
 x = [
