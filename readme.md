@@ -93,9 +93,10 @@ x = {
 y = {foo = true; bar = 0xcafe; };
 ```
 
-## Example
+## Examples
 
-See [example](./example.kevs).
+- Basic example: [example.kevs](./examples/example.kevs).
+- [TOML example](./examples/toml.toml) from toml.io compared with its [KEVS equivalent](./examples/toml.kevs)
 
 ## Possible FAQ
 

@@ -1,0 +1,39 @@
+# This is a KEVS document
+
+title = "KEVS Example";
+
+owner = {
+  name = "The guy who wrote it";
+
+  # no date/time support, just a string which can be parsed by the application
+  dob = "1984-01-01T05:42:00-08:00";
+};
+
+database = {
+  enabled = true;
+  ports = [ 8000; 8001; 8002; ];
+  data = [
+    [ "delta"; "phi"; ];
+    [ 314; ]; # no floats => 314 = 3.14 * 100
+  ];
+
+  # no floats => use integers multiplied by 10^precision
+  temp_targets = {
+    cpu = 795;  # = 79.5 * 10
+    case = 720; # = 72.0 * 10
+  };
+};
+
+servers = {
+
+  alpha = {
+    ip = "10.0.0.1";
+    role = "frontend";
+  };
+
+  beta = {
+    ip = "10.0.0.2";
+    role = "backend";
+  };
+
+};
