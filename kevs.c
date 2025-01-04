@@ -964,17 +964,8 @@ static bool parse_key(Parser *self, Table parent, Str *key) {
     }
   }
   if (!is_unique) {
-    int prev_ln = -1;
-    for (size_t i = 0; i < self->tokens.len; i++) {
-      Token tok = self->tokens.ptr[i];
-      if (tok.type == kTokenKey && str_equals(tok.value, temp)) {
-        prev_ln = tok.position.line;
-        break;
-      }
-    }
     String s = string_from_str(temp);
-    parse_errorf(self, "key '%s' is not unique, previous definition on line %d",
-                 s.ptr, prev_ln);
+    parse_errorf(self, "key '%s' is not unique for current table", s.ptr);
     string_free(&s);
     return false;
   }
