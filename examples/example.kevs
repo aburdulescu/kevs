@@ -1,41 +1,41 @@
 # strings
-x = "aa";
+str = "aa";
 
 # raw strings
-x = `aa
+raw_str = `aa
 bb
 cc
 `;
 
 # numbers
-x = 42;        # integer
-x = +42;       # positive integer
-x = -42;       # negative integer
-x = 0x42;      # hex
-x = 0o52;      # octal
-x = 0b101010;  # binary
+int = 42;            # integer
+int_pos = +42;       # positive integer
+int_neg = -42;       # negative integer
+int_hex = 0x42;      # hex
+int_oct = 0o52;      # octal
+int_bin = 0b101010;  # binary
 
 # boolean
-x = true;
-x = false;
+bool = true;
+bool_other = false;
 
 # list
-x = [1; 2; 3;];
-x = [
+list1 = [1; 2; 3;];
+list2 = [
   "one";
   "two";
   "three";
 ];
 
 # table
-x = {x = "aa"; y = false; z = 42;};
-person = {
+table1 = {x = "aa"; y = false; z = 42;};
+table2 = {
   name = "John";
   age = 23;
 };
 
 # combined
-x = [
+combined = [
   {s = "1"; i = 1; b = true; l = ["a"; "b"; "c";];};
   {s = "2"; i = 2; b = false; l = ["m"; "n"; "o";];};
   {s = "3"; i = 3; b = true; l = ["x"; "y"; "z";];};

@@ -675,11 +675,8 @@ static const char *valuetag_str(ValueTag v) {
   }
 }
 
-static bool table_check(Table self);
-
 static void list_free(List *self);
 static void list_dump(List self);
-static bool list_check(List self);
 
 static void value_free(Value *self) {
   switch (self->tag) {
@@ -696,17 +693,6 @@ static void value_free(Value *self) {
   }
 
   *self = (Value){};
-}
-
-static bool value_check(Value self) {
-  switch (self.tag) {
-  case kValueTagList:
-    return list_check(self.data.list);
-  case kValueTagTable:
-    return table_check(self.data.table);
-  default:
-    return true;
-  }
 }
 
 static void list_free(List *self) {
@@ -764,38 +750,6 @@ static void list_dump(List self) {
   }
 }
 
-// check that the list elements have the same type
-static bool list_check(List self) {
-  if (self.len == 0) {
-    return true;
-  }
-  // TODO: test with nested lists/tables
-  ValueTag t = self.ptr[0].tag;
-  for (size_t i = 1; i < self.len; i++) {
-    if (self.ptr[i].tag != t) {
-      ERROR("first element is %s, element #%zu is %s", valuetag_str(t), i,
-            valuetag_str(self.ptr[i].tag));
-      return false;
-    }
-    if (self.ptr[i].tag == kValueTagList || self.ptr[i].tag == kValueTagTable) {
-      if (!value_check(self.ptr[i])) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-static bool table_check(Table self) {
-  for (size_t i = 0; i < self.len; i++) {
-    // TODO: check if key is unique
-    if (!value_check(self.ptr[i].val)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 static void table_add(Table *self, KeyValue v) {
   if (self->len == self->cap) {
     self->cap = (self->cap + 1) * 2;
@@ -814,7 +768,7 @@ typedef struct {
 } Parser;
 
 static bool parse_value(Parser *self, Value *out);
-static bool parse_key_value(Parser *self, KeyValue *out);
+static bool parse_key_value(Parser *self, Table parent, KeyValue *out);
 
 static Token parser_get(const Parser *self) {
   return self->tokens.ptr[self->i];
@@ -897,7 +851,7 @@ static bool parse_table_value(Parser *self, Value *out) {
     }
 
     KeyValue kv = {};
-    if (!parse_key_value(self, &kv)) {
+    if (!parse_key_value(self, out->data.table, &kv)) {
       return false;
     }
     table_add(&out->data.table, kv);
@@ -986,7 +940,7 @@ static bool key_is_valid(Str key) {
   return true;
 }
 
-static bool parse_key(Parser *self, Str *key) {
+static bool parse_key(Parser *self, Table parent, Str *key) {
   if (!parser_expect(self, kTokenKey)) {
     parse_errorf(self, "expected key token");
     return false;
@@ -997,13 +951,44 @@ static bool parse_key(Parser *self, Str *key) {
     string_free(&s);
     return false;
   }
-  *key = parser_pop(self).value;
+
+  // check if key is unique
+  Str temp = parser_get(self).value;
+  bool is_unique = true;
+  {
+    for (size_t i = 0; i < parent.len; i++) {
+      if (str_equals(parent.ptr[i].key, temp)) {
+        is_unique = false;
+        break;
+      }
+    }
+  }
+  if (!is_unique) {
+    int prev_ln = -1;
+    for (size_t i = 0; i < self->tokens.len; i++) {
+      Token tok = self->tokens.ptr[i];
+      if (tok.type == kTokenKey && str_equals(tok.value, temp)) {
+        prev_ln = tok.position.line;
+        break;
+      }
+    }
+    String s = string_from_str(temp);
+    parse_errorf(self, "key '%s' is not unique, previous definition on line %d",
+                 s.ptr, prev_ln);
+    string_free(&s);
+    return false;
+  }
+
+  *key = temp;
+
+  parser_pop(self);
+
   return true;
 }
 
-static bool parse_key_value(Parser *self, KeyValue *out) {
+static bool parse_key_value(Parser *self, Table parent, KeyValue *out) {
   Str key = {};
-  if (!parse_key(self, &key)) {
+  if (!parse_key(self, parent, &key)) {
     return false;
   }
 
@@ -1034,7 +1019,7 @@ bool parse(Context ctx, Str file, Tokens tokens, Table *table) {
 
   while (p.i < tokens.len) {
     KeyValue kv = {};
-    if (!parse_key_value(&p, &kv)) {
+    if (!parse_key_value(&p, *table, &kv)) {
       return false;
     }
     table_add(p.table, kv);
@@ -1065,9 +1050,6 @@ bool kevs_parse(Context ctx, Str file, Str content, Table *table) {
     ok = parse(ctx, file, tokens, table);
     if (!ok) {
       ERROR("parser failed");
-    }
-    if (!table_check(*table)) {
-      ERROR("type check failed");
     }
   }
 
