@@ -53,12 +53,16 @@ static ReadFileResult read_file(Str path) {
   return result;
 }
 
+static void usage() {
+  fprintf(stderr, "usage: ./kevs [-abort] [-logs] [-dump] [-no-err] file\n");
+}
+
 int main(int argc, char **argv) {
   const int nargs = argc - 1;
   char **args = argv + 1;
 
   if (nargs < 1) {
-    printf("usage: ./kevs [-abort] [-logs] [-dump] [-no-err] file\n");
+    usage();
     return 1;
   }
 
@@ -81,6 +85,10 @@ int main(int argc, char **argv) {
     } else if (strcmp(args[args_index], "-no-err") == 0) {
       pass_on_error = true;
       args_index++;
+    } else if (strlen(args[args_index]) > 0 && args[args_index][0] == '-') {
+      fprintf(stderr, "error: unknown option '%s'\n", args[args_index]);
+      usage();
+      return 1;
     } else {
       break;
     }
