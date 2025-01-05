@@ -307,7 +307,7 @@ void string_free(String *self) {
   *self = (String){};
 }
 
-static String string_from_str(Str s) {
+String string_from_str(Str s) {
   String self = {
       .ptr = malloc(s.len + 1),
       .cap = s.len,
@@ -1105,4 +1105,38 @@ void kevs_dump(Table self) {
 
     string_free(&k);
   }
+}
+
+bool value_is(Value self, ValueTag tag) { return self.tag == tag; }
+
+bool table_get(Table self, Str key, Value *val) {
+  for (size_t i = 0; i < self.len; i++) {
+    if (str_equals(self.ptr[i].key, key)) {
+      *val = self.ptr[i].val;
+      return true;
+    }
+  }
+  return false;
+}
+
+Error kevs_get_str(Table self, Str key, Str *out) {
+  Value val = {};
+  if (!table_get(self, key, &val)) {
+    return "key not found";
+  }
+  if (!value_is(val, kValueTagString)) {
+    return "value is not string";
+  }
+  *out = val.data.string;
+  return NULL;
+}
+
+Error kevs_get_string(Table self, Str key, String *out) {
+  Str val = {};
+  Error err = kevs_get_str(self, key, &val);
+  if (err != NULL) {
+    return err;
+  }
+  *out = string_from_str(val);
+  return NULL;
 }

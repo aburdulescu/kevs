@@ -5,13 +5,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// Error: static null terminated string
 typedef const char *Error;
 
+// Str: non owning string, like Go/Rust Slice/C++ std::string_view
 typedef struct {
   const char *ptr;
   size_t len;
 } Str;
 
+// String: owning string, like Rust String/C++ std::string
 typedef struct {
   char *ptr;
   size_t cap;
@@ -87,6 +90,7 @@ StrToUintResult str_to_uint(Str self);
 StrToIntResult str_to_int(Str self);
 
 // String
+String string_from_str(Str s);
 void string_resize(String *self, size_t len);
 void string_free(String *self);
 
@@ -94,5 +98,7 @@ void string_free(String *self);
 bool kevs_parse(Context ctx, Str file, Str content, Table *table);
 void kevs_free(Table *self);
 void kevs_dump(Table self);
+Error kevs_get_str(Table self, Str key, Str *out);
+Error kevs_get_string(Table self, Str key, String *out);
 
 #endif

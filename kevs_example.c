@@ -52,53 +52,8 @@ static ReadFileResult read_file(Str path) {
   return result;
 }
 
-static void usage() {
-  fprintf(stderr, "usage: ./kevs [-abort] [-logs] [-dump] [-no-err] file\n");
-}
-
-int main(int argc, char **argv) {
-  const int nargs = argc - 1;
-  char **args = argv + 1;
-
-  if (nargs < 1) {
-    usage();
-    return 1;
-  }
-
-  Context ctx = {};
-
-  bool dump = false;
-  bool pass_on_error = false;
-
-  int args_index = 0;
-  while (args_index < nargs) {
-    if (strcmp(args[args_index], "-abort") == 0) {
-      ctx.abort_on_error = true;
-      args_index++;
-    } else if (strcmp(args[args_index], "-logs") == 0) {
-      ctx.enable_logs = true;
-      args_index++;
-    } else if (strcmp(args[args_index], "-dump") == 0) {
-      dump = true;
-      args_index++;
-    } else if (strcmp(args[args_index], "-no-err") == 0) {
-      pass_on_error = true;
-      args_index++;
-    } else if (strlen(args[args_index]) > 0 && args[args_index][0] == '-') {
-      fprintf(stderr, "error: unknown option '%s'\n", args[args_index]);
-      usage();
-      return 1;
-    } else {
-      break;
-    }
-  }
-
-  Str file = str_from_cstring(args[args_index]);
-
-  if (ctx.enable_logs) {
-    printf("file=%s, abort=%d, logs=%d, dump=%d, no-err=%d\n", file.ptr,
-           ctx.abort_on_error, ctx.enable_logs, dump, pass_on_error);
-  }
+int main() {
+  Str file = str_from_cstring("examples/example.kevs");
 
   ReadFileResult result = read_file(file);
   if (result.err != NULL) {
@@ -108,20 +63,25 @@ int main(int argc, char **argv) {
 
   int rc = 0;
 
+  Context ctx = {};
   Table table = {};
   const bool ok = kevs_parse(ctx, file, str_from_string(result.val), &table);
   if (!ok) {
-    if (!pass_on_error) {
-      rc = 1;
-    }
+    rc = 1;
   }
 
-  if (dump) {
-    kevs_dump(table);
+  const Str key = str_from_cstring("str");
+  String val = {};
+  Error err = kevs_get_string(table, key, &val);
+  if (err != NULL) {
+    fprintf(stderr, "error: %s\n", err);
+    rc = 1;
   }
 
+  printf("%s = '%s'\n", key.ptr, val.ptr);
+
+  string_free(&val);
   kevs_free(&table);
-
   string_free(&result.val);
 
   return rc;

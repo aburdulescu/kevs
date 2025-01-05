@@ -47,3 +47,5 @@ target_link_options(kevs_fuzz
   PUBLIC
   -fsanitize=undefined,address,fuzzer
 )
+
+add_executable(kevs_example kevs_example.c kevs.c)
