@@ -1140,3 +1140,27 @@ Error kevs_get_string(Table self, Str key, String *out) {
   *out = string_from_str(val);
   return NULL;
 }
+
+Error kevs_get_int(Table self, Str key, int64_t *out) {
+  Value val = {};
+  if (!table_get(self, key, &val)) {
+    return "key not found";
+  }
+  if (!value_is(val, kValueTagInteger)) {
+    return "value is not integer";
+  }
+  *out = val.data.integer;
+  return NULL;
+}
+
+Error kevs_get_bool(Table self, Str key, bool *out) {
+  Value val = {};
+  if (!table_get(self, key, &val)) {
+    return "key not found";
+  }
+  if (!value_is(val, kValueTagBoolean)) {
+    return "value is not boolean";
+  }
+  *out = val.data.boolean;
+  return NULL;
+}

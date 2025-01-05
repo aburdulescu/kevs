@@ -100,5 +100,7 @@ void kevs_free(Table *self);
 void kevs_dump(Table self);
 Error kevs_get_str(Table self, Str key, Str *out);
 Error kevs_get_string(Table self, Str key, String *out);
+Error kevs_get_int(Table self, Str key, int64_t *out);
+Error kevs_get_bool(Table self, Str key, bool *out);
 
 #endif
