@@ -34,19 +34,17 @@ func main() {
 
 func mainErr() error {
 	flag.Parse()
-
 	*buildDir, _ = filepath.Abs(*buildDir)
-
 	if err := runUnitTests(); err != nil {
 		return err
 	}
-
+	if err := runExample(); err != nil {
+		return err
+	}
 	if err := runIntegrationTests(); err != nil {
 		return err
 	}
-
 	globalResult.summary()
-
 	return nil
 }
 
@@ -77,6 +75,29 @@ func (g GlobalResult) summary() {
 }
 
 var globalResult GlobalResult
+
+func runExample() error {
+	exe := filepath.Join(*buildDir, "kevs_example")
+	cmd := exec.Command(exe)
+
+	fmt.Print("example .. ")
+
+	start := time.Now()
+	err := cmd.Run()
+	end := time.Now()
+	dur := end.Sub(start)
+
+	if err == nil {
+		fmt.Print("passed")
+	} else {
+		fmt.Print("failed")
+	}
+	fmt.Printf(" %s\n\n", dur)
+
+	globalResult.add("example", err, dur)
+
+	return nil
+}
 
 func runUnitTests() error {
 	// run

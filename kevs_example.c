@@ -70,42 +70,37 @@ int main() {
     rc = 1;
   }
 
-  Str key = {};
-
   {
-    key = str_from_cstring("str");
     String val = {};
-    Error err = kevs_get_string(table, key, &val);
+    Error err = kevs_get_string(table, str_from_cstring("str"), &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
     } else {
-      printf("%s = '%s'\n", key.ptr, val.ptr);
+      printf("'%s'\n", val.ptr);
     }
     string_free(&val);
   }
 
   {
-    key = str_from_cstring("int");
     int64_t val = 0;
-    Error err = kevs_get_int(table, key, &val);
+    Error err = kevs_get_int(table, str_from_cstring("int"), &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
     } else {
-      printf("%s = %ld\n", key.ptr, val);
+      printf("%ld\n", val);
     }
   }
 
   {
-    key = str_from_cstring("bool");
     bool val = 0;
-    Error err = kevs_get_bool(table, key, &val);
+    Error err = kevs_get_bool(table, str_from_cstring("bool"), &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
     } else {
-      printf("%s = %s\n", key.ptr, (val ? "true" : "false"));
+      printf("%s\n", (val ? "true" : "false"));
     }
   }
 
