@@ -118,3 +118,7 @@ Most likely not :).
 ### Where are the float numbers?
 
 There aren't any. At the moment, I don't see their need. Don't want to complicate the code.
+
+You can store them as integers then convert them back yourself: `f = 123.45 => i = f*100 => f = i/100`.
+
+Or, store them as string and parse them in your application.
