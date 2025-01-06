@@ -9,47 +9,42 @@
 
 #include "kevs.h"
 
-typedef struct ReadFileResult {
-  String val;
-  Error err;
-} ReadFileResult;
-
-static ReadFileResult read_file(Str path) {
-  ReadFileResult result = {};
-
+static Error read_file(Str path, String *out) {
   int fd = open(path.ptr, O_RDONLY);
   if (fd == -1) {
-    result.err = strerror(errno);
-    return result;
+    return strerror(errno);
   }
+
+  Error err = NULL;
+  String content = {};
 
   struct stat stbuf = {};
   if (fstat(fd, &stbuf) == -1) {
-    result.err = strerror(errno);
-    close(fd);
-    return result;
+    err = strerror(errno);
+    goto cleanup;
   }
 
-  String content = {};
   string_resize(&content, stbuf.st_size);
 
   ssize_t nread = read(fd, content.ptr, content.len);
   if (nread == -1) {
-    result.err = strerror(errno);
-    string_free(&content);
-    close(fd);
-    return result;
+    err = strerror(errno);
+    goto cleanup;
   }
   if ((size_t)nread != content.len) {
-    result.err = "short read";
-    string_free(&content);
-    close(fd);
-    return result;
+    err = "short read";
+    goto cleanup;
   }
 
-  result.val = content;
+  *out = content;
 
-  return result;
+cleanup:
+  if (err != NULL) {
+    string_free(&content);
+  }
+  close(fd);
+
+  return err;
 }
 
 static void usage() {
@@ -100,16 +95,17 @@ int main(int argc, char **argv) {
            ctx.abort_on_error, ctx.enable_logs, dump, pass_on_error);
   }
 
-  ReadFileResult result = read_file(file);
-  if (result.err != NULL) {
-    fprintf(stderr, "error: failed to read file: %s\n", result.err);
+  String data = {};
+  Error err = read_file(file, &data);
+  if (err != NULL) {
+    fprintf(stderr, "error: failed to read file: %s\n", err);
     return 1;
   }
 
   int rc = 0;
 
   Table table = {};
-  const bool ok = table_parse(&table, ctx, file, str_from_string(result.val));
+  const bool ok = table_parse(&table, ctx, file, str_from_string(data));
   if (!ok) {
     if (!pass_on_error) {
       rc = 1;
@@ -121,8 +117,7 @@ int main(int argc, char **argv) {
   }
 
   table_free(&table);
-
-  string_free(&result.val);
+  string_free(&data);
 
   return rc;
 }

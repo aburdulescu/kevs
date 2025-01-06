@@ -164,25 +164,21 @@ Str str_trim(Str self, Str cutset) {
   return self;
 }
 
-StrToUintResult str_to_uint(Str self) {
-  StrToUintResult result = {};
-
+Error str_to_uint(Str self, uint64_t *out) {
   if (self.len == 0) {
-    result.err = "empty input";
-    return result;
+    return "empty input";
   }
 
   uint64_t base = 10;
   if (self.ptr[0] == '0') {
     // stop if 0
     if (self.len == 1) {
-      result.value = 0;
-      return result;
+      *out = 0;
+      return NULL;
     }
 
     if (self.len < 3) {
-      result.err = "leading 0 requires at least 2 more chars";
-      return result;
+      return "leading 0 requires at least 2 more chars";
     }
 
     switch (self.ptr[1]) {
@@ -199,8 +195,7 @@ StrToUintResult str_to_uint(Str self) {
       self = str_slice_low(self, 2);
     } break;
     default:
-      result.err = "invalid base char, must be 'x', 'o' or 'b'";
-      return result;
+      return "invalid base char, must be 'x', 'o' or 'b'";
     }
   }
 
@@ -219,40 +214,33 @@ StrToUintResult str_to_uint(Str self) {
     } else if (is_letter(c)) {
       d = lower(c) - 'a' + 10;
     } else {
-      result.err = "invalid char, must be a letter or a digit";
-      return result;
+      return "invalid char, must be a letter or a digit";
     }
 
     if (d >= base) {
-      result.err = "invalid digit, bigger than base";
-      return result;
+      return "invalid digit, bigger than base";
     }
 
     if (n >= cutoff) {
-      result.err = "invalid input, mul overflows";
-      return result;
+      return "invalid input, mul overflows";
     }
     n *= base;
 
     const uint64_t n1 = n + d;
     if (n1 < n || n1 > max) {
-      result.err = "invalid input, add overflows";
-      return result;
+      return "invalid input, add overflows";
     }
     n = n1;
   }
 
-  result.value = n;
+  *out = n;
 
-  return result;
+  return NULL;
 }
 
-StrToIntResult str_to_int(Str self) {
-  StrToIntResult result = {};
-
+Error str_to_int(Str self, int64_t *out) {
   if (self.len == 0) {
-    result.err = "empty input";
-    return result;
+    return "empty input";
   }
 
   bool neg = false;
@@ -263,22 +251,19 @@ StrToIntResult str_to_int(Str self) {
     self = str_slice_low(self, 1);
   }
 
-  StrToUintResult uresult = str_to_uint(self);
-  if (uresult.err != NULL) {
-    result.err = uresult.err;
-    return result;
+  uint64_t un = 0;
+  Error err = str_to_uint(self, &un);
+  if (err != NULL) {
+    return err;
   }
 
-  const uint64_t un = uresult.value;
   const uint64_t max = (uint64_t)1 << 63;
 
   if (!neg && un >= max) {
-    result.err = "invalid input, overflows max value";
-    return result;
+    return "invalid input, overflows max value";
   }
   if (neg && un > max) {
-    result.err = "invalid input, underflows min value";
-    return result;
+    return "invalid input, underflows min value";
   }
 
   int64_t n = (int64_t)un;
@@ -286,9 +271,9 @@ StrToIntResult str_to_int(Str self) {
     n = -n;
   }
 
-  result.value = n;
+  *out = n;
 
-  return result;
+  return NULL;
 }
 
 static void string_reserve(String *self, size_t cap) {
@@ -893,15 +878,16 @@ static bool parse_simple_value(Parser *self, Value *out) {
       out->tag = kValueTagBoolean;
       out->data.boolean = false;
     } else {
-      StrToIntResult res = str_to_int(val);
-      if (res.err != NULL) {
+      int64_t i = 0;
+      Error err = str_to_int(val, &i);
+      if (err != NULL) {
         String s = string_from_str(val);
-        parse_errorf(self, "value '%s' is not an integer: %s", s.ptr, res.err);
+        parse_errorf(self, "value '%s' is not an integer: %s", s.ptr, err);
         string_free(&s);
         ok = false;
       } else {
         out->tag = kValueTagInteger;
-        out->data.integer = res.value;
+        out->data.integer = i;
       }
     }
   }
@@ -1107,9 +1093,10 @@ void table_dump(Table self) {
 
 static bool value_is(Value self, ValueTag tag) { return self.tag == tag; }
 
-static Error table_get(Table self, Str key, Value *val) {
+static Error table_get(Table self, const char *key, Value *val) {
+  Str key_str = str_from_cstring(key);
   for (size_t i = 0; i < self.len; i++) {
-    if (str_equals(self.ptr[i].key, key)) {
+    if (str_equals(self.ptr[i].key, key_str)) {
       *val = self.ptr[i].val;
       return NULL;
     }
@@ -1117,7 +1104,7 @@ static Error table_get(Table self, Str key, Value *val) {
   return "key not found";
 }
 
-Error table_get_str(Table self, Str key, Str *out) {
+Error table_get_str(Table self, const char *key, Str *out) {
   Value val = {};
   Error err = table_get(self, key, &val);
   if (err != NULL) {
@@ -1130,7 +1117,7 @@ Error table_get_str(Table self, Str key, Str *out) {
   return NULL;
 }
 
-Error table_get_string(Table self, Str key, String *out) {
+Error table_get_string(Table self, const char *key, String *out) {
   Str val = {};
   Error err = table_get_str(self, key, &val);
   if (err != NULL) {
@@ -1140,7 +1127,7 @@ Error table_get_string(Table self, Str key, String *out) {
   return NULL;
 }
 
-Error table_get_int(Table self, Str key, int64_t *out) {
+Error table_get_int(Table self, const char *key, int64_t *out) {
   Value val = {};
   Error err = table_get(self, key, &val);
   if (err != NULL) {
@@ -1153,7 +1140,7 @@ Error table_get_int(Table self, Str key, int64_t *out) {
   return NULL;
 }
 
-Error table_get_bool(Table self, Str key, bool *out) {
+Error table_get_bool(Table self, const char *key, bool *out) {
   Value val = {};
   Error err = table_get(self, key, &val);
   if (err != NULL) {
@@ -1166,7 +1153,7 @@ Error table_get_bool(Table self, Str key, bool *out) {
   return NULL;
 }
 
-Error table_get_list(Table self, Str key, List *out) {
+Error table_get_list(Table self, const char *key, List *out) {
   Value val = {};
   Error err = table_get(self, key, &val);
   if (err != NULL) {
@@ -1179,7 +1166,7 @@ Error table_get_list(Table self, Str key, List *out) {
   return NULL;
 }
 
-Error table_get_table(Table self, Str key, Table *out) {
+Error table_get_table(Table self, const char *key, Table *out) {
   Value val = {};
   Error err = table_get(self, key, &val);
   if (err != NULL) {

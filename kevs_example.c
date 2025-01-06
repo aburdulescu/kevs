@@ -9,55 +9,51 @@
 
 #include "kevs.h"
 
-typedef struct ReadFileResult {
-  String val;
-  Error err;
-} ReadFileResult;
-
-static ReadFileResult read_file(Str path) {
-  ReadFileResult result = {};
-
+static Error read_file(Str path, String *out) {
   int fd = open(path.ptr, O_RDONLY);
   if (fd == -1) {
-    result.err = strerror(errno);
-    return result;
+    return strerror(errno);
   }
+
+  Error err = NULL;
+  String content = {};
 
   struct stat stbuf = {};
   if (fstat(fd, &stbuf) == -1) {
-    result.err = strerror(errno);
-    close(fd);
-    return result;
+    err = strerror(errno);
+    goto cleanup;
   }
 
-  String content = {};
   string_resize(&content, stbuf.st_size);
 
   ssize_t nread = read(fd, content.ptr, content.len);
   if (nread == -1) {
-    result.err = strerror(errno);
-    string_free(&content);
-    close(fd);
-    return result;
+    err = strerror(errno);
+    goto cleanup;
   }
   if ((size_t)nread != content.len) {
-    result.err = "short read";
-    string_free(&content);
-    close(fd);
-    return result;
+    err = "short read";
+    goto cleanup;
   }
 
-  result.val = content;
+  *out = content;
 
-  return result;
+cleanup:
+  if (err != NULL) {
+    string_free(&content);
+  }
+  close(fd);
+
+  return err;
 }
 
 int main() {
   Str file = str_from_cstring("examples/example.kevs");
 
-  ReadFileResult result = read_file(file);
-  if (result.err != NULL) {
-    fprintf(stderr, "error: failed to read file: %s\n", result.err);
+  String data = {};
+  Error err = read_file(file, &data);
+  if (err != NULL) {
+    fprintf(stderr, "error: failed to read file: %s\n", err);
     return 1;
   }
 
@@ -65,7 +61,7 @@ int main() {
 
   Context ctx = {};
   Table table = {};
-  const bool ok = table_parse(&table, ctx, file, str_from_string(result.val));
+  const bool ok = table_parse(&table, ctx, file, str_from_string(data));
   if (!ok) {
     rc = 1;
   }
@@ -73,7 +69,7 @@ int main() {
   // string
   {
     String val = {};
-    Error err = table_get_string(table, str_from_cstring("str"), &val);
+    Error err = table_get_string(table, "str", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
@@ -86,7 +82,7 @@ int main() {
   // integer
   {
     int64_t val = 0;
-    Error err = table_get_int(table, str_from_cstring("int"), &val);
+    Error err = table_get_int(table, "int", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
@@ -98,7 +94,7 @@ int main() {
   // boolean
   {
     bool val = false;
-    Error err = table_get_bool(table, str_from_cstring("bool"), &val);
+    Error err = table_get_bool(table, "bool", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
@@ -110,7 +106,7 @@ int main() {
   // list with elements of different types
   {
     List val = {};
-    Error err = table_get_list(table, str_from_cstring("list1"), &val);
+    Error err = table_get_list(table, "list1", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
@@ -155,7 +151,7 @@ int main() {
   // list with elements of same types
   {
     List val = {};
-    Error err = table_get_list(table, str_from_cstring("list2"), &val);
+    Error err = table_get_list(table, "list2", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
@@ -177,13 +173,13 @@ int main() {
   // table
   {
     Table val = {};
-    Error err = table_get_table(table, str_from_cstring("table2"), &val);
+    Error err = table_get_table(table, "table2", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
     } else {
       String name = {};
-      Error err = table_get_string(val, str_from_cstring("name"), &name);
+      Error err = table_get_string(val, "name", &name);
       if (err != NULL) {
         fprintf(stderr, "error: %s\n", err);
         rc = 1;
@@ -193,7 +189,7 @@ int main() {
       string_free(&name);
 
       int64_t age = 0;
-      err = table_get_int(val, str_from_cstring("age"), &age);
+      err = table_get_int(val, "age", &age);
       if (err != NULL) {
         fprintf(stderr, "error: %s\n", err);
         rc = 1;
@@ -204,7 +200,7 @@ int main() {
   }
 
   table_free(&table);
-  string_free(&result.val);
+  string_free(&data);
 
   return rc;
 }

@@ -160,10 +160,11 @@ static void test_str_to_int_negative() {
   for (size_t i = 0; i < tests_len; i++) {
     INFO("test #%zu: input=%s", i, tests[i]);
 
-    StrToIntResult res = str_to_int(str_from_cstring(tests[i]));
+    int64_t v = 0;
+    Error err = str_to_int(str_from_cstring(tests[i]), &v);
 
-    INFO("test #%zu: err=%s, value=%ld", i, res.err, res.value);
-    assert(res.err != NULL);
+    INFO("test #%zu: err=%s, value=%ld", i, err, v);
+    assert(err != NULL);
   }
 }
 
@@ -217,13 +218,15 @@ static void test_str_to_int_positive() {
   for (size_t i = 0; i < tests_len; i++) {
     INFO("test #%zu: input=%s, expected %ld", i, tests[i].input,
          tests[i].expected);
-    StrToIntResult res = str_to_int(str_from_cstring(tests[i].input));
 
-    INFO("test #%zu: err=%s, value=%ld", i, res.err, res.value);
-    assert(res.err == NULL);
+    int64_t v = 0;
+    Error err = str_to_int(str_from_cstring(tests[i].input), &v);
 
-    INFO("test #%zu: len: want %ld, have %ld", i, tests[i].expected, res.value);
-    assert(res.value == tests[i].expected);
+    INFO("test #%zu: err=%s, value=%ld", i, err, v);
+    assert(err == NULL);
+
+    INFO("test #%zu: len: want %ld, have %ld", i, tests[i].expected, v);
+    assert(v == tests[i].expected);
   }
 }
 
