@@ -503,7 +503,6 @@ static bool scan_raw_string(Scanner *self) {
 static bool scan_int_or_bool_value(Scanner *self) {
   // search for semicolon or new newline
   // if semicolon is not found or newline is found => error
-  // TODO: maybe check for other delimiters? i.e. ] }
   char c = 0;
   const int end = str_index_any(self->content, str_from_cstring(";\n"), &c);
   if (end == -1 || c != kKeyValEnd) {

@@ -101,6 +101,4 @@ Error list_bool(List self, size_t i, bool *out);
 Error list_list(List self, size_t i, List *out);
 Error list_table(List self, size_t i, Table *out);
 
-// TODO: use const char* for keys?
-
 #endif
