@@ -5,7 +5,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   Str file = {};
   Str content = {.ptr = (char *)Data, .len = Size};
   Table t = {};
-  kevs_parse(ctx, file, content, &t);
-  kevs_free(&t);
+  table_parse(&t, ctx, file, content);
+  table_free(&t);
   return 0;
 }

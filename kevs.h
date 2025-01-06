@@ -95,12 +95,20 @@ void string_resize(String *self, size_t len);
 void string_free(String *self);
 
 // kevs
-bool kevs_parse(Context ctx, Str file, Str content, Table *table);
-void kevs_free(Table *self);
-void kevs_dump(Table self);
-Error kevs_get_str(Table self, Str key, Str *out);
-Error kevs_get_string(Table self, Str key, String *out);
-Error kevs_get_int(Table self, Str key, int64_t *out);
-Error kevs_get_bool(Table self, Str key, bool *out);
+bool table_parse(Table *table, Context ctx, Str file, Str content);
+void table_free(Table *self);
+void table_dump(Table self);
+Error table_get_str(Table self, Str key, Str *out);
+Error table_get_string(Table self, Str key, String *out);
+Error table_get_int(Table self, Str key, int64_t *out);
+Error table_get_bool(Table self, Str key, bool *out);
+Error table_get_list(Table self, Str key, List *out);
+Error table_get_table(Table self, Str key, Table *out);
+Error list_get_str(List self, size_t i, Str *out);
+Error list_get_string(List self, size_t i, String *out);
+Error list_get_int(List self, size_t i, int64_t *out);
+Error list_get_bool(List self, size_t i, bool *out);
+Error list_get_list(List self, size_t i, List *out);
+Error list_get_table(List self, size_t i, Table *out);
 
 #endif

@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
   int rc = 0;
 
   Table table = {};
-  const bool ok = kevs_parse(ctx, file, str_from_string(result.val), &table);
+  const bool ok = table_parse(&table, ctx, file, str_from_string(result.val));
   if (!ok) {
     if (!pass_on_error) {
       rc = 1;
@@ -117,10 +117,10 @@ int main(int argc, char **argv) {
   }
 
   if (dump) {
-    kevs_dump(table);
+    table_dump(table);
   }
 
-  kevs_free(&table);
+  table_free(&table);
 
   string_free(&result.val);
 

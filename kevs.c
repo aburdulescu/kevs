@@ -692,7 +692,7 @@ static void value_free(Value *self) {
   } break;
 
   case kValueTagTable: {
-    kevs_free(&self->data.table);
+    table_free(&self->data.table);
   } break;
 
   default:
@@ -727,7 +727,7 @@ static void list_dump(List self) {
     switch (v.tag) {
     case kValueTagTable: {
       printf("%s\n", valuetag_str(v.tag));
-      kevs_dump(v.data.table);
+      table_dump(v.data.table);
     } break;
 
     case kValueTagList: {
@@ -1006,7 +1006,7 @@ static bool parse_key_value(Parser *self, Table parent, KeyValue *out) {
   return true;
 }
 
-bool parse(Context ctx, Str file, Tokens tokens, Table *table) {
+static bool parse(Context ctx, Str file, Tokens tokens, Table *table) {
   Parser p = {
       .file = file,
       .tokens = tokens,
@@ -1026,9 +1026,7 @@ bool parse(Context ctx, Str file, Tokens tokens, Table *table) {
   return true;
 }
 
-// TODO: check that keys are unique for each table
-// TODO: values in a list have the same type? Or leave it to the user?
-bool kevs_parse(Context ctx, Str file, Str content, Table *table) {
+bool table_parse(Table *table, Context ctx, Str file, Str content) {
   global_ctx = ctx;
 
   bool ok = false;
@@ -1056,7 +1054,7 @@ bool kevs_parse(Context ctx, Str file, Str content, Table *table) {
   return ok;
 }
 
-void kevs_free(Table *self) {
+void table_free(Table *self) {
   for (size_t i = 0; i < self->len; i++) {
     value_free(&self->ptr[i].val);
   }
@@ -1065,7 +1063,7 @@ void kevs_free(Table *self) {
   *self = (Table){};
 }
 
-void kevs_dump(Table self) {
+void table_dump(Table self) {
   for (size_t i = 0; i < self.len; i++) {
     const KeyValue kv = self.ptr[i];
 
@@ -1074,7 +1072,7 @@ void kevs_dump(Table self) {
     switch (kv.val.tag) {
     case kValueTagTable: {
       printf("%s %s\n", k.ptr, valuetag_str(kv.val.tag));
-      kevs_dump(kv.val.data.table);
+      table_dump(kv.val.data.table);
     } break;
 
     case kValueTagList: {
@@ -1107,22 +1105,23 @@ void kevs_dump(Table self) {
   }
 }
 
-bool value_is(Value self, ValueTag tag) { return self.tag == tag; }
+static bool value_is(Value self, ValueTag tag) { return self.tag == tag; }
 
-bool table_get(Table self, Str key, Value *val) {
+static Error table_get(Table self, Str key, Value *val) {
   for (size_t i = 0; i < self.len; i++) {
     if (str_equals(self.ptr[i].key, key)) {
       *val = self.ptr[i].val;
-      return true;
+      return NULL;
     }
   }
-  return false;
+  return "key not found";
 }
 
-Error kevs_get_str(Table self, Str key, Str *out) {
+Error table_get_str(Table self, Str key, Str *out) {
   Value val = {};
-  if (!table_get(self, key, &val)) {
-    return "key not found";
+  Error err = table_get(self, key, &val);
+  if (err != NULL) {
+    return err;
   }
   if (!value_is(val, kValueTagString)) {
     return "value is not string";
@@ -1131,9 +1130,9 @@ Error kevs_get_str(Table self, Str key, Str *out) {
   return NULL;
 }
 
-Error kevs_get_string(Table self, Str key, String *out) {
+Error table_get_string(Table self, Str key, String *out) {
   Str val = {};
-  Error err = kevs_get_str(self, key, &val);
+  Error err = table_get_str(self, key, &val);
   if (err != NULL) {
     return err;
   }
@@ -1141,10 +1140,11 @@ Error kevs_get_string(Table self, Str key, String *out) {
   return NULL;
 }
 
-Error kevs_get_int(Table self, Str key, int64_t *out) {
+Error table_get_int(Table self, Str key, int64_t *out) {
   Value val = {};
-  if (!table_get(self, key, &val)) {
-    return "key not found";
+  Error err = table_get(self, key, &val);
+  if (err != NULL) {
+    return err;
   }
   if (!value_is(val, kValueTagInteger)) {
     return "value is not integer";
@@ -1153,14 +1153,124 @@ Error kevs_get_int(Table self, Str key, int64_t *out) {
   return NULL;
 }
 
-Error kevs_get_bool(Table self, Str key, bool *out) {
+Error table_get_bool(Table self, Str key, bool *out) {
   Value val = {};
-  if (!table_get(self, key, &val)) {
-    return "key not found";
+  Error err = table_get(self, key, &val);
+  if (err != NULL) {
+    return err;
   }
   if (!value_is(val, kValueTagBoolean)) {
     return "value is not boolean";
   }
   *out = val.data.boolean;
+  return NULL;
+}
+
+Error table_get_list(Table self, Str key, List *out) {
+  Value val = {};
+  Error err = table_get(self, key, &val);
+  if (err != NULL) {
+    return err;
+  }
+  if (!value_is(val, kValueTagList)) {
+    return "value is not list";
+  }
+  *out = val.data.list;
+  return NULL;
+}
+
+Error table_get_table(Table self, Str key, Table *out) {
+  Value val = {};
+  Error err = table_get(self, key, &val);
+  if (err != NULL) {
+    return err;
+  }
+  if (!value_is(val, kValueTagTable)) {
+    return "value is not table";
+  }
+  *out = val.data.table;
+  return NULL;
+}
+
+static Error list_get(List self, size_t i, Value *val) {
+  if (i >= self.len) {
+    return "index out of bounds";
+  }
+  *val = self.ptr[i];
+  return NULL;
+}
+
+Error list_get_str(List self, size_t i, Str *out) {
+  Value val = {};
+  Error err = list_get(self, i, &val);
+  if (err != NULL) {
+    return err;
+  }
+  if (!value_is(val, kValueTagString)) {
+    return "value is not string";
+  }
+  *out = val.data.string;
+  return NULL;
+}
+
+Error list_get_string(List self, size_t i, String *out) {
+  Str val = {};
+  Error err = list_get_str(self, i, &val);
+  if (err != NULL) {
+    return err;
+  }
+  *out = string_from_str(val);
+  return NULL;
+}
+
+Error list_get_int(List self, size_t i, int64_t *out) {
+  Value val = {};
+  Error err = list_get(self, i, &val);
+  if (err != NULL) {
+    return err;
+  }
+  if (!value_is(val, kValueTagInteger)) {
+    return "value is not integer";
+  }
+  *out = val.data.integer;
+  return NULL;
+}
+
+Error list_get_bool(List self, size_t i, bool *out) {
+  Value val = {};
+  Error err = list_get(self, i, &val);
+  if (err != NULL) {
+    return err;
+  }
+  if (!value_is(val, kValueTagBoolean)) {
+    return "value is not boolean";
+  }
+  *out = val.data.boolean;
+  return NULL;
+}
+
+Error list_get_list(List self, size_t i, List *out) {
+  Value val = {};
+  Error err = list_get(self, i, &val);
+  if (err != NULL) {
+    return err;
+  }
+  if (!value_is(val, kValueTagList)) {
+    return "value is not list";
+  }
+  *out = val.data.list;
+  return NULL;
+}
+
+Error list_get_table(List self, size_t i, Table *out) {
+  Value val = {};
+  Error err = list_get(self, i, &val);
+  if (err != NULL) {
+    return err;
+  }
+  if (!value_is(val, kValueTagTable)) {
+    return "value is not table";
+  }
+  *out = val.data.table;
   return NULL;
 }

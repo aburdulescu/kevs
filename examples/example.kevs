@@ -20,7 +20,7 @@ bool = true;
 bool_other = false;
 
 # list
-list1 = [1; 2; 3;];
+list1 = [1; "2"; true;];
 list2 = [
   "one";
   "two";
