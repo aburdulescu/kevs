@@ -1,6 +1,7 @@
 #include "kevs.h"
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -731,7 +732,7 @@ static void list_dump(List self) {
     } break;
 
     case kValueTagInteger: {
-      printf("%s %ld\n", valuetag_str(v.tag), v.data.integer);
+      printf("%s %" PRId64 "\n", valuetag_str(v.tag), v.data.integer);
     } break;
 
     default: {
@@ -1077,7 +1078,7 @@ void table_dump(Table self) {
     } break;
 
     case kValueTagInteger: {
-      printf("%s %s %ld\n", k.ptr, valuetag_str(kv.val.tag),
+      printf("%s %s %" PRId64 "\n", k.ptr, valuetag_str(kv.val.tag),
              kv.val.data.integer);
     } break;
 

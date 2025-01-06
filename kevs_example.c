@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -87,7 +88,7 @@ int main() {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
     } else {
-      printf("integer: %ld\n", val);
+      printf("integer: %" PRId64 "\n", val);
     }
   }
 
@@ -119,7 +120,7 @@ int main() {
           fprintf(stderr, "error: %s\n", err);
           rc = 1;
         } else {
-          printf("list1[0]: %ld\n", v);
+          printf("list1[0]: %" PRId64 "\n", v);
         }
       }
       // 2nd is string
@@ -194,7 +195,7 @@ int main() {
         fprintf(stderr, "error: %s\n", err);
         rc = 1;
       } else {
-        printf("age: %ld\n", age);
+        printf("age: %" PRId64 "\n", age);
       }
     }
   }
