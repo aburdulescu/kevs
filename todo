@@ -1,2 +1,4 @@
 - run integration tests with windows and linux binaries generated with zig
 - rewrite test runner in zig to remove dependency on go
+- drop cmake and just build the bins with clang downloaded from llvm.org or zig cc(but we need llvm tools also?)
+- investigate if zig supports sanitizers and fuzzer
