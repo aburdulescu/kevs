@@ -1,1 +1,2 @@
 - run integration tests with CLI windows and linux binaries generated with zig
+- rewrite test runner in zig to remove dependency on go
