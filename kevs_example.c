@@ -69,7 +69,7 @@ int main() {
   // string
   {
     String val = {};
-    Error err = table_get_string(table, "str", &val);
+    Error err = table_string(table, "str", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
@@ -82,7 +82,7 @@ int main() {
   // integer
   {
     int64_t val = 0;
-    Error err = table_get_int(table, "int", &val);
+    Error err = table_int(table, "int", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
@@ -94,7 +94,7 @@ int main() {
   // boolean
   {
     bool val = false;
-    Error err = table_get_bool(table, "bool", &val);
+    Error err = table_bool(table, "bool", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
@@ -106,7 +106,7 @@ int main() {
   // list with elements of different types
   {
     List val = {};
-    Error err = table_get_list(table, "list1", &val);
+    Error err = table_list(table, "list1", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
@@ -114,7 +114,7 @@ int main() {
       // 1st is int
       {
         int64_t v = 0;
-        Error err = list_get_int(val, 0, &v);
+        Error err = list_int(val, 0, &v);
         if (err != NULL) {
           fprintf(stderr, "error: %s\n", err);
           rc = 1;
@@ -125,7 +125,7 @@ int main() {
       // 2nd is string
       {
         String v = {};
-        Error err = list_get_string(val, 1, &v);
+        Error err = list_string(val, 1, &v);
         if (err != NULL) {
           fprintf(stderr, "error: %s\n", err);
           rc = 1;
@@ -137,7 +137,7 @@ int main() {
       // 3rd is boolean
       {
         bool v = false;
-        Error err = list_get_bool(val, 2, &v);
+        Error err = list_bool(val, 2, &v);
         if (err != NULL) {
           fprintf(stderr, "error: %s\n", err);
           rc = 1;
@@ -151,14 +151,14 @@ int main() {
   // list with elements of same types
   {
     List val = {};
-    Error err = table_get_list(table, "list2", &val);
+    Error err = table_list(table, "list2", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
     } else {
       for (size_t i = 0; i < val.len; i++) {
         String v = {};
-        Error err = list_get_string(val, i, &v);
+        Error err = list_string(val, i, &v);
         if (err != NULL) {
           fprintf(stderr, "error: %s\n", err);
           rc = 1;
@@ -173,13 +173,13 @@ int main() {
   // table
   {
     Table val = {};
-    Error err = table_get_table(table, "table2", &val);
+    Error err = table_table(table, "table2", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
     } else {
       String name = {};
-      Error err = table_get_string(val, "name", &name);
+      Error err = table_string(val, "name", &name);
       if (err != NULL) {
         fprintf(stderr, "error: %s\n", err);
         rc = 1;
@@ -189,7 +189,7 @@ int main() {
       string_free(&name);
 
       int64_t age = 0;
-      err = table_get_int(val, "age", &age);
+      err = table_int(val, "age", &age);
       if (err != NULL) {
         fprintf(stderr, "error: %s\n", err);
         rc = 1;

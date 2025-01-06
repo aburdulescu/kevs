@@ -1104,7 +1104,7 @@ static Error table_get(Table self, const char *key, Value *val) {
   return "key not found";
 }
 
-Error table_get_str(Table self, const char *key, Str *out) {
+Error table_str(Table self, const char *key, Str *out) {
   Value val = {};
   Error err = table_get(self, key, &val);
   if (err != NULL) {
@@ -1117,9 +1117,9 @@ Error table_get_str(Table self, const char *key, Str *out) {
   return NULL;
 }
 
-Error table_get_string(Table self, const char *key, String *out) {
+Error table_string(Table self, const char *key, String *out) {
   Str val = {};
-  Error err = table_get_str(self, key, &val);
+  Error err = table_str(self, key, &val);
   if (err != NULL) {
     return err;
   }
@@ -1127,7 +1127,7 @@ Error table_get_string(Table self, const char *key, String *out) {
   return NULL;
 }
 
-Error table_get_int(Table self, const char *key, int64_t *out) {
+Error table_int(Table self, const char *key, int64_t *out) {
   Value val = {};
   Error err = table_get(self, key, &val);
   if (err != NULL) {
@@ -1140,7 +1140,7 @@ Error table_get_int(Table self, const char *key, int64_t *out) {
   return NULL;
 }
 
-Error table_get_bool(Table self, const char *key, bool *out) {
+Error table_bool(Table self, const char *key, bool *out) {
   Value val = {};
   Error err = table_get(self, key, &val);
   if (err != NULL) {
@@ -1153,7 +1153,7 @@ Error table_get_bool(Table self, const char *key, bool *out) {
   return NULL;
 }
 
-Error table_get_list(Table self, const char *key, List *out) {
+Error table_list(Table self, const char *key, List *out) {
   Value val = {};
   Error err = table_get(self, key, &val);
   if (err != NULL) {
@@ -1166,7 +1166,7 @@ Error table_get_list(Table self, const char *key, List *out) {
   return NULL;
 }
 
-Error table_get_table(Table self, const char *key, Table *out) {
+Error table_table(Table self, const char *key, Table *out) {
   Value val = {};
   Error err = table_get(self, key, &val);
   if (err != NULL) {
@@ -1187,7 +1187,7 @@ static Error list_get(List self, size_t i, Value *val) {
   return NULL;
 }
 
-Error list_get_str(List self, size_t i, Str *out) {
+Error list_str(List self, size_t i, Str *out) {
   Value val = {};
   Error err = list_get(self, i, &val);
   if (err != NULL) {
@@ -1200,9 +1200,9 @@ Error list_get_str(List self, size_t i, Str *out) {
   return NULL;
 }
 
-Error list_get_string(List self, size_t i, String *out) {
+Error list_string(List self, size_t i, String *out) {
   Str val = {};
-  Error err = list_get_str(self, i, &val);
+  Error err = list_str(self, i, &val);
   if (err != NULL) {
     return err;
   }
@@ -1210,7 +1210,7 @@ Error list_get_string(List self, size_t i, String *out) {
   return NULL;
 }
 
-Error list_get_int(List self, size_t i, int64_t *out) {
+Error list_int(List self, size_t i, int64_t *out) {
   Value val = {};
   Error err = list_get(self, i, &val);
   if (err != NULL) {
@@ -1223,7 +1223,7 @@ Error list_get_int(List self, size_t i, int64_t *out) {
   return NULL;
 }
 
-Error list_get_bool(List self, size_t i, bool *out) {
+Error list_bool(List self, size_t i, bool *out) {
   Value val = {};
   Error err = list_get(self, i, &val);
   if (err != NULL) {
@@ -1236,7 +1236,7 @@ Error list_get_bool(List self, size_t i, bool *out) {
   return NULL;
 }
 
-Error list_get_list(List self, size_t i, List *out) {
+Error list_list(List self, size_t i, List *out) {
   Value val = {};
   Error err = list_get(self, i, &val);
   if (err != NULL) {
@@ -1249,7 +1249,7 @@ Error list_get_list(List self, size_t i, List *out) {
   return NULL;
 }
 
-Error list_get_table(List self, size_t i, Table *out) {
+Error list_table(List self, size_t i, Table *out) {
   Value val = {};
   Error err = list_get(self, i, &val);
   if (err != NULL) {

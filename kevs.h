@@ -88,18 +88,18 @@ void string_free(String *self);
 bool table_parse(Table *table, Context ctx, Str file, Str content);
 void table_free(Table *self);
 void table_dump(Table self);
-Error table_get_str(Table self, const char *key, Str *out);
-Error table_get_string(Table self, const char *key, String *out);
-Error table_get_int(Table self, const char *key, int64_t *out);
-Error table_get_bool(Table self, const char *key, bool *out);
-Error table_get_list(Table self, const char *key, List *out);
-Error table_get_table(Table self, const char *key, Table *out);
-Error list_get_str(List self, size_t i, Str *out);
-Error list_get_string(List self, size_t i, String *out);
-Error list_get_int(List self, size_t i, int64_t *out);
-Error list_get_bool(List self, size_t i, bool *out);
-Error list_get_list(List self, size_t i, List *out);
-Error list_get_table(List self, size_t i, Table *out);
+Error table_str(Table self, const char *key, Str *out);
+Error table_string(Table self, const char *key, String *out);
+Error table_int(Table self, const char *key, int64_t *out);
+Error table_bool(Table self, const char *key, bool *out);
+Error table_list(Table self, const char *key, List *out);
+Error table_table(Table self, const char *key, Table *out);
+Error list_str(List self, size_t i, Str *out);
+Error list_string(List self, size_t i, String *out);
+Error list_int(List self, size_t i, int64_t *out);
+Error list_bool(List self, size_t i, bool *out);
+Error list_list(List self, size_t i, List *out);
+Error list_table(List self, size_t i, Table *out);
 
 // TODO: use const char* for keys?
 
