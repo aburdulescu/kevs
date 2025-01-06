@@ -99,12 +99,14 @@ pub fn build(b: *std.Build) void {
         release.dependOn(&install.step);
     }
 
-    const test_step = b.step("test", "Run tests");
     const test_exe = b.addExecutable(.{
         .name = "test",
         .target = target,
         .root_source_file = b.path("test.zig"),
     });
     const test_run = b.addRunArtifact(test_exe);
+
+    const test_step = b.step("test", "Run tests");
+    test_step.dependOn(&exe.step); // TODO: this does not compile the exe before test
     test_step.dependOn(&test_run.step);
 }
