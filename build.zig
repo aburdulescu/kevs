@@ -3,7 +3,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const strip = b.option(bool, "strip", "strip the binary");
+    const strip = b.option(bool, "strip", "Strip the binary");
 
     const exe_name = "kevs";
 
@@ -31,7 +31,7 @@ pub fn build(b: *std.Build) void {
     exe.addCSourceFiles(c_opts);
     b.installArtifact(exe);
 
-    const release = b.step("release", "make an upstream binary release");
+    const release = b.step("release", "Make an upstream binary release");
     const release_targets = [_]std.Target.Query{
         .{
             .cpu_arch = .aarch64,
@@ -62,10 +62,13 @@ pub fn build(b: *std.Build) void {
     for (release_targets) |target_query| {
         const resolved_target = b.resolveTargetQuery(target_query);
         const t = resolved_target.result;
+
+        const rel_optimize = if (optimize != .Debug) optimize else .ReleaseFast;
+
         const rel_exe = b.addExecutable(.{
             .name = "kevs",
             .target = resolved_target,
-            .optimize = .ReleaseFast,
+            .optimize = rel_optimize,
             .strip = true,
             .link_libc = true,
         });
@@ -75,6 +78,12 @@ pub fn build(b: *std.Build) void {
         install.dest_dir = .prefix;
         install.dest_sub_path = b.fmt("{s}-{s}-{s}", .{
             rel_exe.name, @tagName(t.os.tag), @tagName(t.cpu.arch),
+        });
+        install.dest_sub_path = b.fmt("{s}/{s}-{s}-{s}", .{
+            @tagName(rel_optimize),
+            rel_exe.name,
+            @tagName(t.os.tag),
+            @tagName(t.cpu.arch),
         });
 
         release.dependOn(&install.step);
