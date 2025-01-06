@@ -1,6 +1,16 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 pub fn build(b: *std.Build) void {
+    comptime {
+        const needed = "0.13.0";
+        const current = builtin.zig_version;
+        const needed_vers = std.SemanticVersion.parse(needed) catch unreachable;
+        if (current.order(needed_vers) != .eq) {
+            @compileError(std.fmt.comptimePrint("Your zig version is not supported, need version {s}", .{needed}));
+        }
+    }
+
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const strip = b.option(bool, "strip", "Strip the binary");
@@ -88,4 +98,13 @@ pub fn build(b: *std.Build) void {
 
         release.dependOn(&install.step);
     }
+
+    const test_step = b.step("test", "Run tests");
+    const test_exe = b.addExecutable(.{
+        .name = "test",
+        .target = target,
+        .root_source_file = b.path("test.zig"),
+    });
+    const test_run = b.addRunArtifact(test_exe);
+    test_step.dependOn(&test_run.step);
 }

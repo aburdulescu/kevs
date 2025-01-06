@@ -20,9 +20,12 @@ const (
 )
 
 var (
-	buildDir = flag.String("b", "b", "Path to build directory")
-	update   = flag.Bool("update", false, "Update expected output for integration tests with valid input")
-	coverage = flag.Bool("coverage", false, "Generate code coverage")
+	buildDir                = flag.String("b", "b", "Path to build directory")
+	update                  = flag.Bool("update", false, "Update expected output for integration tests with valid input")
+	coverage                = flag.Bool("coverage", false, "Generate code coverage")
+	disableUnitTests        = flag.Bool("no-ut", false, "Disable unit tests")
+	disableExample          = flag.Bool("no-ex", false, "Disable example")
+	disableIntegrationTests = flag.Bool("no-it", false, "Disable integration tests")
 )
 
 func main() {
@@ -35,14 +38,20 @@ func main() {
 func mainErr() error {
 	flag.Parse()
 	*buildDir, _ = filepath.Abs(*buildDir)
-	if err := runUnitTests(); err != nil {
-		return err
+	if !*disableUnitTests {
+		if err := runUnitTests(); err != nil {
+			return err
+		}
 	}
-	if err := runExample(); err != nil {
-		return err
+	if !*disableIntegrationTests {
+		if err := runIntegrationTests(); err != nil {
+			return err
+		}
 	}
-	if err := runIntegrationTests(); err != nil {
-		return err
+	if !*disableExample {
+		if err := runExample(); err != nil {
+			return err
+		}
 	}
 	globalResult.summary()
 	return nil
