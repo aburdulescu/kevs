@@ -104,9 +104,20 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .root_source_file = b.path("test.zig"),
     });
+    b.installArtifact(test_exe);
+
     const test_run = b.addRunArtifact(test_exe);
 
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&exe.step); // TODO: this does not compile the exe before test
     test_step.dependOn(&test_run.step);
+
+    const fmt_step = b.step("fmt", "Format zig source code");
+    const fmt = b.addFmt(.{
+        .paths = &.{
+            "build.zig",
+            "test.zig",
+        },
+    });
+    fmt_step.dependOn(&fmt.step);
 }

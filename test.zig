@@ -9,14 +9,32 @@ var gpa = gpa_instance.allocator();
 var gr = GlobalResult{
     .total = 0,
     .duration = 0,
+    .failed = undefined,
 };
 
 pub fn main() !void {
+    gr.failed = std.ArrayList(TestResult).init(gpa);
+
     try runIntegrationTests();
     try gr.summary();
 }
 
+const kevs_exe = "./zig-out/bin/kevs";
+
+const IntegrationTestError = error{
+    Unknown,
+    DiffrentNumOfLines,
+    DiffrentLines,
+    LineNotFound,
+};
+
 fn runIntegrationTests() !void {
+    // check if exe exists
+    if (std.fs.cwd().openFile(kevs_exe, .{ .mode = .read_only })) |_| {} else |err| {
+        std.debug.print("failed to open '{s}': {}.\n", .{ kevs_exe, err });
+        return err;
+    }
+
     const root_path = "testdata";
 
     var dir = try std.fs.cwd().openDir(root_path, .{ .iterate = true });
@@ -26,6 +44,7 @@ fn runIntegrationTests() !void {
     defer walker.deinit();
 
     var tests = std.ArrayList(IntegrationTest).init(gpa);
+    defer tests.deinit();
 
     const file_ext = ".kevs";
 
@@ -66,16 +85,32 @@ fn runIntegrationTests() !void {
     var timer = std.time.Timer.start() catch @panic("need timer to work");
 
     for (tests.items) |item| {
+        var failed: ?anyerror = null;
+
         const start = timer.read();
-        const status = if (item.run()) |_| "passed" else |_| "failed";
+        if (item.run()) |_| {} else |err| {
+            failed = err;
+        }
         const end = timer.read();
         const duration = end - start;
 
-        gr.add(duration);
+        try gr.add(
+            .{
+                .name = item.name,
+                .err = failed,
+            },
+            duration,
+        );
 
         const pretty = prettyTime(duration);
 
-        try stdout.print("{s} {s} {s} {d}{s}\n", .{ item.name, dots[0 .. max_name - item.name.len], status, pretty.value, pretty.unit });
+        try stdout.print("{s} {s} {s} {d}{s}\n", .{
+            item.name,
+            dots[0 .. max_name - item.name.len],
+            if (failed) |_| "failed" else "passed",
+            pretty.value,
+            pretty.unit,
+        });
     }
 }
 
@@ -88,42 +123,131 @@ const IntegrationTest = struct {
 
     fn run(self: Self) !void {
         if (std.mem.startsWith(u8, self.name, "valid")) {
-            var args = std.ArrayList([]const u8).init(gpa);
-            try args.append("./zig-out/bin/kevs");
-            try args.append("-abort");
-            try args.append("-dump");
-            try args.append(self.input);
-
-            var child = std.process.Child.init(args.items, gpa);
-            child.stdout_behavior = std.process.Child.StdIo.Pipe;
-            child.stderr_behavior = std.process.Child.StdIo.Pipe;
-
-            const term = try child.spawnAndWait();
-            if (term != .Exited) {
-                try stderr.print("error: command terminated unexpectedly\n", .{});
-                std.process.exit(1);
-            }
-
-            // TODO: check stdout against expected
+            try self.runValid();
         } else if (std.mem.startsWith(u8, self.name, "not_valid")) {
-            var args = std.ArrayList([]const u8).init(gpa);
-            try args.append("./zig-out/bin/kevs");
-            try args.append("-dump");
-            try args.append(self.input);
-
-            var child = std.process.Child.init(args.items, gpa);
-            child.stdout_behavior = std.process.Child.StdIo.Pipe;
-            child.stderr_behavior = std.process.Child.StdIo.Pipe;
-
-            const term = try child.spawnAndWait();
-            if (term != .Exited) {
-                try stderr.print("error: command terminated unexpectedly\n", .{});
-                std.process.exit(1);
-            }
-
-            // TODO: check stdout against expected
+            try self.runNotValid();
         } else {
             unreachable;
+        }
+    }
+
+    fn runValid(self: Self) !void {
+        var args = std.ArrayList([]const u8).init(gpa);
+        defer args.deinit();
+
+        try args.append(kevs_exe);
+        try args.append("-abort");
+        try args.append("-dump");
+        try args.append(self.input);
+
+        const result = try std.process.Child.run(.{
+            .allocator = gpa,
+            .argv = args.items,
+        });
+        defer gpa.free(result.stdout);
+        defer gpa.free(result.stderr);
+
+        switch (result.term) {
+            .Exited => |code| {
+                if (code != 0) {
+                    try stderr.print("error: command returned code {d}\n", .{code});
+                }
+            },
+            else => {
+                try stderr.print("error: command terminated unexpectedly: {}\n", .{result.term});
+                std.process.exit(1);
+            },
+        }
+
+        var file = try std.fs.cwd().openFile(self.expected, .{ .mode = .read_only });
+        defer file.close();
+        const expected = try file.readToEndAlloc(gpa, std.math.maxInt(usize));
+        defer gpa.free(expected);
+
+        var wantLines = std.ArrayList([]const u8).init(gpa);
+        defer wantLines.deinit();
+        {
+            var it = std.mem.splitSequence(u8, expected, "\n");
+            while (it.next()) |line| {
+                try wantLines.append(line);
+            }
+        }
+
+        var haveLines = std.ArrayList([]const u8).init(gpa);
+        defer haveLines.deinit();
+        {
+            var it = std.mem.splitSequence(u8, result.stdout, "\n");
+            while (it.next()) |line| {
+                try haveLines.append(line);
+            }
+        }
+
+        if (haveLines.items.len != wantLines.items.len) {
+            return IntegrationTestError.DiffrentNumOfLines;
+        }
+
+        for (wantLines.items, 0..) |want, i| {
+            const have = haveLines.items[i];
+            if (!std.mem.eql(u8, want, have)) {
+                return IntegrationTestError.DiffrentLines;
+            }
+        }
+    }
+
+    fn runNotValid(self: Self) !void {
+        var args = std.ArrayList([]const u8).init(gpa);
+        defer args.deinit();
+
+        try args.append(kevs_exe);
+        try args.append("-no-err");
+        try args.append(self.input);
+
+        const result = try std.process.Child.run(.{
+            .allocator = gpa,
+            .argv = args.items,
+        });
+        defer gpa.free(result.stdout);
+        defer gpa.free(result.stderr);
+
+        switch (result.term) {
+            .Exited => |code| {
+                if (code != 0) {
+                    try stderr.print("error: command returned code {d}\n", .{code});
+                }
+            },
+            else => {
+                try stderr.print("error: command terminated unexpectedly: {}\n", .{result.term});
+                std.process.exit(1);
+            },
+        }
+
+        var file = try std.fs.cwd().openFile(self.expected, .{ .mode = .read_only });
+        defer file.close();
+
+        const expected = try file.readToEndAlloc(gpa, std.math.maxInt(usize));
+        defer gpa.free(expected);
+
+        const want = std.mem.trim(u8, expected, "\n");
+
+        var haveLines = std.ArrayList([]const u8).init(gpa);
+        defer haveLines.deinit();
+        {
+            var it = std.mem.splitSequence(u8, result.stdout, "\n");
+            while (it.next()) |line| {
+                try haveLines.append(line);
+            }
+        }
+
+        var failed = true;
+        for (haveLines.items) |have| {
+            if (std.mem.indexOf(u8, have, want)) |_| {
+                failed = false;
+                break;
+            }
+        }
+
+        if (failed) {
+            return IntegrationTestError.LineNotFound;
         }
     }
 };
@@ -133,16 +257,33 @@ const GlobalResult = struct {
 
     total: i32,
     duration: u64,
+    failed: std.ArrayList(TestResult),
 
-    fn add(self: *Self, duration: u64) void {
+    fn add(self: *Self, tr: TestResult, duration: u64) !void {
+        if (tr.err) |_| {
+            try self.failed.append(tr);
+        }
         self.total += 1;
         self.duration += duration;
     }
 
     fn summary(self: Self) !void {
         const pretty = prettyTime(self.duration);
-        try stdout.print("\nsummary:\nran {d} tests in {d}{s}\n", .{ self.total, pretty.value, pretty.unit });
+
+        try stdout.print("\nsummary:\nran {d} tests in {d}{s}, {d} failed\n", .{ self.total, pretty.value, pretty.unit, self.failed.items.len });
+
+        if (self.failed.items.len != 0) {
+            try stdout.print("\nfailures:\n", .{});
+            for (self.failed.items) |item| {
+                try stdout.print("{s}: {}\n", .{ item.name, item.err.? });
+            }
+        }
     }
+};
+
+const TestResult = struct {
+    name: []const u8,
+    err: ?anyerror,
 };
 
 const PrettyTime = struct {
