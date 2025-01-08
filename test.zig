@@ -6,20 +6,84 @@ const stderr = std.io.getStdErr().writer();
 var gpa_instance = std.heap.GeneralPurposeAllocator(.{}){};
 var gpa = gpa_instance.allocator();
 
-var gr = GlobalResult{
-    .total = 0,
-    .duration = 0,
-    .failed = undefined,
-};
-
 pub fn main() !void {
-    gr.failed = std.ArrayList(TestResult).init(gpa);
+    const flags = try parseFlags();
 
-    try runIntegrationTests();
-    try gr.summary();
+    var dir = try std.fs.cwd().openDir(flags.build_dir, .{ .iterate = true });
+    defer dir.close();
+
+    var walker = try dir.walk(gpa);
+    defer walker.deinit();
+
+    var exes = std.ArrayList(IntegrationTest).init(gpa);
+    defer exes.deinit();
+
+    const exe_name = "kevs";
+    const exe_name_linux = "kevs-";
+
+    var report = TestReport{
+        .total = 0,
+        .duration = 0,
+        .failed = std.ArrayList(TestResult).init(gpa),
+    };
+
+    var timer = std.time.Timer.start() catch @panic("need timer to work");
+
+    while (try walker.next()) |entry| {
+        if (entry.kind != std.fs.File.Kind.file) {
+            continue;
+        }
+        if (!std.mem.eql(u8, entry.basename, exe_name) and !std.mem.startsWith(u8, entry.basename, exe_name_linux)) {
+            continue;
+        }
+
+        const exe = try std.fs.path.join(gpa, &[_][]const u8{ flags.build_dir, entry.path });
+        try stdout.print("==== {s} {s}\n", .{ flags.build_dir, exe });
+
+        var failed: ?anyerror = null;
+        const start = timer.read();
+        if (runTestsWithExe(exe)) |_| {} else |err| {
+            failed = err;
+        }
+        const end = timer.read();
+        const duration = end - start;
+        try report.add(.{ .name = exe, .err = failed }, duration);
+    }
+
+    try report.summary();
 }
 
-const kevs_exe = "./zig-out/bin/kevs";
+const Flags = struct {
+    build_dir: []const u8,
+};
+
+fn parseFlags() !Flags {
+    const args = (try std.process.argsAlloc(gpa))[1..];
+    var flags = Flags{
+        .build_dir = "zig-out/bin/",
+    };
+    var i: usize = 0;
+    while (i < args.len) {
+        if (std.mem.eql(u8, args[i], "-b")) {
+            if (i + 1 == args.len) {
+                try stderr.print("error: -b needs a value\n", .{});
+                std.process.exit(1);
+            }
+            flags.build_dir = args[i + 1];
+            i += 1;
+        } else {
+            break;
+        }
+        i += 1;
+    }
+    return flags;
+}
+
+fn runTestsWithExe(exe: []const u8) !TestReport {
+    const report = try runIntegrationTests(exe);
+    try report.summary();
+    return report;
+}
 
 const IntegrationTestError = error{
     Unknown,
@@ -28,13 +92,7 @@ const IntegrationTestError = error{
     LineNotFound,
 };
 
-fn runIntegrationTests() !void {
-    // check if exe exists
-    if (std.fs.cwd().openFile(kevs_exe, .{ .mode = .read_only })) |_| {} else |err| {
-        std.debug.print("failed to open '{s}': {}.\n", .{ kevs_exe, err });
-        return err;
-    }
-
+fn runIntegrationTests(exe: []const u8) !TestReport {
     const root_path = "testdata";
 
     var dir = try std.fs.cwd().openDir(root_path, .{ .iterate = true });
@@ -84,17 +142,23 @@ fn runIntegrationTests() !void {
 
     var timer = std.time.Timer.start() catch @panic("need timer to work");
 
+    var report = TestReport{
+        .total = 0,
+        .duration = 0,
+        .failed = std.ArrayList(TestResult).init(gpa),
+    };
+
     for (tests.items) |item| {
         var failed: ?anyerror = null;
 
         const start = timer.read();
-        if (item.run()) |_| {} else |err| {
+        if (item.run(exe)) |_| {} else |err| {
             failed = err;
         }
         const end = timer.read();
         const duration = end - start;
 
-        try gr.add(
+        try report.add(
             .{
                 .name = item.name,
                 .err = failed,
@@ -112,6 +176,8 @@ fn runIntegrationTests() !void {
             pretty.unit,
         });
     }
+
+    return report;
 }
 
 const IntegrationTest = struct {
@@ -121,21 +187,21 @@ const IntegrationTest = struct {
     input: []const u8,
     expected: []const u8,
 
-    fn run(self: Self) !void {
+    fn run(self: Self, exe: []const u8) !void {
         if (std.mem.startsWith(u8, self.name, "valid")) {
-            try self.runValid();
+            try self.runValid(exe);
         } else if (std.mem.startsWith(u8, self.name, "not_valid")) {
-            try self.runNotValid();
+            try self.runNotValid(exe);
         } else {
             unreachable;
         }
     }
 
-    fn runValid(self: Self) !void {
+    fn runValid(self: Self, exe: []const u8) !void {
         var args = std.ArrayList([]const u8).init(gpa);
         defer args.deinit();
 
-        try args.append(kevs_exe);
+        try args.append(exe);
         try args.append("-abort");
         try args.append("-dump");
         try args.append(self.input);
@@ -194,11 +260,11 @@ const IntegrationTest = struct {
         }
     }
 
-    fn runNotValid(self: Self) !void {
+    fn runNotValid(self: Self, exe: []const u8) !void {
         var args = std.ArrayList([]const u8).init(gpa);
         defer args.deinit();
 
-        try args.append(kevs_exe);
+        try args.append(exe);
         try args.append("-no-err");
         try args.append(self.input);
 
@@ -252,7 +318,7 @@ const IntegrationTest = struct {
     }
 };
 
-const GlobalResult = struct {
+const TestReport = struct {
     const Self = @This();
 
     total: i32,
@@ -270,7 +336,10 @@ const GlobalResult = struct {
     fn summary(self: Self) !void {
         const pretty = prettyTime(self.duration);
 
-        try stdout.print("\nsummary:\nran {d} tests in {d}{s}, {d} failed\n", .{ self.total, pretty.value, pretty.unit, self.failed.items.len });
+        try stdout.print(
+            "\nsummary:\nran {d} tests in {d}{s}, {d} failed\n",
+            .{ self.total, pretty.value, pretty.unit, self.failed.items.len },
+        );
 
         if (self.failed.items.len != 0) {
             try stdout.print("\nfailures:\n", .{});
