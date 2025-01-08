@@ -1,89 +1,53 @@
 const std = @import("std");
 
+const usage =
+    \\Usage: test [OPTIONS]
+    \\
+    \\Run tests.
+    \\
+    \\OPTIONS:
+    \\  -help  print this message and exit
+    \\  -exe   path to kevs CLI executable
+    \\
+;
+
 const stdout = std.io.getStdOut().writer();
 const stderr = std.io.getStdErr().writer();
 
 var gpa_instance = std.heap.GeneralPurposeAllocator(.{}){};
 var gpa = gpa_instance.allocator();
 
-pub fn main() !void {
-    const flags = try parseFlags();
-
-    var dir = try std.fs.cwd().openDir(flags.build_dir, .{ .iterate = true });
-    defer dir.close();
-
-    var walker = try dir.walk(gpa);
-    defer walker.deinit();
-
-    var exes = std.ArrayList(IntegrationTest).init(gpa);
-    defer exes.deinit();
-
-    const exe_name = "kevs";
-    const exe_name_linux = "kevs-";
-
-    var report = TestReport{
-        .total = 0,
-        .duration = 0,
-        .failed = std.ArrayList(TestResult).init(gpa),
-    };
-
-    var timer = std.time.Timer.start() catch @panic("need timer to work");
-
-    while (try walker.next()) |entry| {
-        if (entry.kind != std.fs.File.Kind.file) {
-            continue;
-        }
-        if (!std.mem.eql(u8, entry.basename, exe_name) and !std.mem.startsWith(u8, entry.basename, exe_name_linux)) {
-            continue;
-        }
-
-        const exe = try std.fs.path.join(gpa, &[_][]const u8{ flags.build_dir, entry.path });
-        try stdout.print("==== {s} {s}\n", .{ flags.build_dir, exe });
-
-        var failed: ?anyerror = null;
-        const start = timer.read();
-        if (runTestsWithExe(exe)) |_| {} else |err| {
-            failed = err;
-        }
-        const end = timer.read();
-        const duration = end - start;
-        try report.add(.{ .name = exe, .err = failed }, duration);
-    }
-
-    try report.summary();
-}
-
-const Flags = struct {
-    build_dir: []const u8,
+var flags = Flags{
+    .exe = "zig-out/bin/kevs",
 };
 
-fn parseFlags() !Flags {
+pub fn main() !void {
     const args = (try std.process.argsAlloc(gpa))[1..];
-    var flags = Flags{
-        .build_dir = "zig-out/bin/",
-    };
     var i: usize = 0;
     while (i < args.len) {
-        if (std.mem.eql(u8, args[i], "-b")) {
+        if (std.mem.eql(u8, args[i], "-help")) {
+            try stdout.writeAll(usage);
+            return;
+        } else if (std.mem.eql(u8, args[i], "-exe")) {
             if (i + 1 == args.len) {
-                try stderr.print("error: -b needs a value\n", .{});
+                try stderr.print("error: -exe needs a value\n", .{});
                 std.process.exit(1);
             }
-            flags.build_dir = args[i + 1];
+            flags.exe = args[i + 1];
             i += 1;
         } else {
             break;
         }
         i += 1;
     }
-    return flags;
+
+    const report = try runIntegrationTests(flags.exe);
+    try report.summary();
 }
 
-fn runTestsWithExe(exe: []const u8) !TestReport {
-    const report = try runIntegrationTests(exe);
-    try report.summary();
-    return report;
-}
+const Flags = struct {
+    exe: []const u8,
+};
 
 const IntegrationTestError = error{
     Unknown,
@@ -150,24 +114,14 @@ fn runIntegrationTests(exe: []const u8) !TestReport {
 
     for (tests.items) |item| {
         var failed: ?anyerror = null;
-
         const start = timer.read();
         if (item.run(exe)) |_| {} else |err| {
             failed = err;
         }
         const end = timer.read();
         const duration = end - start;
-
-        try report.add(
-            .{
-                .name = item.name,
-                .err = failed,
-            },
-            duration,
-        );
-
+        try report.add(.{ .name = item.name, .err = failed }, duration);
         const pretty = prettyTime(duration);
-
         try stdout.print("{s} {s} {s} {d}{s}\n", .{
             item.name,
             dots[0 .. max_name - item.name.len],
@@ -188,18 +142,23 @@ const IntegrationTest = struct {
     expected: []const u8,
 
     fn run(self: Self, exe: []const u8) !void {
+        const is_windows = if (std.mem.indexOf(u8, exe, "-windows-")) |_| true else false;
         if (std.mem.startsWith(u8, self.name, "valid")) {
-            try self.runValid(exe);
+            try self.runValid(exe, is_windows);
         } else if (std.mem.startsWith(u8, self.name, "not_valid")) {
-            try self.runNotValid(exe);
+            try self.runNotValid(exe, is_windows);
         } else {
             unreachable;
         }
     }
 
-    fn runValid(self: Self, exe: []const u8) !void {
+    fn runValid(self: Self, exe: []const u8, is_windows: bool) !void {
         var args = std.ArrayList([]const u8).init(gpa);
         defer args.deinit();
+
+        if (is_windows) {
+            try args.append("wine");
+        }
 
         try args.append(exe);
         try args.append("-abort");
@@ -260,9 +219,13 @@ const IntegrationTest = struct {
         }
     }
 
-    fn runNotValid(self: Self, exe: []const u8) !void {
+    fn runNotValid(self: Self, exe: []const u8, is_windows: bool) !void {
         var args = std.ArrayList([]const u8).init(gpa);
         defer args.deinit();
+
+        if (is_windows) {
+            try args.append("wine");
+        }
 
         try args.append(exe);
         try args.append("-no-err");
@@ -318,6 +281,38 @@ const IntegrationTest = struct {
     }
 };
 
+const ExeReport = struct {
+    const Self = @This();
+
+    total: i32,
+    duration: u64,
+    failed: std.ArrayList([]const u8),
+
+    fn add(self: *Self, name: []const u8, duration: u64, failed: bool) !void {
+        if (failed) {
+            try self.failed.append(name);
+        }
+        self.total += 1;
+        self.duration += duration;
+    }
+
+    fn summary(self: Self) !void {
+        const pretty = prettyTime(self.duration);
+
+        try stdout.print(
+            "\ntest summary:\nran {d} executables in {d}{s}, {d} failed\n",
+            .{ self.total, pretty.value, pretty.unit, self.failed.items.len },
+        );
+
+        if (self.failed.items.len != 0) {
+            try stdout.print("\nfailures:\n", .{});
+            for (self.failed.items) |item| {
+                try stdout.print("{s}\n", .{item});
+            }
+        }
+    }
+};
+
 const TestReport = struct {
     const Self = @This();
 
@@ -337,7 +332,7 @@ const TestReport = struct {
         const pretty = prettyTime(self.duration);
 
         try stdout.print(
-            "\nsummary:\nran {d} tests in {d}{s}, {d} failed\n",
+            "\nexe summary:\nran {d} tests in {d}{s}, {d} failed\n",
             .{ self.total, pretty.value, pretty.unit, self.failed.items.len },
         );
 
