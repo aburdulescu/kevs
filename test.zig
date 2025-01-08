@@ -7,7 +7,7 @@ const usage =
     \\
     \\OPTIONS:
     \\  -help  print this message and exit
-    \\  -exe   path to kevs CLI executable
+    \\  -exe   path to kevs CLI executable(default: zig-out/bin/kevs)
     \\
 ;
 
