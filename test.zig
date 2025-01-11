@@ -132,7 +132,7 @@ fn runIntegrationTests(exe: []const u8) !TestReport {
         const duration = end - start;
         try report.add(.{ .name = item.name, .err = failed }, duration);
         const pretty = prettyTime(duration);
-        try stdout.print("{s} {s} {s} {d}{s}\n", .{
+        try stdout.print("{s} {s} {s} {d:.3}{s}\n", .{
             item.name,
             dots[0 .. max_name - item.name.len],
             if (failed) |_| "failed" else "passed",
@@ -326,7 +326,7 @@ const ExeReport = struct {
         const pretty = prettyTime(self.duration);
 
         try stdout.print(
-            "\ntest summary:\nran {d} executables in {d}{s}, {d} failed\n",
+            "\ntest summary:\nran {d} executables in {d:.3}{s}, {d} failed\n",
             .{ self.total, pretty.value, pretty.unit, self.failed.items.len },
         );
 
@@ -358,7 +358,7 @@ const TestReport = struct {
         const pretty = prettyTime(self.duration);
 
         try stdout.print(
-            "\nexe summary:\nran {d} tests in {d}{s}, {d} failed\n",
+            "\nexe summary:\nran {d} tests in {d:.3}{s}, {d} failed\n",
             .{ self.total, pretty.value, pretty.unit, self.failed.items.len },
         );
 
