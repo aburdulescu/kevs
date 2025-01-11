@@ -59,13 +59,6 @@ const Flags = struct {
     out: []const u8,
 };
 
-const IntegrationTestError = error{
-    Unknown,
-    DiffrentNumOfLines,
-    DiffrentLines,
-    LineNotFound,
-};
-
 fn runIntegrationTests(exe: []const u8) !TestReport {
     const root_path = "testdata";
 
@@ -123,19 +116,16 @@ fn runIntegrationTests(exe: []const u8) !TestReport {
     };
 
     for (tests.items) |item| {
-        var failed: ?anyerror = null;
         const start = timer.read();
-        if (item.run(exe)) |_| {} else |err| {
-            failed = err;
-        }
+        const result = try item.run(exe);
         const end = timer.read();
         const duration = end - start;
-        try report.add(.{ .name = item.name, .err = failed }, duration);
+        try report.add(result, duration);
         const pretty = prettyTime(duration);
         try stdout.print("{s} {s} {s} {d:.3}{s}\n", .{
             item.name,
             dots[0 .. max_name - item.name.len],
-            if (failed) |_| "failed" else "passed",
+            if (result.err) |_| "failed" else "passed",
             pretty.value,
             pretty.unit,
         });
@@ -151,18 +141,18 @@ const IntegrationTest = struct {
     input: []const u8,
     expected: []const u8,
 
-    fn run(self: Self, exe: []const u8) !void {
+    fn run(self: Self, exe: []const u8) !TestResult {
         const is_windows = if (std.mem.indexOf(u8, exe, "-windows-")) |_| true else false;
         if (std.mem.startsWith(u8, self.name, "valid")) {
-            try self.runValid(exe, is_windows);
+            return self.runValid(exe, is_windows);
         } else if (std.mem.startsWith(u8, self.name, "not_valid")) {
-            try self.runNotValid(exe, is_windows);
+            return self.runNotValid(exe, is_windows);
         } else {
             unreachable;
         }
     }
 
-    fn runValid(self: Self, exe: []const u8, is_windows: bool) !void {
+    fn runValid(self: Self, exe: []const u8, is_windows: bool) !TestResult {
         var args = std.ArrayList([]const u8).init(gpa);
         defer args.deinit();
 
@@ -229,23 +219,33 @@ const IntegrationTest = struct {
         {
             var it = std.mem.splitSequence(u8, result.stdout, "\n");
             while (it.next()) |line| {
-                try haveLines.append(line);
+                try haveLines.append(std.mem.trimRight(u8, line, "\r"));
             }
         }
 
         if (haveLines.items.len != wantLines.items.len) {
-            return IntegrationTestError.DiffrentNumOfLines;
+            const err = try std.fmt.allocPrint(gpa, "want {d} lines, have {d}", .{ wantLines.items.len, haveLines.items.len });
+            return .{
+                .name = self.name,
+                .err = err,
+            };
         }
 
         for (wantLines.items, 0..) |want, i| {
             const have = haveLines.items[i];
             if (!std.mem.eql(u8, want, have)) {
-                return IntegrationTestError.DiffrentLines;
+                const err = try std.fmt.allocPrint(gpa, "line {d}: want '{s}', have '{s}'", .{ i + 1, want, have });
+                return .{
+                    .name = self.name,
+                    .err = err,
+                };
             }
         }
+
+        return .{ .name = self.name, .err = null };
     }
 
-    fn runNotValid(self: Self, exe: []const u8, is_windows: bool) !void {
+    fn runNotValid(self: Self, exe: []const u8, is_windows: bool) !TestResult {
         var args = std.ArrayList([]const u8).init(gpa);
         defer args.deinit();
 
@@ -276,6 +276,22 @@ const IntegrationTest = struct {
             },
         }
 
+        // write logs
+        {
+            try std.fs.cwd().makePath(flags.out);
+
+            var out_dir = try std.fs.cwd().openDir(flags.out, .{});
+            defer out_dir.close();
+
+            try out_dir.makePath(self.name);
+
+            var test_dir = try out_dir.openDir(self.name, .{});
+            defer test_dir.close();
+
+            try test_dir.writeFile(.{ .sub_path = "out", .data = result.stdout });
+            try test_dir.writeFile(.{ .sub_path = "err", .data = result.stderr });
+        }
+
         var file = try std.fs.cwd().openFile(self.expected, .{ .mode = .read_only });
         defer file.close();
 
@@ -289,7 +305,7 @@ const IntegrationTest = struct {
         {
             var it = std.mem.splitSequence(u8, result.stdout, "\n");
             while (it.next()) |line| {
-                try haveLines.append(line);
+                try haveLines.append(std.mem.trimRight(u8, line, "\r"));
             }
         }
 
@@ -302,40 +318,14 @@ const IntegrationTest = struct {
         }
 
         if (failed) {
-            return IntegrationTestError.LineNotFound;
+            const err = try std.fmt.allocPrint(gpa, "output does not contain '{s}'", .{want});
+            return .{
+                .name = self.name,
+                .err = err,
+            };
         }
-    }
-};
 
-const ExeReport = struct {
-    const Self = @This();
-
-    total: i32,
-    duration: u64,
-    failed: std.ArrayList([]const u8),
-
-    fn add(self: *Self, name: []const u8, duration: u64, failed: bool) !void {
-        if (failed) {
-            try self.failed.append(name);
-        }
-        self.total += 1;
-        self.duration += duration;
-    }
-
-    fn summary(self: Self) !void {
-        const pretty = prettyTime(self.duration);
-
-        try stdout.print(
-            "\ntest summary:\nran {d} executables in {d:.3}{s}, {d} failed\n",
-            .{ self.total, pretty.value, pretty.unit, self.failed.items.len },
-        );
-
-        if (self.failed.items.len != 0) {
-            try stdout.print("\nfailures:\n", .{});
-            for (self.failed.items) |item| {
-                try stdout.print("{s}\n", .{item});
-            }
-        }
+        return .{ .name = self.name, .err = null };
     }
 };
 
@@ -365,7 +355,7 @@ const TestReport = struct {
         if (self.failed.items.len != 0) {
             try stdout.print("\nfailures:\n", .{});
             for (self.failed.items) |item| {
-                try stdout.print("{s}: {}\n", .{ item.name, item.err.? });
+                try stdout.print("{s}: {s}\n", .{ item.name, item.err.? });
             }
         }
     }
@@ -373,7 +363,7 @@ const TestReport = struct {
 
 const TestResult = struct {
     name: []const u8,
-    err: ?anyerror,
+    err: ?[]const u8,
 };
 
 const PrettyTime = struct {
