@@ -5,6 +5,6 @@
 /venv/
 /default.profraw
 /fuzz-out/
-/tests-out/
+/test-out/
 /.zig-cache/
 /zig-out/

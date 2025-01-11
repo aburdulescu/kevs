@@ -8,6 +8,7 @@ const usage =
     \\OPTIONS:
     \\  -help  print this message and exit
     \\  -exe   path to kevs CLI executable(default: zig-out/bin/kevs)
+    \\  -out   path to write test output(default: test-out)
     \\
 ;
 
@@ -19,6 +20,7 @@ var gpa = gpa_instance.allocator();
 
 var flags = Flags{
     .exe = "zig-out/bin/kevs",
+    .out = "test-out",
 };
 
 pub fn main() !void {
@@ -35,6 +37,13 @@ pub fn main() !void {
             }
             flags.exe = args[i + 1];
             i += 1;
+        } else if (std.mem.eql(u8, args[i], "-out")) {
+            if (i + 1 == args.len) {
+                try stderr.print("error: -out needs a value\n", .{});
+                std.process.exit(1);
+            }
+            flags.out = args[i + 1];
+            i += 1;
         } else {
             break;
         }
@@ -47,6 +56,7 @@ pub fn main() !void {
 
 const Flags = struct {
     exe: []const u8,
+    out: []const u8,
 };
 
 const IntegrationTestError = error{
@@ -182,6 +192,22 @@ const IntegrationTest = struct {
                 try stderr.print("error: command terminated unexpectedly: {}\n", .{result.term});
                 std.process.exit(1);
             },
+        }
+
+        // write logs
+        {
+            try std.fs.cwd().makePath(flags.out);
+
+            var out_dir = try std.fs.cwd().openDir(flags.out, .{});
+            defer out_dir.close();
+
+            try out_dir.makePath(self.name);
+
+            var test_dir = try out_dir.openDir(self.name, .{});
+            defer test_dir.close();
+
+            try test_dir.writeFile(.{ .sub_path = "out", .data = result.stdout });
+            try test_dir.writeFile(.{ .sub_path = "err", .data = result.stderr });
         }
 
         var file = try std.fs.cwd().openFile(self.expected, .{ .mode = .read_only });

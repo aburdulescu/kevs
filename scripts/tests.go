@@ -16,7 +16,7 @@ import (
 // TODO: run CLI on fuzzer corpus?
 
 const (
-	testsOutDir = "tests-out"
+	testsOutDir = "test-out"
 )
 
 var (
