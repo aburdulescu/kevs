@@ -43,7 +43,7 @@ pub fn build(b: *std.Build) void {
     const tester_exe = b.addExecutable(.{
         .name = "tester",
         .target = target,
-        .root_source_file = b.path("tester.zig"),
+        .root_source_file = b.path("scripts/tester.zig"),
     });
     b.installArtifact(tester_exe);
 
@@ -77,7 +77,7 @@ pub fn build(b: *std.Build) void {
     const fmt = b.addFmt(.{
         .paths = &.{
             "build.zig",
-            "tester.zig",
+            "scripts/tester.zig",
         },
     });
     fmt_step.dependOn(&fmt.step);
