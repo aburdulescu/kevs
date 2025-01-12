@@ -116,8 +116,5 @@ int main(int argc, char **argv) {
     table_dump(table);
   }
 
-  // table_free(&table);
-  // string_free(&data);
-
   return rc;
 }
