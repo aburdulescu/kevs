@@ -26,12 +26,12 @@ static void kevs_logf(const char *level, const char *fn, int ln,
 }
 
 #define INFO(...)                                                              \
-  if (global_ctx.enable_logs) {                                                \
+  if (global_ctx.verbose) {                                                    \
     kevs_logf("INFO ", __FUNCTION__, __LINE__, __VA_ARGS__);                   \
   }
 
 #define ERROR(...)                                                             \
-  if (global_ctx.enable_logs) {                                                \
+  if (global_ctx.verbose) {                                                    \
     kevs_logf("ERROR", __FUNCTION__, __LINE__, __VA_ARGS__);                   \
   }
 
@@ -1022,10 +1022,12 @@ bool table_parse(Table *table, Context ctx, Str file, Str content) {
   if (!ok) {
     ERROR("scanner failed");
   }
-  for (size_t i = 0; i < tokens.len; i++) {
-    String v = string_from_str(tokens.ptr[i].value);
-    INFO("%s '%s'", tokentype_str(tokens.ptr[i].type), v.ptr);
-    string_free(&v);
+  if (global_ctx.verbose) {
+    for (size_t i = 0; i < tokens.len; i++) {
+      String v = string_from_str(tokens.ptr[i].value);
+      INFO("%s '%s'", tokentype_str(tokens.ptr[i].type), v.ptr);
+      string_free(&v);
+    }
   }
 
   if (ok) {

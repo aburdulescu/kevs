@@ -48,7 +48,7 @@ cleanup:
 }
 
 static void usage() {
-  fprintf(stderr, "usage: ./kevs [-abort] [-logs] [-dump] [-no-err] file\n");
+  fprintf(stderr, "usage: ./kevs [-abort] [-verbose] [-dump] [-no-err] file\n");
 }
 
 int main(int argc, char **argv) {
@@ -70,8 +70,8 @@ int main(int argc, char **argv) {
     if (strcmp(args[args_index], "-abort") == 0) {
       ctx.abort_on_error = true;
       args_index++;
-    } else if (strcmp(args[args_index], "-logs") == 0) {
-      ctx.enable_logs = true;
+    } else if (strcmp(args[args_index], "-verbose") == 0) {
+      ctx.verbose = true;
       args_index++;
     } else if (strcmp(args[args_index], "-dump") == 0) {
       dump = true;
@@ -90,9 +90,9 @@ int main(int argc, char **argv) {
 
   Str file = str_from_cstring(args[args_index]);
 
-  if (ctx.enable_logs) {
-    printf("file=%s, abort=%d, logs=%d, dump=%d, no-err=%d\n", file.ptr,
-           ctx.abort_on_error, ctx.enable_logs, dump, pass_on_error);
+  if (ctx.verbose) {
+    printf("file=%s, abort=%d, verbose=%d, dump=%d, no-err=%d\n", file.ptr,
+           ctx.abort_on_error, ctx.verbose, dump, pass_on_error);
   }
 
   String data = {};
@@ -116,8 +116,8 @@ int main(int argc, char **argv) {
     table_dump(table);
   }
 
-  table_free(&table);
-  string_free(&data);
+  // table_free(&table);
+  // string_free(&data);
 
   return rc;
 }
