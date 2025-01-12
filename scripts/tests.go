@@ -88,7 +88,7 @@ func runExample() error {
 	exe := filepath.Join(*buildDir, "example")
 	cmd := exec.Command(exe)
 
-	fmt.Print("example .. ")
+	fmt.Print("\nexample .. ")
 
 	start := time.Now()
 	err := cmd.Run()
@@ -100,7 +100,7 @@ func runExample() error {
 	} else {
 		fmt.Print("failed")
 	}
-	fmt.Printf(" %s\n\n", dur)
+	fmt.Printf(" %s\n", dur)
 
 	globalResult.add("example", err, dur)
 
