@@ -26,7 +26,7 @@ pub fn build(b: *std.Build) void {
     };
 
     const cli_copts = std.Build.Module.AddCSourceFilesOptions{
-        .files = &.{ "kevs_cli.c", "kevs.c" },
+        .files = &.{ "src/cli.c", "src/kevs.c" },
         .flags = &cflags,
     };
 
@@ -48,7 +48,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(tester_exe);
 
     const example_copts = std.Build.Module.AddCSourceFilesOptions{
-        .files = &.{ "kevs_example.c", "kevs.c" },
+        .files = &.{ "src/example.c", "src/kevs.c" },
         .flags = &cflags,
     };
 
@@ -61,7 +61,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(example_exe);
 
     const unittests_copts = std.Build.Module.AddCSourceFilesOptions{
-        .files = &.{ "kevs_test.c", "kevs.c" },
+        .files = &.{ "src/unittests.c", "src/kevs.c" },
         .flags = &cflags,
     };
 
@@ -77,7 +77,7 @@ pub fn build(b: *std.Build) void {
     const fmt = b.addFmt(.{
         .paths = &.{
             "build.zig",
-            "test.zig",
+            "tester.zig",
         },
     });
     fmt_step.dependOn(&fmt.step);

@@ -11,8 +11,8 @@ max_time=60
 set -ex
 
 # add testdata to corpus
-./b/kevs_fuzz -create_missing_dirs=1 -merge=1 ${main_corpus_dir}/ testdata/not_valid/
-./b/kevs_fuzz -create_missing_dirs=1 -merge=1 ${main_corpus_dir}/ testdata/valid/
+./b/fuzzer -create_missing_dirs=1 -merge=1 ${main_corpus_dir}/ testdata/not_valid/
+./b/fuzzer -create_missing_dirs=1 -merge=1 ${main_corpus_dir}/ testdata/valid/
 
 rm -rf ${fuzz_out_dir}
 
@@ -21,12 +21,12 @@ mkdir -p ${temp_corpus_dir}
 cp -r ${main_corpus_dir}/* ${temp_corpus_dir}/
 
 # run fuzzer
-LLVM_PROFILE_FILE=${coverage_raw_profile} ./b/kevs_fuzz -max_total_time=${max_time} -create_missing_dirs=1 -artifact_prefix=${fuzz_out_dir} ${temp_corpus_dir}
+LLVM_PROFILE_FILE=${coverage_raw_profile} ./b/fuzzer -max_total_time=${max_time} -create_missing_dirs=1 -artifact_prefix=${fuzz_out_dir} ${temp_corpus_dir}
 
 # generate coverage
 ./scripts/cov-merge.py ${coverage_raw_profile} -o ${coverage_profile}
-./scripts/cov-show.py b/kevs_fuzz -p ${coverage_profile} -s kevs.c -o ${coverage_dir}
+./scripts/cov-show.py b/fuzzer -p ${coverage_profile} -s kevs.c -o ${coverage_dir}
 
 # merge corpus
 rm -rf ${main_corpus_dir}
-./b/kevs_fuzz -create_missing_dirs=1 -merge=1 ${main_corpus_dir}/ ${temp_corpus_dir}
+./b/fuzzer -create_missing_dirs=1 -merge=1 ${main_corpus_dir}/ ${temp_corpus_dir}

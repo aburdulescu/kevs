@@ -16,13 +16,12 @@ import (
 // TODO: run CLI on fuzzer corpus?
 
 const (
-	testsOutDir = "test-out"
+	testsOutDir = "tests-out"
 )
 
 var (
 	buildDir                = flag.String("b", "b", "Path to build directory")
 	update                  = flag.Bool("update", false, "Update expected output for integration tests with valid input")
-	coverage                = flag.Bool("coverage", false, "Generate code coverage")
 	disableUnitTests        = flag.Bool("no-ut", false, "Disable unit tests")
 	disableExample          = flag.Bool("no-ex", false, "Disable example")
 	disableIntegrationTests = flag.Bool("no-it", false, "Disable integration tests")
@@ -86,7 +85,7 @@ func (g GlobalResult) summary() {
 var globalResult GlobalResult
 
 func runExample() error {
-	exe := filepath.Join(*buildDir, "kevs_example")
+	exe := filepath.Join(*buildDir, "example")
 	cmd := exec.Command(exe)
 
 	fmt.Print("example .. ")
@@ -110,15 +109,13 @@ func runExample() error {
 
 func runUnitTests() error {
 	// run
-	exe := filepath.Join(*buildDir, "kevs_test")
+	exe := filepath.Join(*buildDir, "unittests")
 	out := new(bytes.Buffer)
 	covProfile := filepath.Join(testsOutDir, "unit", "coverage", "coverage.profraw")
 
 	cmd := exec.Command(exe)
 	cmd.Stdout = out
-	if *coverage {
-		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
-	}
+	cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 
 	fmt.Print("unit tests .. ")
 
@@ -138,7 +135,7 @@ func runUnitTests() error {
 
 	// coverage
 	profiles := []string{covProfile}
-	bins := []string{filepath.Join(*buildDir, "kevs_test")}
+	bins := []string{filepath.Join(*buildDir, "unittests")}
 	coverageOut := filepath.Join(testsOutDir, "unit", "coverage")
 	if err := generateCoverage(coverageOut, profiles, bins); err != nil {
 		return err
@@ -207,25 +204,23 @@ func runIntegrationTests() error {
 		fmt.Printf("  %s\n", dur)
 	}
 
-	if *coverage {
-		var profiles []string
-		profilesDir := filepath.Join(testsOutDir, "int", "coverage", "profraw")
-		err := filepath.WalkDir(profilesDir, func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			profiles = append(profiles, path)
-			return nil
-		})
+	var profiles []string
+	profilesDir := filepath.Join(testsOutDir, "int", "coverage", "profraw")
+	err = filepath.WalkDir(profilesDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
+		profiles = append(profiles, path)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 
-		bins := []string{filepath.Join(*buildDir, "kevs")}
-		out := filepath.Join(testsOutDir, "int", "coverage")
-		if err := generateCoverage(out, profiles, bins); err != nil {
-			return err
-		}
+	bins := []string{filepath.Join(*buildDir, "kevs")}
+	out := filepath.Join(testsOutDir, "int", "coverage")
+	if err := generateCoverage(out, profiles, bins); err != nil {
+		return err
 	}
 
 	return nil
@@ -258,10 +253,8 @@ func (t IntegrationTest) runValid() error {
 
 	cmd := exec.Command(exe, "-abort", "-dump", t.input)
 	cmd.Stdout = out
-	if *coverage {
-		covProfile := filepath.Join(testsOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
-		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
-	}
+	covProfile := filepath.Join(testsOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
+	cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run command: %w", err)
@@ -300,10 +293,8 @@ func (t IntegrationTest) runNotValid() error {
 
 	cmd := exec.Command(exe, "-no-err", t.input)
 	cmd.Stdout = out
-	if *coverage {
-		covProfile := filepath.Join(testsOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
-		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
-	}
+	covProfile := filepath.Join(testsOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
+	cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run command: %w", err)
@@ -354,7 +345,7 @@ func generateCoverage(outDir string, profiles []string, binaries []string) error
 			"-show-regions=false",
 		}
 		args = append(args, binaries...)
-		args = append(args, "kevs.c")
+		args = append(args, "src/kevs.c")
 		cmd := exec.Command("llvm-cov-14", args...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr

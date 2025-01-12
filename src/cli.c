@@ -64,6 +64,7 @@ int main(int argc, char **argv) {
 
   bool dump = false;
   bool pass_on_error = false;
+  bool no_heap_free = false;
 
   int args_index = 0;
   while (args_index < nargs) {
@@ -78,6 +79,9 @@ int main(int argc, char **argv) {
       args_index++;
     } else if (strcmp(args[args_index], "-no-err") == 0) {
       pass_on_error = true;
+      args_index++;
+    } else if (strcmp(args[args_index], "-no-free") == 0) {
+      no_heap_free = true;
       args_index++;
     } else if (strlen(args[args_index]) > 0 && args[args_index][0] == '-') {
       fprintf(stderr, "error: unknown option '%s'\n", args[args_index]);
@@ -114,6 +118,11 @@ int main(int argc, char **argv) {
 
   if (dump) {
     table_dump(table);
+  }
+
+  if (!no_heap_free) {
+    table_free(&table);
+    string_free(&data);
   }
 
   return rc;
