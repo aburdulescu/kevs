@@ -4,8 +4,6 @@
 /perf.data*
 /venv/
 /default.profraw
-/fuzz-out/
-/tests-out/
-/test-out/
+/dev-out/
 /.zig-cache/
 /zig-out/

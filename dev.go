@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -12,12 +13,8 @@ import (
 	"time"
 )
 
-// TODO: run fuzzer?
-// TODO: run CLI on fuzzer corpus?
-// TODO: run CLI release binaries
-
 const (
-	testsOutDir = "tests-out"
+	devOutDir = "dev-out"
 )
 
 var (
@@ -26,6 +23,7 @@ var (
 	disableUnitTests        = flag.Bool("no-ut", false, "Disable unit tests")
 	disableExample          = flag.Bool("no-ex", false, "Disable example")
 	disableIntegrationTests = flag.Bool("no-it", false, "Disable integration tests")
+	enableFuzzer            = flag.Bool("fuzz", false, "Run fuzzer")
 )
 
 func main() {
@@ -37,7 +35,13 @@ func main() {
 
 func mainErr() error {
 	flag.Parse()
+
 	*buildDir, _ = filepath.Abs(*buildDir)
+
+	if *enableFuzzer {
+		return runFuzzer()
+	}
+
 	if !*disableUnitTests {
 		if err := runUnitTests(); err != nil {
 			return err
@@ -53,7 +57,9 @@ func mainErr() error {
 			return err
 		}
 	}
+
 	globalResult.summary()
+
 	return nil
 }
 
@@ -85,6 +91,90 @@ func (g GlobalResult) summary() {
 
 var globalResult GlobalResult
 
+func runFuzzer() error {
+	const (
+		maxTotalTime  = "60"
+		mainCorpusDir = "testdata/corpus"
+	)
+	var (
+		fuzzOutDir    = filepath.Join(devOutDir, "fuzz")
+		tempCorpusDir = filepath.Join(fuzzOutDir, "corpus")
+		covProfile    = filepath.Join(fuzzOutDir, "coverage.profraw")
+	)
+
+	// add testdata to corpus
+	{
+		dirs := []string{"testdata/not_valid/", "testdata/valid/"}
+		for _, dir := range dirs {
+			exe := filepath.Join(*buildDir, "fuzzer")
+			cmd := exec.Command(exe, "-create_missing_dirs=1", "-merge=1", mainCorpusDir, dir)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				return err
+			}
+		}
+	}
+
+	os.RemoveAll(fuzzOutDir)
+	os.MkdirAll(tempCorpusDir, 0755)
+
+	// add main corpus to temp
+	{
+		files, _ := os.ReadDir(mainCorpusDir)
+		for _, file := range files {
+			dstFile := filepath.Join(tempCorpusDir, file.Name())
+			srcFile := filepath.Join(mainCorpusDir, file.Name())
+			if err := copyFile(dstFile, srcFile); err != nil {
+				return err
+			}
+		}
+	}
+
+	// run fuzzer
+	{
+		exe := filepath.Join(*buildDir, "fuzzer")
+		cmd := exec.Command(
+			exe,
+			"-max_total_time="+maxTotalTime,
+			"-create_missing_dirs=1",
+			"-artifact_prefix="+fuzzOutDir,
+			tempCorpusDir,
+		)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+	}
+
+	os.RemoveAll(mainCorpusDir)
+
+	// merge corpus
+	{
+		exe := filepath.Join(*buildDir, "fuzzer")
+		cmd := exec.Command(exe, "-create_missing_dirs=1", "-merge=1", mainCorpusDir, tempCorpusDir)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+	}
+
+	// generate coverage
+	{
+		profiles := []string{covProfile}
+		bins := []string{filepath.Join(*buildDir, "fuzzer")}
+		coverageOut := filepath.Join(devOutDir, "fuzz", "coverage")
+		if err := generateCoverage(coverageOut, profiles, bins); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func runExample() error {
 	exe := filepath.Join(*buildDir, "example")
 	outBuf := new(bytes.Buffer)
@@ -103,8 +193,8 @@ func runExample() error {
 
 	// write logs
 	{
-		outFile := filepath.Join(testsOutDir, "example", "logs", "out")
-		errFile := filepath.Join(testsOutDir, "example", "logs", "err")
+		outFile := filepath.Join(devOutDir, "example", "logs", "out")
+		errFile := filepath.Join(devOutDir, "example", "logs", "err")
 		os.MkdirAll(filepath.Dir(outFile), 0755)
 		if err := os.WriteFile(outFile, outBuf.Bytes(), 0600); err != nil {
 			return fmt.Errorf("failed to write stdout file: %w", err)
@@ -131,7 +221,7 @@ func runUnitTests() error {
 	outBuf := new(bytes.Buffer)
 	errBuf := new(bytes.Buffer)
 
-	covProfile := filepath.Join(testsOutDir, "unit", "coverage", "coverage.profraw")
+	covProfile := filepath.Join(devOutDir, "unit", "coverage", "coverage.profraw")
 
 	cmd := exec.Command(exe)
 	cmd.Stdout = outBuf
@@ -147,8 +237,8 @@ func runUnitTests() error {
 
 	// write logs
 	{
-		outFile := filepath.Join(testsOutDir, "unit", "logs", "out")
-		errFile := filepath.Join(testsOutDir, "unit", "logs", "err")
+		outFile := filepath.Join(devOutDir, "unit", "logs", "out")
+		errFile := filepath.Join(devOutDir, "unit", "logs", "err")
 		os.MkdirAll(filepath.Dir(outFile), 0755)
 		if err := os.WriteFile(outFile, outBuf.Bytes(), 0600); err != nil {
 			return fmt.Errorf("failed to write stdout file: %w", err)
@@ -170,7 +260,7 @@ func runUnitTests() error {
 	// coverage
 	profiles := []string{covProfile}
 	bins := []string{filepath.Join(*buildDir, "unittests")}
-	coverageOut := filepath.Join(testsOutDir, "unit", "coverage")
+	coverageOut := filepath.Join(devOutDir, "unit", "coverage")
 	if err := generateCoverage(coverageOut, profiles, bins); err != nil {
 		return err
 	}
@@ -239,7 +329,7 @@ func runIntegrationTests() error {
 	}
 
 	var profiles []string
-	profilesDir := filepath.Join(testsOutDir, "int", "coverage", "profraw")
+	profilesDir := filepath.Join(devOutDir, "int", "coverage", "profraw")
 	err = filepath.WalkDir(profilesDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -252,7 +342,7 @@ func runIntegrationTests() error {
 	}
 
 	bins := []string{filepath.Join(*buildDir, "kevs")}
-	out := filepath.Join(testsOutDir, "int", "coverage")
+	out := filepath.Join(devOutDir, "int", "coverage")
 	if err := generateCoverage(out, profiles, bins); err != nil {
 		return err
 	}
@@ -285,7 +375,7 @@ func (t IntegrationTest) runValid() error {
 	exe := filepath.Join(*buildDir, "kevs")
 	outBuf := new(bytes.Buffer)
 	errBuf := new(bytes.Buffer)
-	covProfile := filepath.Join(testsOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
+	covProfile := filepath.Join(devOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
 
 	cmd := exec.Command(exe, "-abort", "-dump", t.input)
 	cmd.Stdout = outBuf
@@ -303,8 +393,8 @@ func (t IntegrationTest) runValid() error {
 		}
 	} else {
 		// write logs
-		outFile := filepath.Join(testsOutDir, "int", "logs", t.name+".out")
-		errFile := filepath.Join(testsOutDir, "int", "logs", t.name+".err")
+		outFile := filepath.Join(devOutDir, "int", "logs", t.name+".out")
+		errFile := filepath.Join(devOutDir, "int", "logs", t.name+".err")
 		os.MkdirAll(filepath.Dir(outFile), 0755)
 		if err := os.WriteFile(outFile, outBuf.Bytes(), 0600); err != nil {
 			return fmt.Errorf("failed to write stdout file: %w", err)
@@ -338,7 +428,7 @@ func (t IntegrationTest) runNotValid() error {
 	exe := filepath.Join(*buildDir, "kevs")
 	outBuf := new(bytes.Buffer)
 	errBuf := new(bytes.Buffer)
-	covProfile := filepath.Join(testsOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
+	covProfile := filepath.Join(devOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
 
 	cmd := exec.Command(exe, "-no-err", t.input)
 	cmd.Stdout = outBuf
@@ -351,8 +441,8 @@ func (t IntegrationTest) runNotValid() error {
 
 	// write logs
 	{
-		outFile := filepath.Join(testsOutDir, "int", "logs", t.name+".out")
-		errFile := filepath.Join(testsOutDir, "int", "logs", t.name+".err")
+		outFile := filepath.Join(devOutDir, "int", "logs", t.name+".out")
+		errFile := filepath.Join(devOutDir, "int", "logs", t.name+".err")
 		os.MkdirAll(filepath.Dir(outFile), 0755)
 		if err := os.WriteFile(outFile, outBuf.Bytes(), 0600); err != nil {
 			return fmt.Errorf("failed to write stdout file: %w", err)
@@ -380,6 +470,8 @@ func (t IntegrationTest) runNotValid() error {
 }
 
 func generateCoverage(outDir string, profiles []string, binaries []string) error {
+	os.MkdirAll(outDir, 0755)
+
 	dataFile := filepath.Join(outDir, "coverage.data")
 
 	// merge raw profiles
@@ -417,4 +509,22 @@ func generateCoverage(outDir string, profiles []string, binaries []string) error
 	}
 
 	return nil
+}
+
+func copyFile(dstPath, srcPath string) error {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+	_, err = io.Copy(dst, src)
+	if err != nil {
+		return err
+	}
+	return dst.Sync()
 }
