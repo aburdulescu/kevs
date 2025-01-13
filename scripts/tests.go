@@ -14,6 +14,7 @@ import (
 
 // TODO: run fuzzer?
 // TODO: run CLI on fuzzer corpus?
+// TODO: run CLI release binaries
 
 const (
 	testsOutDir = "tests-out"
@@ -86,7 +87,12 @@ var globalResult GlobalResult
 
 func runExample() error {
 	exe := filepath.Join(*buildDir, "example")
+	outBuf := new(bytes.Buffer)
+	errBuf := new(bytes.Buffer)
+
 	cmd := exec.Command(exe)
+	cmd.Stdout = outBuf
+	cmd.Stderr = errBuf
 
 	fmt.Print("\nexample .. ")
 
@@ -94,6 +100,19 @@ func runExample() error {
 	err := cmd.Run()
 	end := time.Now()
 	dur := end.Sub(start)
+
+	// write logs
+	{
+		outFile := filepath.Join(testsOutDir, "example", "logs", "out")
+		errFile := filepath.Join(testsOutDir, "example", "logs", "err")
+		os.MkdirAll(filepath.Dir(outFile), 0755)
+		if err := os.WriteFile(outFile, outBuf.Bytes(), 0600); err != nil {
+			return fmt.Errorf("failed to write stdout file: %w", err)
+		}
+		if err := os.WriteFile(errFile, errBuf.Bytes(), 0600); err != nil {
+			return fmt.Errorf("failed to write stderr file: %w", err)
+		}
+	}
 
 	if err == nil {
 		fmt.Print("passed")
@@ -108,13 +127,15 @@ func runExample() error {
 }
 
 func runUnitTests() error {
-	// run
 	exe := filepath.Join(*buildDir, "unittests")
-	out := new(bytes.Buffer)
+	outBuf := new(bytes.Buffer)
+	errBuf := new(bytes.Buffer)
+
 	covProfile := filepath.Join(testsOutDir, "unit", "coverage", "coverage.profraw")
 
 	cmd := exec.Command(exe)
-	cmd.Stdout = out
+	cmd.Stdout = outBuf
+	cmd.Stderr = errBuf
 	cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 
 	fmt.Print("unit tests .. ")
@@ -123,6 +144,19 @@ func runUnitTests() error {
 	err := cmd.Run()
 	end := time.Now()
 	dur := end.Sub(start)
+
+	// write logs
+	{
+		outFile := filepath.Join(testsOutDir, "unit", "logs", "out")
+		errFile := filepath.Join(testsOutDir, "unit", "logs", "err")
+		os.MkdirAll(filepath.Dir(outFile), 0755)
+		if err := os.WriteFile(outFile, outBuf.Bytes(), 0600); err != nil {
+			return fmt.Errorf("failed to write stdout file: %w", err)
+		}
+		if err := os.WriteFile(errFile, errBuf.Bytes(), 0600); err != nil {
+			return fmt.Errorf("failed to write stderr file: %w", err)
+		}
+	}
 
 	if err == nil {
 		fmt.Print("passed")
@@ -249,11 +283,13 @@ func (t IntegrationTest) run() error {
 
 func (t IntegrationTest) runValid() error {
 	exe := filepath.Join(*buildDir, "kevs")
-	out := new(bytes.Buffer)
+	outBuf := new(bytes.Buffer)
+	errBuf := new(bytes.Buffer)
+	covProfile := filepath.Join(testsOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
 
 	cmd := exec.Command(exe, "-abort", "-dump", t.input)
-	cmd.Stdout = out
-	covProfile := filepath.Join(testsOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
+	cmd.Stdout = outBuf
+	cmd.Stderr = errBuf
 	cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 
 	if err := cmd.Run(); err != nil {
@@ -261,9 +297,20 @@ func (t IntegrationTest) runValid() error {
 	}
 
 	if *update {
-		err := os.WriteFile(t.expected, out.Bytes(), 0600)
+		err := os.WriteFile(t.expected, outBuf.Bytes(), 0600)
 		if err != nil {
 			return fmt.Errorf("failed to write output file: %w", err)
+		}
+	} else {
+		// write logs
+		outFile := filepath.Join(testsOutDir, "int", "logs", t.name+".out")
+		errFile := filepath.Join(testsOutDir, "int", "logs", t.name+".err")
+		os.MkdirAll(filepath.Dir(outFile), 0755)
+		if err := os.WriteFile(outFile, outBuf.Bytes(), 0600); err != nil {
+			return fmt.Errorf("failed to write stdout file: %w", err)
+		}
+		if err := os.WriteFile(errFile, errBuf.Bytes(), 0600); err != nil {
+			return fmt.Errorf("failed to write stderr file: %w", err)
 		}
 	}
 
@@ -272,7 +319,7 @@ func (t IntegrationTest) runValid() error {
 		return fmt.Errorf("failed to read expected output file: %w", err)
 	}
 
-	haveLines := strings.Split(out.String(), "\n")
+	haveLines := strings.Split(outBuf.String(), "\n")
 	wantLines := strings.Split(string(data), "\n")
 
 	if len(haveLines) != len(wantLines) {
@@ -289,15 +336,30 @@ func (t IntegrationTest) runValid() error {
 
 func (t IntegrationTest) runNotValid() error {
 	exe := filepath.Join(*buildDir, "kevs")
-	out := new(bytes.Buffer)
+	outBuf := new(bytes.Buffer)
+	errBuf := new(bytes.Buffer)
+	covProfile := filepath.Join(testsOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
 
 	cmd := exec.Command(exe, "-no-err", t.input)
-	cmd.Stdout = out
-	covProfile := filepath.Join(testsOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
+	cmd.Stdout = outBuf
+	cmd.Stderr = errBuf
 	cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run command: %w", err)
+	}
+
+	// write logs
+	{
+		outFile := filepath.Join(testsOutDir, "int", "logs", t.name+".out")
+		errFile := filepath.Join(testsOutDir, "int", "logs", t.name+".err")
+		os.MkdirAll(filepath.Dir(outFile), 0755)
+		if err := os.WriteFile(outFile, outBuf.Bytes(), 0600); err != nil {
+			return fmt.Errorf("failed to write stdout file: %w", err)
+		}
+		if err := os.WriteFile(errFile, errBuf.Bytes(), 0600); err != nil {
+			return fmt.Errorf("failed to write stderr file: %w", err)
+		}
 	}
 
 	data, err := os.ReadFile(t.expected)
@@ -305,7 +367,7 @@ func (t IntegrationTest) runNotValid() error {
 		return fmt.Errorf("failed to read expected output file: %w", err)
 	}
 
-	haveLines := strings.Split(out.String(), "\n")
+	haveLines := strings.Split(outBuf.String(), "\n")
 	want := strings.TrimSuffix(string(data), "\n")
 
 	for _, line := range haveLines {
