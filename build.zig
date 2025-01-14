@@ -25,6 +25,17 @@ pub fn build(b: *std.Build) void {
     });
     fmt_step.dependOn(&fmt.step);
 
+    const Executable = struct {
+        name: []const u8,
+        src: []const u8,
+    };
+
+    const executables = [_]Executable{
+        .{ .name = "kevs", .src = "src/cli.c" },
+        .{ .name = "unittests", .src = "src/unittests.c" },
+        .{ .name = "example", .src = "src/example.c" },
+    };
+
     const targets = [_]std.Target.Query{
         .{ .os_tag = .linux, .cpu_arch = .aarch64 },
         .{ .os_tag = .linux, .cpu_arch = .x86_64 },
@@ -34,30 +45,32 @@ pub fn build(b: *std.Build) void {
         .{ .os_tag = .windows, .cpu_arch = .x86_64 },
     };
 
-    for (targets) |query| {
-        const target = b.resolveTargetQuery(query);
-        const t = target.result;
+    for (executables) |executable| {
+        for (targets) |query| {
+            const target = b.resolveTargetQuery(query);
+            const t = target.result;
 
-        const exe = b.addExecutable(.{
-            .name = "kevs",
-            .target = target,
-            .optimize = optimize,
-            .strip = strip,
-            .link_libc = true,
-        });
-        exe.addCSourceFiles(.{
-            .files = &.{ "src/cli.c", "src/kevs.c" },
-            .flags = &.{ "-std=c11", "-g", "-Wall", "-Wextra", "-Werror" },
-        });
+            const exe = b.addExecutable(.{
+                .name = executable.name,
+                .target = target,
+                .optimize = optimize,
+                .strip = strip,
+                .link_libc = true,
+            });
+            exe.addCSourceFiles(.{
+                .files = &.{ executable.src, "src/kevs.c" },
+                .flags = &.{ "-std=c11", "-g", "-Wall", "-Wextra", "-Werror" },
+            });
 
-        const install = b.addInstallArtifact(exe, .{});
-        install.dest_dir = .prefix;
-        install.dest_sub_path = b.fmt("{s}/{s}-{s}-{s}", .{
-            @tagName(optimize),
-            exe.name,
-            @tagName(t.os.tag),
-            @tagName(t.cpu.arch),
-        });
-        b.getInstallStep().dependOn(&install.step);
+            const install = b.addInstallArtifact(exe, .{});
+            install.dest_dir = .prefix;
+            install.dest_sub_path = b.fmt("{s}/{s}/{s}/{s}", .{
+                @tagName(optimize),
+                @tagName(t.os.tag),
+                @tagName(t.cpu.arch),
+                exe.name,
+            });
+            b.getInstallStep().dependOn(&install.step);
+        }
     }
 }

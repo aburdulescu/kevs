@@ -23,7 +23,9 @@ var (
 	disableUnitTests        = flag.Bool("no-ut", false, "Disable unit tests")
 	disableExample          = flag.Bool("no-ex", false, "Disable example")
 	disableIntegrationTests = flag.Bool("no-it", false, "Disable integration tests")
+	disableCodeCoverage     = flag.Bool("no-cc", false, "Disable code coverage")
 	enableFuzzer            = flag.Bool("fuzz", false, "Run fuzzer")
+	osTag                   = flag.String("os", "linux", "Os tag: linux or windows")
 )
 
 func main() {
@@ -35,6 +37,12 @@ func main() {
 
 func mainErr() error {
 	flag.Parse()
+
+	switch *osTag {
+	case "linux", "windows":
+	default:
+		return fmt.Errorf("OS '%s' is not supported", *osTag)
+	}
 
 	*buildDir, _ = filepath.Abs(*buildDir)
 
@@ -180,7 +188,13 @@ func runExample() error {
 	outBuf := new(bytes.Buffer)
 	errBuf := new(bytes.Buffer)
 
-	cmd := exec.Command(exe)
+	var args []string
+	if *osTag == "windows" {
+		args = append(args, "wine")
+	}
+	args = append(args, exe)
+
+	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout = outBuf
 	cmd.Stderr = errBuf
 
@@ -223,10 +237,19 @@ func runUnitTests() error {
 
 	covProfile := filepath.Join(devOutDir, "unit", "coverage", "coverage.profraw")
 
-	cmd := exec.Command(exe)
+	var args []string
+	if *osTag == "windows" {
+		args = append(args, "wine")
+	}
+	args = append(args, exe)
+
+	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout = outBuf
 	cmd.Stderr = errBuf
-	cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
+
+	if !*disableCodeCoverage {
+		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
+	}
 
 	fmt.Print("unit tests .. ")
 
@@ -258,11 +281,13 @@ func runUnitTests() error {
 	globalResult.add("unittests", err, dur)
 
 	// coverage
-	profiles := []string{covProfile}
-	bins := []string{filepath.Join(*buildDir, "unittests")}
-	coverageOut := filepath.Join(devOutDir, "unit", "coverage")
-	if err := generateCoverage(coverageOut, profiles, bins); err != nil {
-		return err
+	if !*disableCodeCoverage {
+		profiles := []string{covProfile}
+		bins := []string{filepath.Join(*buildDir, "unittests")}
+		coverageOut := filepath.Join(devOutDir, "unit", "coverage")
+		if err := generateCoverage(coverageOut, profiles, bins); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -328,23 +353,25 @@ func runIntegrationTests() error {
 		fmt.Printf("  %s\n", dur)
 	}
 
-	var profiles []string
-	profilesDir := filepath.Join(devOutDir, "int", "coverage", "profraw")
-	err = filepath.WalkDir(profilesDir, func(path string, d fs.DirEntry, err error) error {
+	if !*disableCodeCoverage {
+		var profiles []string
+		profilesDir := filepath.Join(devOutDir, "int", "coverage", "profraw")
+		err = filepath.WalkDir(profilesDir, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			profiles = append(profiles, path)
+			return nil
+		})
 		if err != nil {
 			return err
 		}
-		profiles = append(profiles, path)
-		return nil
-	})
-	if err != nil {
-		return err
-	}
 
-	bins := []string{filepath.Join(*buildDir, "kevs")}
-	out := filepath.Join(devOutDir, "int", "coverage")
-	if err := generateCoverage(out, profiles, bins); err != nil {
-		return err
+		bins := []string{filepath.Join(*buildDir, "kevs")}
+		out := filepath.Join(devOutDir, "int", "coverage")
+		if err := generateCoverage(out, profiles, bins); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -377,19 +404,28 @@ func (t IntegrationTest) runValid() error {
 	errBuf := new(bytes.Buffer)
 	covProfile := filepath.Join(devOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
 
-	cmd := exec.Command(exe, "-abort", "-dump", t.input)
+	var args []string
+	if *osTag == "windows" {
+		args = append(args, "wine")
+	}
+	args = append(args, exe, "-abort", "-dump", t.input)
+
+	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout = outBuf
 	cmd.Stderr = errBuf
-	cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run command: %w", err)
+	if !*disableCodeCoverage {
+		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 	}
 
+	err := cmd.Run()
+
 	if *update {
-		err := os.WriteFile(t.expected, outBuf.Bytes(), 0600)
-		if err != nil {
-			return fmt.Errorf("failed to write output file: %w", err)
+		if err == nil {
+			err = os.WriteFile(t.expected, outBuf.Bytes(), 0600)
+			if err != nil {
+				return fmt.Errorf("failed to write output file: %w", err)
+			}
 		}
 	} else {
 		// write logs
@@ -404,6 +440,10 @@ func (t IntegrationTest) runValid() error {
 		}
 	}
 
+	if err != nil {
+		return fmt.Errorf("failed to run command: %w", err)
+	}
+
 	data, err := os.ReadFile(t.expected)
 	if err != nil {
 		return fmt.Errorf("failed to read expected output file: %w", err)
@@ -416,8 +456,9 @@ func (t IntegrationTest) runValid() error {
 		return fmt.Errorf("error: want %d lines, have %d lines\n", len(wantLines), len(haveLines))
 	}
 	for i := range wantLines {
-		if haveLines[i] != wantLines[i] {
-			return fmt.Errorf("error: line %d: want '%s', have '%s'\n", i+1, wantLines[i], haveLines[i])
+		haveLine := strings.TrimSuffix(haveLines[i], "\r")
+		if haveLine != wantLines[i] {
+			return fmt.Errorf("error: line %d: want '%s', have '%s'\n", i+1, wantLines[i], haveLine)
 		}
 	}
 
@@ -430,14 +471,21 @@ func (t IntegrationTest) runNotValid() error {
 	errBuf := new(bytes.Buffer)
 	covProfile := filepath.Join(devOutDir, "int", "coverage", "profraw", t.name) + ".profraw"
 
-	cmd := exec.Command(exe, "-no-err", t.input)
+	var args []string
+	if *osTag == "windows" {
+		args = append(args, "wine")
+	}
+	args = append(args, exe, "-no-err", t.input)
+
+	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout = outBuf
 	cmd.Stderr = errBuf
-	cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run command: %w", err)
+	if !*disableCodeCoverage {
+		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 	}
+
+	err := cmd.Run()
 
 	// write logs
 	{
@@ -452,6 +500,10 @@ func (t IntegrationTest) runNotValid() error {
 		}
 	}
 
+	if err != nil {
+		return fmt.Errorf("failed to run command: %w", err)
+	}
+
 	data, err := os.ReadFile(t.expected)
 	if err != nil {
 		return fmt.Errorf("failed to read expected output file: %w", err)
@@ -461,6 +513,7 @@ func (t IntegrationTest) runNotValid() error {
 	want := strings.TrimSuffix(string(data), "\n")
 
 	for _, line := range haveLines {
+		line = strings.TrimSuffix(line, "\r")
 		if strings.Index(line, want) != -1 {
 			return nil
 		}
