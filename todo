@@ -3,3 +3,4 @@
   - add progress bar for fuzzer and more flags
   - bootstrap development: download cmake, llvm, go, zig?
   - run CLI on fuzzer corpus and generate integration tests?
+- add node limit(max tables and lists) or memory allocator to avoid OOM?
