@@ -46,7 +46,6 @@ typedef struct {
 } Table;
 
 typedef struct Value {
-  ValueTag tag;
   union {
     int64_t integer;
     bool boolean;
@@ -54,6 +53,7 @@ typedef struct Value {
     List list;
     Table table;
   } data;
+  ValueTag tag;
 } Value;
 
 typedef struct KeyValue {

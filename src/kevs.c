@@ -339,14 +339,9 @@ static const char kTableEnd = '}';
 static const char *spaces = " \t";
 
 typedef struct {
-  int line;
-  int column;
-} Position;
-
-typedef struct {
-  TokenType type;
   Str value;
-  Position position;
+  TokenType type;
+  int line;
 } Token;
 
 typedef struct {
@@ -414,7 +409,7 @@ static void scanner_add(Scanner *self, TokenType type, size_t end) {
   const Token t = {
       .type = type,
       .value = val,
-      .position.line = self->line,
+      .line = self->line,
   };
 
   tokens_add(self->tokens, t);
@@ -426,7 +421,7 @@ static void scanner_add_delim(Scanner *self) {
   const Token t = {
       .type = kTokenDelim,
       .value = str_slice(self->content, 0, 1),
-      .position.line = self->line,
+      .line = self->line,
   };
   tokens_add(self->tokens, t);
   scanner_advance(self, 1);
@@ -770,7 +765,7 @@ static void parse_errorf(const Parser *self, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   fprintf(stdout, "%s:%d: error: parse: ", self->file.ptr,
-          parser_get(self).position.line);
+          parser_get(self).line);
   vfprintf(stdout, fmt, args);
   fprintf(stdout, "\n");
   va_end(args);
