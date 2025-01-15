@@ -408,7 +408,7 @@ func (t IntegrationTest) runValid() error {
 	if *osTag == "windows" {
 		args = append(args, "wine")
 	}
-	args = append(args, exe, "-abort", "-dump", t.input)
+	args = append(args, exe, "-abort", "-dump", "-free", t.input)
 
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout = outBuf
@@ -475,7 +475,7 @@ func (t IntegrationTest) runNotValid() error {
 	if *osTag == "windows" {
 		args = append(args, "wine")
 	}
-	args = append(args, exe, "-no-err", t.input)
+	args = append(args, exe, "-no-err", "-free", t.input)
 
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout = outBuf

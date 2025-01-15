@@ -48,7 +48,8 @@ cleanup:
 }
 
 static void usage() {
-  fprintf(stderr, "usage: ./kevs [-abort] [-verbose] [-dump] [-no-err] file\n");
+  fprintf(stderr,
+          "usage: ./kevs [-abort] [-verbose] [-dump] [-no-err] [-free] file\n");
 }
 
 int main(int argc, char **argv) {
@@ -64,7 +65,7 @@ int main(int argc, char **argv) {
 
   bool dump = false;
   bool pass_on_error = false;
-  bool no_heap_free = false;
+  bool free_heap = false;
 
   int args_index = 0;
   while (args_index < nargs) {
@@ -80,8 +81,8 @@ int main(int argc, char **argv) {
     } else if (strcmp(args[args_index], "-no-err") == 0) {
       pass_on_error = true;
       args_index++;
-    } else if (strcmp(args[args_index], "-no-free") == 0) {
-      no_heap_free = true;
+    } else if (strcmp(args[args_index], "-free") == 0) {
+      free_heap = true;
       args_index++;
     } else if (strlen(args[args_index]) > 0 && args[args_index][0] == '-') {
       fprintf(stderr, "error: unknown option '%s'\n", args[args_index]);
@@ -120,7 +121,7 @@ int main(int argc, char **argv) {
     table_dump(table);
   }
 
-  if (!no_heap_free) {
+  if (free_heap) {
     table_free(&table);
     string_free(&data);
   }
