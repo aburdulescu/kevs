@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+static const size_t kDefaultCapacity = 32;
+
 static Context global_ctx = {};
 
 static void kevs_logf(const char *level, const char *fn, int ln,
@@ -745,6 +747,11 @@ static void list_dump(List self) {
   }
 }
 
+static void table_reserve(Table *self, size_t cap) {
+  self->cap = cap;
+  self->ptr = realloc(self->ptr, cap * sizeof(KeyValue));
+}
+
 static void table_add(Table *self, KeyValue v) {
   if (self->len == self->cap) {
     table_reserve(self, (self->cap + 1) * 2);
@@ -810,7 +817,7 @@ static bool parse_list_value(Parser *self, Value *out) {
   out->tag = kValueTagList;
 
   // pre-aloc some memory
-  list_reserve(&out->data.list, 128);
+  list_reserve(&out->data.list, kDefaultCapacity);
 
   parser_pop(self);
 
@@ -837,7 +844,7 @@ static bool parse_table_value(Parser *self, Value *out) {
   out->tag = kValueTagTable;
 
   // pre-alloc some memory
-  table_reserve(&out->data.table, 128);
+  table_reserve(&out->data.table, kDefaultCapacity);
 
   parser_pop(self);
 
@@ -1008,10 +1015,7 @@ static bool parse(Context ctx, Str file, Tokens tokens, Table *table) {
       .ctx = ctx,
   };
 
-  if (table->cap == 0) {
-    // pre-alloc some memory
-    table_reserve(table, 128);
-  }
+  table_reserve(table, kDefaultCapacity);
 
   while (p.i < tokens.len) {
     KeyValue kv = {};
@@ -1024,11 +1028,6 @@ static bool parse(Context ctx, Str file, Tokens tokens, Table *table) {
   return true;
 }
 
-void table_reserve(Table *self, size_t cap) {
-  self->cap = cap;
-  self->ptr = realloc(self->ptr, cap * sizeof(KeyValue));
-}
-
 bool table_parse(Table *table, Context ctx, Str file, Str content) {
   global_ctx = ctx;
 
@@ -1037,7 +1036,7 @@ bool table_parse(Table *table, Context ctx, Str file, Str content) {
   Tokens tokens = {};
 
   // pre-aloc some memory
-  tokens_reserve(&tokens, 1024);
+  tokens_reserve(&tokens, kDefaultCapacity);
 
   ok = scan(ctx, file, content, &tokens);
   if (!ok) {

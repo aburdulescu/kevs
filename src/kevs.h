@@ -85,7 +85,6 @@ void string_resize(String *self, size_t len);
 void string_free(String *self);
 
 // kevs
-void table_reserve(Table *self, size_t cap);
 bool table_parse(Table *table, Context ctx, Str file, Str content);
 void table_free(Table *self);
 void table_dump(Table self);
