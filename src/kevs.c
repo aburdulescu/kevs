@@ -761,6 +761,8 @@ static Token parser_get(const Parser *self) {
   return self->tokens.ptr[self->i];
 }
 
+static void parser_pop(Parser *self) { self->i++; }
+
 static void parse_errorf(const Parser *self, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
@@ -787,12 +789,6 @@ static bool parser_expect_delim(const Parser *self, char delim) {
     return false;
   }
   return str_equals_char(parser_get(self).value, delim);
-}
-
-static Token parser_pop(Parser *self) {
-  Token t = parser_get(self);
-  self->i++;
-  return t;
 }
 
 static bool parse_delim(Parser *self, char c) {
@@ -933,15 +929,18 @@ static bool parse_key(Parser *self, Table parent, Str *key) {
     parse_errorf(self, "expected key token");
     return false;
   }
-  if (!key_is_valid(parser_get(self).value)) {
-    String s = string_from_str(parser_get(self).value);
+
+  const Token tok = parser_get(self);
+
+  if (!key_is_valid(tok.value)) {
+    String s = string_from_str(tok.value);
     parse_errorf(self, "key is not a valid identifier: '%s'", s.ptr);
     string_free(&s);
     return false;
   }
 
   // check if key is unique
-  Str temp = parser_get(self).value;
+  Str temp = tok.value;
   bool is_unique = true;
   {
     for (size_t i = 0; i < parent.len; i++) {
