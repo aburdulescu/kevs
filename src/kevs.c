@@ -350,6 +350,11 @@ typedef struct {
   size_t len;
 } Tokens;
 
+static void tokens_reserve(Tokens *self, size_t cap) {
+  self->cap = cap;
+  self->ptr = realloc(self->ptr, cap * sizeof(Token));
+}
+
 static void tokens_free(Tokens *self) {
   free(self->ptr);
   *self = (Tokens){};
@@ -357,8 +362,7 @@ static void tokens_free(Tokens *self) {
 
 static void tokens_add(Tokens *self, Token v) {
   if (self->len == self->cap) {
-    self->cap = (self->cap + 1) * 2;
-    self->ptr = realloc(self->ptr, self->cap * sizeof(v));
+    tokens_reserve(self, (self->cap + 1) * 2);
   }
   memcpy(self->ptr + self->len, &v, sizeof(v));
   self->len += 1;
@@ -682,6 +686,11 @@ static void value_free(Value *self) {
   *self = (Value){};
 }
 
+static void list_reserve(List *self, size_t cap) {
+  self->cap = cap;
+  self->ptr = realloc(self->ptr, cap * sizeof(Value));
+}
+
 static void list_free(List *self) {
   for (size_t i = 0; i < self->len; i++) {
     value_free(&self->ptr[i]);
@@ -693,8 +702,7 @@ static void list_free(List *self) {
 
 static void list_add(List *self, Value v) {
   if (self->len == self->cap) {
-    self->cap = (self->cap + 1) * 2;
-    self->ptr = realloc(self->ptr, self->cap * sizeof(v));
+    list_reserve(self, (self->cap + 1) * 2);
   }
   memcpy(self->ptr + self->len, &v, sizeof(v));
   self->len += 1;
@@ -739,8 +747,7 @@ static void list_dump(List self) {
 
 static void table_add(Table *self, KeyValue v) {
   if (self->len == self->cap) {
-    self->cap = (self->cap + 1) * 2;
-    self->ptr = realloc(self->ptr, self->cap * sizeof(v));
+    table_reserve(self, (self->cap + 1) * 2);
   }
   memcpy(self->ptr + self->len, &v, sizeof(v));
   self->len += 1;
@@ -802,6 +809,9 @@ static bool parse_delim(Parser *self, char c) {
 static bool parse_list_value(Parser *self, Value *out) {
   out->tag = kValueTagList;
 
+  // pre-aloc some memory
+  list_reserve(&out->data.list, 128);
+
   parser_pop(self);
 
   while (true) {
@@ -825,6 +835,9 @@ static bool parse_list_value(Parser *self, Value *out) {
 
 static bool parse_table_value(Parser *self, Value *out) {
   out->tag = kValueTagTable;
+
+  // pre-alloc some memory
+  table_reserve(&out->data.table, 128);
 
   parser_pop(self);
 
@@ -995,6 +1008,11 @@ static bool parse(Context ctx, Str file, Tokens tokens, Table *table) {
       .ctx = ctx,
   };
 
+  if (table->cap == 0) {
+    // pre-alloc some memory
+    table_reserve(table, 128);
+  }
+
   while (p.i < tokens.len) {
     KeyValue kv = {};
     if (!parse_key_value(&p, *table, &kv)) {
@@ -1006,12 +1024,21 @@ static bool parse(Context ctx, Str file, Tokens tokens, Table *table) {
   return true;
 }
 
+void table_reserve(Table *self, size_t cap) {
+  self->cap = cap;
+  self->ptr = realloc(self->ptr, cap * sizeof(KeyValue));
+}
+
 bool table_parse(Table *table, Context ctx, Str file, Str content) {
   global_ctx = ctx;
 
   bool ok = false;
 
   Tokens tokens = {};
+
+  // pre-aloc some memory
+  tokens_reserve(&tokens, 1024);
+
   ok = scan(ctx, file, content, &tokens);
   if (!ok) {
     ERROR("scanner failed");
