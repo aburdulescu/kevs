@@ -1,4 +1,4 @@
-# KEVS(`k=v;`)
+# KEVS
 
 A configuration format which aims to be easy(enough) to read and write by humans and at the same time, easy(enough) to parse by machines.
 
