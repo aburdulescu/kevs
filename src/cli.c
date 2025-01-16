@@ -93,6 +93,12 @@ int main(int argc, char **argv) {
     }
   }
 
+  if (args_index >= nargs) {
+    fprintf(stderr, "error: need file\n");
+    usage();
+    return 1;
+  }
+
   Str file = str_from_cstring(args[args_index]);
 
   if (ctx.verbose) {
