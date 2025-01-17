@@ -112,21 +112,6 @@ static void test_str_trim_right() {
   assert(t.ptr == expected_ptr);
 }
 
-static void test_str_trim() {
-  Str s = str_from_cstr("  aa  ");
-
-  Str t = str_trim(s, str_from_cstr(" "));
-
-  const char *expected_ptr = s.ptr + 2;
-  const size_t expected_len = 2;
-
-  INFO("len: want %zu, have %zu", expected_len, t.len);
-  assert(t.len == expected_len);
-
-  INFO("ptr: want %p, have %p", expected_ptr, t.ptr);
-  assert(t.ptr == expected_ptr);
-}
-
 static void test_str_to_int_negative() {
   const char *tests[] = {
       "",                     // empty input
@@ -237,7 +222,6 @@ int main() {
   test_str_slice();
   test_str_trim_left();
   test_str_trim_right();
-  test_str_trim();
   test_str_to_int_negative();
   test_str_to_int_positive();
   return 0;

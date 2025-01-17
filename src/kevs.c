@@ -120,14 +120,6 @@ Str str_slice_low(Str self, size_t low) {
   return self;
 }
 
-Str str_slice_high(Str self, size_t high) {
-  assert(self.ptr != NULL);
-  assert(self.len != 0);
-  assert(high <= self.len);
-  self.len -= high;
-  return self;
-}
-
 Str str_slice(Str self, size_t low, size_t high) {
   assert(self.ptr != NULL);
   assert(self.len != 0);
@@ -157,12 +149,6 @@ Str str_trim_right(Str self, Str cutset) {
     }
     self.len--;
   }
-  return self;
-}
-
-Str str_trim(Str self, Str cutset) {
-  self = str_trim_left(self, cutset);
-  self = str_trim_right(self, cutset);
   return self;
 }
 
