@@ -27,13 +27,13 @@ pub fn build(b: *std.Build) void {
 
     const Executable = struct {
         name: []const u8,
-        src: []const u8,
+        srcs: []const []const u8,
     };
 
     const executables = [_]Executable{
-        .{ .name = "kevs", .src = "src/cli.c" },
-        .{ .name = "unittests", .src = "src/unittests.c" },
-        .{ .name = "example", .src = "src/example.c" },
+        .{ .name = "kevs", .srcs = &[_][]const u8{ "src/cli.c", "src/util.c", "src/kevs.c" } },
+        .{ .name = "unittests", .srcs = &[_][]const u8{ "src/unittests.c", "src/kevs.c" } },
+        .{ .name = "example", .srcs = &[_][]const u8{ "src/example.c", "src/util.c", "src/kevs.c" } },
     };
 
     const targets = [_]std.Target.Query{
@@ -58,7 +58,7 @@ pub fn build(b: *std.Build) void {
                 .link_libc = true,
             });
             exe.addCSourceFiles(.{
-                .files = &.{ executable.src, "src/kevs.c" },
+                .files = executable.srcs,
                 .flags = &.{ "-std=c11", "-g", "-Wall", "-Wextra", "-Werror" },
             });
 
