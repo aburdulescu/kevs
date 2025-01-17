@@ -14,13 +14,6 @@ typedef struct {
   size_t len;
 } Str;
 
-// String: owning string with null terminator
-typedef struct {
-  char *ptr;
-  size_t cap;
-  size_t len;
-} String;
-
 typedef struct KeyValue KeyValue;
 typedef struct Value Value;
 
@@ -67,35 +60,19 @@ typedef struct {
 } Context;
 
 // Str
-Str str_from_cstring(const char *s);
-Str str_from_string(String s);
-int str_index_char(Str self, char c);
-Str str_slice_low(Str self, size_t low);
-Str str_slice_high(Str self, size_t high);
-Str str_slice(Str self, size_t low, size_t high);
-Str str_trim_left(Str self, Str cutset);
-Str str_trim_right(Str self, Str cutset);
-Str str_trim(Str self, Str cutset);
-Error str_to_uint(Str self, uint64_t *out);
-Error str_to_int(Str self, int64_t *out);
-
-// String
-String string_from_str(Str s);
-void string_resize(String *self, size_t len);
-void string_free(String *self);
+Str str_from_cstr(const char *s);
+char *str_dup(Str self);
 
 // kevs
 bool table_parse(Table *table, Context ctx, Str file, Str content);
 void table_free(Table *self);
 void table_dump(Table self);
-Error table_str(Table self, const char *key, Str *out);
-Error table_string(Table self, const char *key, String *out);
+Error table_string(Table self, const char *key, Str *out);
 Error table_int(Table self, const char *key, int64_t *out);
 Error table_bool(Table self, const char *key, bool *out);
 Error table_list(Table self, const char *key, List *out);
 Error table_table(Table self, const char *key, Table *out);
-Error list_str(List self, size_t i, Str *out);
-Error list_string(List self, size_t i, String *out);
+Error list_string(List self, size_t i, Str *out);
 Error list_int(List self, size_t i, int64_t *out);
 Error list_bool(List self, size_t i, bool *out);
 Error list_list(List self, size_t i, List *out);

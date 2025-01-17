@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "kevs.h"
+#include "str.h"
 
 static void kevs_logf(const char *level, const char *fn, int ln,
                       const char *fmt, ...) {
@@ -24,7 +25,7 @@ static void kevs_logf(const char *level, const char *fn, int ln,
 #define ERROR(...) kevs_logf("ERROR", __FUNCTION__, __LINE__, __VA_ARGS__)
 
 static void test_str_index_char() {
-  Str s = str_from_cstring("0123456789");
+  Str s = str_from_cstr("0123456789");
   {
     int i = str_index_char(s, '0');
     const int expected = 0;
@@ -52,7 +53,7 @@ static void test_str_index_char() {
 }
 
 static void test_str_slice_low() {
-  Str s = str_from_cstring("0123456789");
+  Str s = str_from_cstr("0123456789");
 
   Str s4 = str_slice_low(s, 4);
 
@@ -67,7 +68,7 @@ static void test_str_slice_low() {
 }
 
 static void test_str_slice() {
-  Str s = str_from_cstring("0123456789");
+  Str s = str_from_cstr("0123456789");
 
   Str s26 = str_slice(s, 2, 6);
 
@@ -82,9 +83,9 @@ static void test_str_slice() {
 }
 
 static void test_str_trim_left() {
-  Str s = str_from_cstring("  aa");
+  Str s = str_from_cstr("  aa");
 
-  Str t = str_trim_left(s, str_from_cstring(" "));
+  Str t = str_trim_left(s, str_from_cstr(" "));
 
   const char *expected_ptr = s.ptr + 2;
   const size_t expected_len = 2;
@@ -97,9 +98,9 @@ static void test_str_trim_left() {
 }
 
 static void test_str_trim_right() {
-  Str s = str_from_cstring("aa  ");
+  Str s = str_from_cstr("aa  ");
 
-  Str t = str_trim_right(s, str_from_cstring(" "));
+  Str t = str_trim_right(s, str_from_cstr(" "));
 
   const char *expected_ptr = s.ptr;
   const size_t expected_len = 2;
@@ -112,9 +113,9 @@ static void test_str_trim_right() {
 }
 
 static void test_str_trim() {
-  Str s = str_from_cstring("  aa  ");
+  Str s = str_from_cstr("  aa  ");
 
-  Str t = str_trim(s, str_from_cstring(" "));
+  Str t = str_trim(s, str_from_cstr(" "));
 
   const char *expected_ptr = s.ptr + 2;
   const size_t expected_len = 2;
@@ -161,7 +162,7 @@ static void test_str_to_int_negative() {
     INFO("test #%zu: input=%s", i, tests[i]);
 
     int64_t v = 0;
-    Error err = str_to_int(str_from_cstring(tests[i]), &v);
+    Error err = str_to_int(str_from_cstr(tests[i]), &v);
 
     INFO("test #%zu: err=%s, value=%ld", i, err, v);
     assert(err != NULL);
@@ -220,7 +221,7 @@ static void test_str_to_int_positive() {
          tests[i].expected);
 
     int64_t v = 0;
-    Error err = str_to_int(str_from_cstring(tests[i].input), &v);
+    Error err = str_to_int(str_from_cstr(tests[i].input), &v);
 
     INFO("test #%zu: err=%s, value=%ld", i, err, v);
     assert(err == NULL);

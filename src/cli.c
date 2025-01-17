@@ -9,14 +9,13 @@
 
 #include "kevs.h"
 
-static Error read_file(Str path, String *out) {
+static Error read_file(Str path, char **out) {
   int fd = open(path.ptr, O_RDONLY);
   if (fd == -1) {
     return strerror(errno);
   }
 
   Error err = NULL;
-  String content = {};
 
   struct stat stbuf = {};
   if (fstat(fd, &stbuf) == -1) {
@@ -24,23 +23,25 @@ static Error read_file(Str path, String *out) {
     goto cleanup;
   }
 
-  string_resize(&content, stbuf.st_size);
+  const size_t len = stbuf.st_size;
+  char *ptr = malloc(len + 1);
+  ptr[len] = 0;
 
-  ssize_t nread = read(fd, content.ptr, content.len);
+  ssize_t nread = read(fd, ptr, len);
   if (nread == -1) {
     err = strerror(errno);
     goto cleanup;
   }
-  if ((size_t)nread != content.len) {
+  if ((size_t)nread != len) {
     err = "short read";
     goto cleanup;
   }
 
-  *out = content;
+  *out = ptr;
 
 cleanup:
   if (err != NULL) {
-    string_free(&content);
+    free(ptr);
   }
   close(fd);
 
@@ -99,14 +100,14 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  Str file = str_from_cstring(args[args_index]);
+  Str file = str_from_cstr(args[args_index]);
 
   if (ctx.verbose) {
     printf("file=%s, abort=%d, verbose=%d, dump=%d, no-err=%d\n", file.ptr,
            ctx.abort_on_error, ctx.verbose, dump, pass_on_error);
   }
 
-  String data = {};
+  char *data = NULL;
   Error err = read_file(file, &data);
   if (err != NULL) {
     fprintf(stderr, "error: failed to read file: %s\n", err);
@@ -116,7 +117,7 @@ int main(int argc, char **argv) {
   int rc = 0;
 
   Table table = {};
-  const bool ok = table_parse(&table, ctx, file, str_from_string(data));
+  const bool ok = table_parse(&table, ctx, file, str_from_cstr(data));
   if (!ok) {
     if (!pass_on_error) {
       rc = 1;
@@ -129,7 +130,7 @@ int main(int argc, char **argv) {
 
   if (free_heap) {
     table_free(&table);
-    string_free(&data);
+    free(data);
   }
 
   return rc;

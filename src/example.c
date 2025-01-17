@@ -10,14 +10,13 @@
 
 #include "kevs.h"
 
-static Error read_file(Str path, String *out) {
+static Error read_file(Str path, char **out) {
   int fd = open(path.ptr, O_RDONLY);
   if (fd == -1) {
     return strerror(errno);
   }
 
   Error err = NULL;
-  String content = {};
 
   struct stat stbuf = {};
   if (fstat(fd, &stbuf) == -1) {
@@ -25,23 +24,25 @@ static Error read_file(Str path, String *out) {
     goto cleanup;
   }
 
-  string_resize(&content, stbuf.st_size);
+  const size_t len = stbuf.st_size;
+  char *ptr = malloc(len + 1);
+  ptr[len] = 0;
 
-  ssize_t nread = read(fd, content.ptr, content.len);
+  ssize_t nread = read(fd, ptr, len);
   if (nread == -1) {
     err = strerror(errno);
     goto cleanup;
   }
-  if ((size_t)nread != content.len) {
+  if ((size_t)nread != len) {
     err = "short read";
     goto cleanup;
   }
 
-  *out = content;
+  *out = ptr;
 
 cleanup:
   if (err != NULL) {
-    string_free(&content);
+    free(ptr);
   }
   close(fd);
 
@@ -49,9 +50,9 @@ cleanup:
 }
 
 int main() {
-  Str file = str_from_cstring("examples/example.kevs");
+  Str file = str_from_cstr("examples/example.kevs");
 
-  String data = {};
+  char *data = NULL;
   Error err = read_file(file, &data);
   if (err != NULL) {
     fprintf(stderr, "error: failed to read file: %s\n", err);
@@ -62,22 +63,23 @@ int main() {
 
   Context ctx = {};
   Table table = {};
-  const bool ok = table_parse(&table, ctx, file, str_from_string(data));
+  const bool ok = table_parse(&table, ctx, file, str_from_cstr(data));
   if (!ok) {
     rc = 1;
   }
 
   // string
   {
-    String val = {};
+    Str val = {};
     Error err = table_string(table, "str", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
     } else {
-      printf("string: '%s'\n", val.ptr);
+      char *val_cstr = str_dup(val);
+      printf("string: '%s'\n", val_cstr);
+      free(val_cstr);
     }
-    string_free(&val);
   }
 
   // integer
@@ -125,15 +127,16 @@ int main() {
       }
       // 2nd is string
       {
-        String v = {};
+        Str v = {};
         Error err = list_string(val, 1, &v);
         if (err != NULL) {
           fprintf(stderr, "error: %s\n", err);
           rc = 1;
         } else {
+          char *v_cstr = str_dup(v);
           printf("list1[1]: '%s'\n", v.ptr);
+          free(v_cstr);
         }
-        string_free(&v);
       }
       // 3rd is boolean
       {
@@ -158,15 +161,16 @@ int main() {
       rc = 1;
     } else {
       for (size_t i = 0; i < val.len; i++) {
-        String v = {};
+        Str v = {};
         Error err = list_string(val, i, &v);
         if (err != NULL) {
           fprintf(stderr, "error: %s\n", err);
           rc = 1;
         } else {
-          printf("list2[%zu]: '%s'\n", i, v.ptr);
+          char *v_cstr = str_dup(v);
+          printf("list2[%zu]: '%s'\n", i, v_cstr);
+          free(v_cstr);
         }
-        string_free(&v);
       }
     }
   }
@@ -179,15 +183,16 @@ int main() {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
     } else {
-      String name = {};
+      Str name = {};
       Error err = table_string(val, "name", &name);
       if (err != NULL) {
         fprintf(stderr, "error: %s\n", err);
         rc = 1;
       } else {
-        printf("name: '%s'\n", name.ptr);
+        char *name_cstr = str_dup(name);
+        printf("name: '%s'\n", name_cstr);
+        free(name_cstr);
       }
-      string_free(&name);
 
       int64_t age = 0;
       err = table_int(val, "age", &age);
@@ -201,7 +206,7 @@ int main() {
   }
 
   table_free(&table);
-  string_free(&data);
+  free(data);
 
   return rc;
 }

@@ -45,7 +45,7 @@ static inline bool is_letter(char c) {
   return lower(c) >= 'a' && lower(c) <= 'z';
 }
 
-Str str_from_cstring(const char *s) {
+Str str_from_cstr(const char *s) {
   assert(s != NULL);
   Str self = {
       .ptr = s,
@@ -54,15 +54,14 @@ Str str_from_cstring(const char *s) {
   return self;
 }
 
-Str str_from_string(String s) {
-  Str self = {
-      .ptr = s.ptr,
-      .len = s.len,
-  };
-  return self;
+char *str_dup(Str self) {
+  char *ptr = malloc(self.len + 1);
+  ptr[self.len] = 0;
+  memcpy(ptr, self.ptr, self.len);
+  return ptr;
 }
 
-static bool str_starts_with_char(Str self, char c) {
+bool str_starts_with_char(Str self, char c) {
   if (self.len < 1) {
     return false;
   }
@@ -77,7 +76,7 @@ int str_index_char(Str self, char c) {
   return (int)(ptr - self.ptr);
 }
 
-static size_t str_count_char(Str self, char c) {
+size_t str_count_char(Str self, char c) {
   size_t count = 0;
   for (size_t i = 0; i < self.len; i++) {
     if (self.ptr[i] == c) {
@@ -98,14 +97,14 @@ int str_index_any(Str self, Str chars, char *c) {
   return -1;
 }
 
-static bool str_equals(Str self, Str other) {
+bool str_equals(Str self, Str other) {
   if (self.len != other.len) {
     return false;
   }
   return memcmp(self.ptr, other.ptr, self.len) == 0;
 }
 
-static bool str_equals_char(Str self, char c) {
+bool str_equals_char(Str self, char c) {
   if (self.len != 1) {
     return false;
   }
@@ -279,33 +278,6 @@ Error str_to_int(Str self, int64_t *out) {
   return NULL;
 }
 
-static void string_reserve(String *self, size_t cap) {
-  self->ptr = realloc(self->ptr, sizeof(char) * cap + 1);
-  self->cap = cap;
-  self->ptr[self->len] = 0;
-}
-
-void string_resize(String *self, size_t len) {
-  string_reserve(self, len);
-  self->len = len;
-}
-
-void string_free(String *self) {
-  free(self->ptr);
-  *self = (String){};
-}
-
-String string_from_str(Str s) {
-  String self = {
-      .ptr = malloc(s.len + 1),
-      .cap = s.len,
-      .len = s.len,
-  };
-  self.ptr[self.len] = 0;
-  memcpy(self.ptr, s.ptr, s.len);
-  return self;
-}
-
 typedef enum {
   kTokenUndefined = 0,
   kTokenKey,
@@ -405,12 +377,12 @@ static void scanner_advance(Scanner *self, size_t n) {
 }
 
 static void scanner_trim_space(Scanner *self) {
-  self->content = str_trim_left(self->content, str_from_cstring(spaces));
+  self->content = str_trim_left(self->content, str_from_cstr(spaces));
 }
 
 static void scanner_add(Scanner *self, TokenType type, size_t end) {
   Str val = str_slice(self->content, 0, end);
-  val = str_trim_right(val, str_from_cstring(spaces));
+  val = str_trim_right(val, str_from_cstr(spaces));
 
   const Token t = {
       .type = type,
@@ -451,7 +423,7 @@ static bool scan_comment(Scanner *self) {
 
 static bool scan_key(Scanner *self) {
   char c = 0;
-  const int end = str_index_any(self->content, str_from_cstring("=\n"), &c);
+  const int end = str_index_any(self->content, str_from_cstr("=\n"), &c);
   if (end == -1 || c != kKeyValSep) {
     scan_errorf(self, "key-value pair is missing separator");
     return false;
@@ -506,7 +478,7 @@ static bool scan_int_or_bool_value(Scanner *self) {
   // search for all possible value endings(;]}\n)
   // if semicolon(or none of them) is not found => error
   char c = 0;
-  const int end = str_index_any(self->content, str_from_cstring(";]}\n"), &c);
+  const int end = str_index_any(self->content, str_from_cstr(";]}\n"), &c);
   if (end == -1 || c != kKeyValEnd) {
     scan_errorf(self, "integer or boolean value does not end with semicolon");
     return false;
@@ -726,9 +698,9 @@ static void list_dump(List self) {
     } break;
 
     case kValueTagString: {
-      String s = string_from_str(v.data.string);
-      printf("%s '%s'\n", valuetag_str(v.tag), s.ptr);
-      string_free(&s);
+      char *s = str_dup(v.data.string);
+      printf("%s '%s'\n", valuetag_str(v.tag), s);
+      free(s);
     } break;
 
     case kValueTagBoolean: {
@@ -882,19 +854,19 @@ static bool parse_simple_value(Parser *self, Value *out) {
     out->tag = kValueTagString;
     out->data.string = str_slice(val, 1, val.len - 1);
   } else {
-    if (str_equals(val, str_from_cstring("true"))) {
+    if (str_equals(val, str_from_cstr("true"))) {
       out->tag = kValueTagBoolean;
       out->data.boolean = true;
-    } else if (str_equals(val, str_from_cstring("false"))) {
+    } else if (str_equals(val, str_from_cstr("false"))) {
       out->tag = kValueTagBoolean;
       out->data.boolean = false;
     } else {
       int64_t i = 0;
       Error err = str_to_int(val, &i);
       if (err != NULL) {
-        String s = string_from_str(val);
-        parse_errorf(self, "value '%s' is not an integer: %s", s.ptr, err);
-        string_free(&s);
+        char *s = str_dup(val);
+        parse_errorf(self, "value '%s' is not an integer: %s", s, err);
+        free(s);
         ok = false;
       } else {
         out->tag = kValueTagInteger;
@@ -953,9 +925,9 @@ static bool parse_key(Parser *self, Table parent, Str *key) {
   const Token tok = parser_get(self);
 
   if (!key_is_valid(tok.value)) {
-    String s = string_from_str(tok.value);
-    parse_errorf(self, "key is not a valid identifier: '%s'", s.ptr);
-    string_free(&s);
+    char *s = str_dup(tok.value);
+    parse_errorf(self, "key is not a valid identifier: '%s'", s);
+    free(s);
     return false;
   }
 
@@ -971,9 +943,9 @@ static bool parse_key(Parser *self, Table parent, Str *key) {
     }
   }
   if (!is_unique) {
-    String s = string_from_str(temp);
-    parse_errorf(self, "key '%s' is not unique for current table", s.ptr);
-    string_free(&s);
+    char *s = str_dup(temp);
+    parse_errorf(self, "key '%s' is not unique for current table", s);
+    free(s);
     return false;
   }
 
@@ -1044,9 +1016,9 @@ bool table_parse(Table *table, Context ctx, Str file, Str content) {
   }
   if (global_ctx.verbose) {
     for (size_t i = 0; i < tokens.len; i++) {
-      String v = string_from_str(tokens.ptr[i].value);
-      INFO("%s '%s'", tokentype_str(tokens.ptr[i].type), v.ptr);
-      string_free(&v);
+      char *v = str_dup(tokens.ptr[i].value);
+      INFO("%s '%s'", tokentype_str(tokens.ptr[i].type), v);
+      free(v);
     }
   }
 
@@ -1075,48 +1047,48 @@ void table_dump(Table self) {
   for (size_t i = 0; i < self.len; i++) {
     const KeyValue kv = self.ptr[i];
 
-    String k = string_from_str(kv.key);
+    char *k = str_dup(kv.key);
 
     switch (kv.val.tag) {
     case kValueTagTable: {
-      printf("%s %s\n", k.ptr, valuetag_str(kv.val.tag));
+      printf("%s %s\n", k, valuetag_str(kv.val.tag));
       table_dump(kv.val.data.table);
     } break;
 
     case kValueTagList: {
-      printf("%s %s\n", k.ptr, valuetag_str(kv.val.tag));
+      printf("%s %s\n", k, valuetag_str(kv.val.tag));
       list_dump(kv.val.data.list);
     } break;
 
     case kValueTagString: {
-      String s = string_from_str(kv.val.data.string);
-      printf("%s %s '%s'\n", k.ptr, valuetag_str(kv.val.tag), s.ptr);
-      string_free(&s);
+      char *s = str_dup(kv.val.data.string);
+      printf("%s %s '%s'\n", k, valuetag_str(kv.val.tag), s);
+      free(s);
     } break;
 
     case kValueTagBoolean: {
-      printf("%s %s %s\n", k.ptr, valuetag_str(kv.val.tag),
+      printf("%s %s %s\n", k, valuetag_str(kv.val.tag),
              (kv.val.data.boolean ? "true" : "false"));
     } break;
 
     case kValueTagInteger: {
-      printf("%s %s %" PRId64 "\n", k.ptr, valuetag_str(kv.val.tag),
+      printf("%s %s %" PRId64 "\n", k, valuetag_str(kv.val.tag),
              kv.val.data.integer);
     } break;
 
     default: {
-      printf("%s %s\n", k.ptr, valuetag_str(kv.val.tag));
+      printf("%s %s\n", k, valuetag_str(kv.val.tag));
     } break;
     }
 
-    string_free(&k);
+    free(k);
   }
 }
 
 static bool value_is(Value self, ValueTag tag) { return self.tag == tag; }
 
 static Error table_get(Table self, const char *key, Value *val) {
-  Str key_str = str_from_cstring(key);
+  Str key_str = str_from_cstr(key);
   for (size_t i = 0; i < self.len; i++) {
     if (str_equals(self.ptr[i].key, key_str)) {
       *val = self.ptr[i].val;
@@ -1126,7 +1098,7 @@ static Error table_get(Table self, const char *key, Value *val) {
   return "key not found";
 }
 
-Error table_str(Table self, const char *key, Str *out) {
+Error table_string(Table self, const char *key, Str *out) {
   Value val = {};
   Error err = table_get(self, key, &val);
   if (err != NULL) {
@@ -1136,16 +1108,6 @@ Error table_str(Table self, const char *key, Str *out) {
     return "value is not string";
   }
   *out = val.data.string;
-  return NULL;
-}
-
-Error table_string(Table self, const char *key, String *out) {
-  Str val = {};
-  Error err = table_str(self, key, &val);
-  if (err != NULL) {
-    return err;
-  }
-  *out = string_from_str(val);
   return NULL;
 }
 
@@ -1209,7 +1171,7 @@ static Error list_get(List self, size_t i, Value *val) {
   return NULL;
 }
 
-Error list_str(List self, size_t i, Str *out) {
+Error list_string(List self, size_t i, Str *out) {
   Value val = {};
   Error err = list_get(self, i, &val);
   if (err != NULL) {
@@ -1219,16 +1181,6 @@ Error list_str(List self, size_t i, Str *out) {
     return "value is not string";
   }
   *out = val.data.string;
-  return NULL;
-}
-
-Error list_string(List self, size_t i, String *out) {
-  Str val = {};
-  Error err = list_str(self, i, &val);
-  if (err != NULL) {
-    return err;
-  }
-  *out = string_from_str(val);
   return NULL;
 }
 
