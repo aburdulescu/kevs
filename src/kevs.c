@@ -61,7 +61,7 @@ char *str_dup(Str self) {
   return ptr;
 }
 
-bool str_starts_with_char(Str self, char c) {
+static bool str_starts_with_char(Str self, char c) {
   if (self.len < 1) {
     return false;
   }
@@ -76,7 +76,7 @@ int str_index_char(Str self, char c) {
   return (int)(ptr - self.ptr);
 }
 
-size_t str_count_char(Str self, char c) {
+static size_t str_count_char(Str self, char c) {
   size_t count = 0;
   for (size_t i = 0; i < self.len; i++) {
     if (self.ptr[i] == c) {
@@ -86,7 +86,7 @@ size_t str_count_char(Str self, char c) {
   return count;
 }
 
-int str_index_any(Str self, Str chars, char *c) {
+static int str_index_any(Str self, Str chars, char *c) {
   for (size_t i = 0; i < self.len; i++) {
     const int j = str_index_char(chars, self.ptr[i]);
     if (j != -1) {
@@ -97,14 +97,14 @@ int str_index_any(Str self, Str chars, char *c) {
   return -1;
 }
 
-bool str_equals(Str self, Str other) {
+static bool str_equals(Str self, Str other) {
   if (self.len != other.len) {
     return false;
   }
   return memcmp(self.ptr, other.ptr, self.len) == 0;
 }
 
-bool str_equals_char(Str self, char c) {
+static bool str_equals_char(Str self, char c) {
   if (self.len != 1) {
     return false;
   }
@@ -152,7 +152,7 @@ Str str_trim_right(Str self, Str cutset) {
   return self;
 }
 
-Error str_to_uint(Str self, uint64_t *out) {
+static Error str_to_uint(Str self, uint64_t *out) {
   if (self.len == 0) {
     return "empty input";
   }
