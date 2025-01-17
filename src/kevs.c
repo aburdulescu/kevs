@@ -1,7 +1,6 @@
 #include "kevs.h"
 
 #include <assert.h>
-#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,32 +9,6 @@
 static const size_t kDefaultCapacity = 32;
 
 static Context global_ctx = {};
-
-static void kevs_logf(const char *level, const char *fn, int ln,
-                      const char *fmt, ...) {
-  assert(level != NULL);
-  assert(fn != NULL);
-  assert(fmt != NULL);
-
-  va_list args;
-  va_start(args, fmt);
-
-  fprintf(stdout, "%s %s() %d ", level, fn, ln);
-  vfprintf(stdout, fmt, args);
-  fprintf(stdout, "\n");
-
-  va_end(args);
-}
-
-#define INFO(...)                                                              \
-  if (global_ctx.verbose) {                                                    \
-    kevs_logf("INFO ", __FUNCTION__, __LINE__, __VA_ARGS__);                   \
-  }
-
-#define ERROR(...)                                                             \
-  if (global_ctx.verbose) {                                                    \
-    kevs_logf("ERROR", __FUNCTION__, __LINE__, __VA_ARGS__);                   \
-  }
 
 static inline bool is_digit(char c) { return c >= '0' && c <= '9'; }
 
@@ -320,7 +293,7 @@ static void tokens_free(Tokens *self) {
   *self = (Tokens){};
 }
 
-static void tokens_add(Tokens *self, Token v) {
+static void tokens_append(Tokens *self, Token v) {
   if (self->len == self->cap) {
     tokens_reserve(self, (self->cap + 1) * 2);
   }
@@ -366,7 +339,7 @@ static void scanner_trim_space(Scanner *self) {
   self->content = str_trim_left(self->content, str_from_cstr(spaces));
 }
 
-static void scanner_add(Scanner *self, TokenType type, size_t end) {
+static void scanner_append(Scanner *self, TokenType type, size_t end) {
   Str val = str_slice(self->content, 0, end);
   val = str_trim_right(val, str_from_cstr(spaces));
 
@@ -376,18 +349,18 @@ static void scanner_add(Scanner *self, TokenType type, size_t end) {
       .line = self->line,
   };
 
-  tokens_add(self->tokens, t);
+  tokens_append(self->tokens, t);
 
   scanner_advance(self, end);
 }
 
-static void scanner_add_delim(Scanner *self) {
+static void scanner_append_delim(Scanner *self) {
   const Token t = {
       .type = kTokenDelim,
       .value = str_slice(self->content, 0, 1),
       .line = self->line,
   };
-  tokens_add(self->tokens, t);
+  tokens_append(self->tokens, t);
   scanner_advance(self, 1);
 }
 
@@ -414,7 +387,7 @@ static bool scan_key(Scanner *self) {
     scan_errorf(self, "key-value pair is missing separator");
     return false;
   }
-  scanner_add(self, kTokenKey, end);
+  scanner_append(self, kTokenKey, end);
   if (self->tokens->ptr[self->tokens->len - 1].value.len == 0) {
     scan_errorf(self, "empty key");
     return false;
@@ -426,11 +399,10 @@ static bool scan_delim(Scanner *self, char c) {
   if (!scanner_expect(self, c)) {
     return false;
   }
-  scanner_add_delim(self);
+  scanner_append_delim(self);
   return true;
 }
 
-// TODO: handle escapes and unicode
 static bool scan_string_value(Scanner *self) {
   const int end = str_index_char(str_slice_low(self->content, 1), kStringBegin);
   if (end == -1) {
@@ -438,7 +410,7 @@ static bool scan_string_value(Scanner *self) {
     return false;
   }
   // +2 for leading and trailing quotes
-  scanner_add(self, kTokenValue, end + 2);
+  scanner_append(self, kTokenValue, end + 2);
   return true;
 }
 
@@ -451,7 +423,7 @@ static bool scan_raw_string(Scanner *self) {
   }
 
   // +2 for leading and trailing quotes
-  scanner_add(self, kTokenValue, end + 2);
+  scanner_append(self, kTokenValue, end + 2);
 
   // count newlines in raw string to keep line count accurate
   self->line +=
@@ -469,12 +441,12 @@ static bool scan_int_or_bool_value(Scanner *self) {
     scan_errorf(self, "integer or boolean value does not end with semicolon");
     return false;
   }
-  scanner_add(self, kTokenValue, end);
+  scanner_append(self, kTokenValue, end);
   return true;
 }
 
 static bool scan_list_value(Scanner *self) {
-  scanner_add_delim(self);
+  scanner_append_delim(self);
   while (true) {
     scanner_trim_space(self);
     if (self->content.len == 0) {
@@ -494,14 +466,14 @@ static bool scan_list_value(Scanner *self) {
       continue;
     }
     if (scanner_expect(self, kListEnd)) {
-      scanner_add_delim(self);
+      scanner_append_delim(self);
       return true;
     }
     if (!scan_value(self)) {
       return false;
     }
     if (scanner_expect(self, kListEnd)) {
-      scanner_add_delim(self);
+      scanner_append_delim(self);
       return true;
     }
   }
@@ -509,7 +481,7 @@ static bool scan_list_value(Scanner *self) {
 }
 
 static bool scan_table_value(Scanner *self) {
-  scanner_add_delim(self);
+  scanner_append_delim(self);
   while (true) {
     scanner_trim_space(self);
     if (self->content.len == 0) {
@@ -529,14 +501,14 @@ static bool scan_table_value(Scanner *self) {
       continue;
     }
     if (scanner_expect(self, kTableEnd)) {
-      scanner_add_delim(self);
+      scanner_append_delim(self);
       return true;
     }
     if (!scan_key_value(self)) {
       return false;
     }
     if (scanner_expect(self, kTableEnd)) {
-      scanner_add_delim(self);
+      scanner_append_delim(self);
       return true;
     }
   }
@@ -573,7 +545,7 @@ static bool scan_key_value(Scanner *self) {
   }
 
   // separator check done in scan_key, no need to check again
-  scanner_add_delim(self);
+  scanner_append_delim(self);
 
   if (!scan_value(self)) {
     return false;
@@ -607,27 +579,7 @@ static bool scan(Context ctx, Str file, Str content, Tokens *tokens) {
   return true;
 }
 
-static const char *valuetag_str(ValueTag v) {
-  switch (v) {
-  case kValueTagUndefined:
-    return "undefined";
-  case kValueTagString:
-    return "string";
-  case kValueTagInteger:
-    return "integer";
-  case kValueTagBoolean:
-    return "boolean";
-  case kValueTagList:
-    return "list";
-  case kValueTagTable:
-    return "table";
-  default:
-    return "unknown";
-  }
-}
-
 static void list_free(List *self);
-static void list_dump(List self);
 
 static void value_free(Value *self) {
   switch (self->tag) {
@@ -660,7 +612,7 @@ static void list_free(List *self) {
   *self = (List){};
 }
 
-static void list_add(List *self, Value v) {
+static void list_append(List *self, Value v) {
   if (self->len == self->cap) {
     list_reserve(self, (self->cap + 1) * 2);
   }
@@ -668,49 +620,12 @@ static void list_add(List *self, Value v) {
   self->len += 1;
 }
 
-static void list_dump(List self) {
-  for (size_t i = 0; i < self.len; i++) {
-    const Value v = self.ptr[i];
-
-    switch (v.tag) {
-    case kValueTagTable: {
-      printf("%s\n", valuetag_str(v.tag));
-      table_dump(v.data.table);
-    } break;
-
-    case kValueTagList: {
-      printf("%s\n", valuetag_str(v.tag));
-      list_dump(v.data.list);
-    } break;
-
-    case kValueTagString: {
-      char *s = str_dup(v.data.string);
-      printf("%s '%s'\n", valuetag_str(v.tag), s);
-      free(s);
-    } break;
-
-    case kValueTagBoolean: {
-      printf("%s %s\n", valuetag_str(v.tag),
-             (v.data.boolean ? "true" : "false"));
-    } break;
-
-    case kValueTagInteger: {
-      printf("%s %" PRId64 "\n", valuetag_str(v.tag), v.data.integer);
-    } break;
-
-    default: {
-      printf("%s\n", valuetag_str(v.tag));
-    } break;
-    }
-  }
-}
-
 static void table_reserve(Table *self, size_t cap) {
   self->cap = cap;
   self->ptr = realloc(self->ptr, cap * sizeof(KeyValue));
 }
 
-static void table_add(Table *self, KeyValue v) {
+static void table_append(Table *self, KeyValue v) {
   if (self->len == self->cap) {
     table_reserve(self, (self->cap + 1) * 2);
   }
@@ -788,7 +703,7 @@ static bool parse_list_value(Parser *self, Value *out) {
     if (!parse_value(self, &v)) {
       return false;
     }
-    list_add(&out->data.list, v);
+    list_append(&out->data.list, v);
 
     if (parse_delim(self, kListEnd)) {
       return true;
@@ -815,7 +730,7 @@ static bool parse_table_value(Parser *self, Value *out) {
     if (!parse_key_value(self, out->data.table, &kv)) {
       return false;
     }
-    table_add(&out->data.table, kv);
+    table_append(&out->data.table, kv);
 
     if (parse_delim(self, kTableEnd)) {
       return true;
@@ -881,8 +796,8 @@ static bool parse_value(Parser *self, Value *out) {
   }
 
   if (!parse_delim(self, kKeyValEnd)) {
+    parse_errorf(self, "missing key value end");
     value_free(out);
-    ERROR("missing key value end");
     return false;
   }
 
@@ -949,7 +864,7 @@ static bool parse_key_value(Parser *self, Table parent, KeyValue *out) {
   }
 
   if (!parse_delim(self, kKeyValSep)) {
-    ERROR("missing key value separator");
+    parse_errorf(self, "missing key value separator");
     return false;
   }
 
@@ -980,7 +895,7 @@ static bool parse(Context ctx, Str file, Tokens tokens, Table *table) {
     if (!parse_key_value(&p, *table, &kv)) {
       return false;
     }
-    table_add(p.table, kv);
+    table_append(p.table, kv);
   }
 
   return true;
@@ -997,22 +912,8 @@ bool table_parse(Table *table, Context ctx, Str file, Str content) {
   tokens_reserve(&tokens, kDefaultCapacity);
 
   ok = scan(ctx, file, content, &tokens);
-  if (!ok) {
-    ERROR("scanner failed");
-  }
-  if (global_ctx.verbose) {
-    for (size_t i = 0; i < tokens.len; i++) {
-      char *v = str_dup(tokens.ptr[i].value);
-      INFO("%s '%s'", tokentype_str(tokens.ptr[i].type), v);
-      free(v);
-    }
-  }
-
   if (ok) {
     ok = parse(ctx, file, tokens, table);
-    if (!ok) {
-      ERROR("parser failed");
-    }
   }
 
   tokens_free(&tokens);
@@ -1027,48 +928,6 @@ void table_free(Table *self) {
 
   free(self->ptr);
   *self = (Table){};
-}
-
-void table_dump(Table self) {
-  for (size_t i = 0; i < self.len; i++) {
-    const KeyValue kv = self.ptr[i];
-
-    char *k = str_dup(kv.key);
-
-    switch (kv.val.tag) {
-    case kValueTagTable: {
-      printf("%s %s\n", k, valuetag_str(kv.val.tag));
-      table_dump(kv.val.data.table);
-    } break;
-
-    case kValueTagList: {
-      printf("%s %s\n", k, valuetag_str(kv.val.tag));
-      list_dump(kv.val.data.list);
-    } break;
-
-    case kValueTagString: {
-      char *s = str_dup(kv.val.data.string);
-      printf("%s %s '%s'\n", k, valuetag_str(kv.val.tag), s);
-      free(s);
-    } break;
-
-    case kValueTagBoolean: {
-      printf("%s %s %s\n", k, valuetag_str(kv.val.tag),
-             (kv.val.data.boolean ? "true" : "false"));
-    } break;
-
-    case kValueTagInteger: {
-      printf("%s %s %" PRId64 "\n", k, valuetag_str(kv.val.tag),
-             kv.val.data.integer);
-    } break;
-
-    default: {
-      printf("%s %s\n", k, valuetag_str(kv.val.tag));
-    } break;
-    }
-
-    free(k);
-  }
 }
 
 static bool value_is(Value self, ValueTag tag) { return self.tag == tag; }

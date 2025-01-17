@@ -56,17 +56,10 @@ typedef struct KeyValue {
 
 typedef struct {
   bool abort_on_error;
-  bool verbose;
 } Context;
 
-// Str
-Str str_from_cstr(const char *s);
-char *str_dup(Str self);
-
-// kevs
 bool table_parse(Table *table, Context ctx, Str file, Str content);
 void table_free(Table *self);
-void table_dump(Table self);
 Error table_string(Table self, const char *key, Str *out);
 Error table_int(Table self, const char *key, int64_t *out);
 Error table_bool(Table self, const char *key, bool *out);

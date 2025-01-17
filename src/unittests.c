@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #include "kevs.h"
-#include "str.h"
+#include "util.h"
 
 static void kevs_logf(const char *level, const char *fn, int ln,
                       const char *fmt, ...) {

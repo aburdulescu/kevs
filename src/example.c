@@ -9,45 +9,7 @@
 #include <unistd.h>
 
 #include "kevs.h"
-
-static Error read_file(Str path, char **out) {
-  int fd = open(path.ptr, O_RDONLY);
-  if (fd == -1) {
-    return strerror(errno);
-  }
-
-  Error err = NULL;
-
-  struct stat stbuf = {};
-  if (fstat(fd, &stbuf) == -1) {
-    err = strerror(errno);
-    goto cleanup;
-  }
-
-  const size_t len = stbuf.st_size;
-  char *ptr = malloc(len + 1);
-  ptr[len] = 0;
-
-  ssize_t nread = read(fd, ptr, len);
-  if (nread == -1) {
-    err = strerror(errno);
-    goto cleanup;
-  }
-  if ((size_t)nread != len) {
-    err = "short read";
-    goto cleanup;
-  }
-
-  *out = ptr;
-
-cleanup:
-  if (err != NULL) {
-    free(ptr);
-  }
-  close(fd);
-
-  return err;
-}
+#include "util.h"
 
 int main() {
   Str file = str_from_cstr("examples/example.kevs");
