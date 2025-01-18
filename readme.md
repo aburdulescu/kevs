@@ -42,7 +42,7 @@ Supported escape sequences:
 \UXXXXXXXX - unicode         (U+XXXXXXXX)
 ```
 
-- raw(enclosed in `\`\``):
+- raw(enclosed in ` `` `):
 
 Escape sequences are ignores and the final string is copy as read:
 
