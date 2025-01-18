@@ -1,3 +1,5 @@
+- implement strings like Go(https://go.dev/ref/spec#String_literals): raw string(``) and interpreted string("")
+- write spec
 - use latest llvm release
 - update dev.go:
   - add progress bar for fuzzer and more flags
