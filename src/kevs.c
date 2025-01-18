@@ -378,6 +378,11 @@ static Error str_norm(Str self, char **out) {
         // TODO: add tests
         i++;
 
+        if ((i + 4) >= self.len) {
+          free(dst.ptr);
+          return "\\u must be preceded by 4 hex digits: \\uXXXX";
+        }
+
         uint64_t out = 0;
         const Error err = str_to_uint(str_slice(self, i, i + 4), 16, &out);
         if (err != NULL) {
@@ -400,6 +405,11 @@ static Error str_norm(Str self, char **out) {
       case 'U': {
         // TODO: add tests
         i++;
+
+        if ((i + 8) >= self.len) {
+          free(dst.ptr);
+          return "\\U must be preceded by 8 hex digits: \\UXXXXXXXX";
+        }
 
         uint64_t out = 0;
         const Error err = str_to_uint(str_slice(self, i, i + 8), 16, &out);
