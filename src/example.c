@@ -33,7 +33,7 @@ int main() {
   // string
   {
     char *val = NULL;
-    Error err = table_string(table, "str", &val);
+    Error err = table_string(table, "string_escaped", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;

@@ -25,7 +25,18 @@ There are two type of strings: raw and interpreted.
 Escape sequences are interpreted and replaced in the final string:
 
 ```
-x = "first line\nsecond\n\tthird has a tab\nSpock says: \U0001F596"
+# interpreted string, enclosed in ""
+# escape sequences are interpreted and replaced in the final string
+string_escaped = "first line\nsecond\n\tthird has a tab\nSpock says: \U0001F596"
+
+# raw string, enclosed in ``
+# escape sequences are ignored and the final string is as written
+raw_string = `first line
+second
+    third has a tab
+Spock says: 🖖`;
+
+# the above strings are equal: string_escaped == raw_string
 ```
 
 Supported escape sequences:
@@ -40,17 +51,6 @@ Supported escape sequences:
 \\         - backslash       (U+005C)
 \uXXXX     - unicode         (U+XXXX)
 \UXXXXXXXX - unicode         (U+XXXXXXXX)
-```
-
-- raw(enclosed in ` `` `):
-
-Escape sequences are ignored and the final string is as written:
-
-```
-x = `first line
-second
-    third has a tab
-Spock says: 🖖`;
 ```
 
 ### Integer
