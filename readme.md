@@ -13,22 +13,18 @@ Keys are valid identifiers: `[_a-zA-Z][_a-zA-Z0-9]*`.
 
 ### Values
 
-- interpreted string:
+- string(interpreted):
 
 ```
-x = "first line\nsecond\n\tthird has a tab also\nSpock says: \U001F596"
+x = "first line\nsecond\n\tthird has a tab\nSpock says: \U001F596"
 ```
 
-- raw string:
-
-for example a multi-line string with tabs and unicode:
+- string(raw):
 
 ```
 x = `first line
 second
-and
-	so
-on	and so forth
+    third has a tab
 Spock says: 🖖`;
 ```
 

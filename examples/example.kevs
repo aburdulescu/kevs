@@ -1,18 +1,10 @@
 # interpreted strings
-str = "aa";
-str2 = "first line\nsecond\n\tthird has a tab also\nSpock says: \U001F596";
+str = "first line\nsecond\n\tthird has a tab also\nSpock says: \U001F596";
 
 # raw strings
-raw_str = `aa
-bb
-cc
-`;
-
-raw_str2 = `first line
+raw_str = `first line
 second
-and
-	so
-on and so forth
+    third has a tab
 Spock says: 🖖`;
 
 # numbers
