@@ -83,9 +83,8 @@ void list_dump(List self) {
     } break;
 
     case kValueTagString: {
-      char *s = str_dup(v.data.string);
-      printf("%s '%s'\n", valuetag_str(v.tag), s);
-      free(s);
+      printf("%s '%s'\n", valuetag_str(v.tag), v.data.string);
+      free(v.data.string);
     } break;
 
     case kValueTagBoolean: {
@@ -122,9 +121,8 @@ void table_dump(Table self) {
     } break;
 
     case kValueTagString: {
-      char *s = str_dup(kv.val.data.string);
-      printf("%s %s '%s'\n", k, valuetag_str(kv.val.tag), s);
-      free(s);
+      printf("%s %s '%s'\n", k, valuetag_str(kv.val.tag), kv.val.data.string);
+      free(kv.val.data.string);
     } break;
 
     case kValueTagBoolean: {

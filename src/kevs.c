@@ -753,7 +753,7 @@ static bool parse_simple_value(Parser *self, Value *out) {
   if (str_starts_with_char(val, kStringBegin) ||
       str_starts_with_char(val, kRawStringBegin)) {
     out->tag = kValueTagString;
-    out->data.string = str_slice(val, 1, val.len - 1);
+    out->data.string = str_dup(str_slice(val, 1, val.len - 1));
   } else {
     if (str_equals(val, str_from_cstr("true"))) {
       out->tag = kValueTagBoolean;
@@ -943,7 +943,7 @@ static Error table_get(Table self, const char *key, Value *val) {
   return "key not found";
 }
 
-Error table_string(Table self, const char *key, Str *out) {
+Error table_string(Table self, const char *key, char **out) {
   Value val = {};
   Error err = table_get(self, key, &val);
   if (err != NULL) {
@@ -1016,7 +1016,7 @@ static Error list_get(List self, size_t i, Value *val) {
   return NULL;
 }
 
-Error list_string(List self, size_t i, Str *out) {
+Error list_string(List self, size_t i, char **out) {
   Value val = {};
   Error err = list_get(self, i, &val);
   if (err != NULL) {

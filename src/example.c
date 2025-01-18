@@ -32,16 +32,15 @@ int main() {
 
   // string
   {
-    Str val = {};
+    char *val = NULL;
     Error err = table_string(table, "str", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
     } else {
-      char *val_cstr = str_dup(val);
-      printf("string: '%s'\n", val_cstr);
-      free(val_cstr);
+      printf("string: '%s'\n", val);
     }
+    free(val);
   }
 
   // integer
@@ -89,16 +88,15 @@ int main() {
       }
       // 2nd is string
       {
-        Str v = {};
+        char *v = NULL;
         Error err = list_string(val, 1, &v);
         if (err != NULL) {
           fprintf(stderr, "error: %s\n", err);
           rc = 1;
         } else {
-          char *v_cstr = str_dup(v);
-          printf("list1[1]: '%s'\n", v.ptr);
-          free(v_cstr);
+          printf("list1[1]: '%s'\n", v);
         }
+        free(v);
       }
       // 3rd is boolean
       {
@@ -123,16 +121,15 @@ int main() {
       rc = 1;
     } else {
       for (size_t i = 0; i < val.len; i++) {
-        Str v = {};
+        char *v = NULL;
         Error err = list_string(val, i, &v);
         if (err != NULL) {
           fprintf(stderr, "error: %s\n", err);
           rc = 1;
         } else {
-          char *v_cstr = str_dup(v);
-          printf("list2[%zu]: '%s'\n", i, v_cstr);
-          free(v_cstr);
+          printf("list2[%zu]: '%s'\n", i, v);
         }
+        free(v);
       }
     }
   }
@@ -145,16 +142,15 @@ int main() {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
     } else {
-      Str name = {};
+      char *name = NULL;
       Error err = table_string(val, "name", &name);
       if (err != NULL) {
         fprintf(stderr, "error: %s\n", err);
         rc = 1;
       } else {
-        char *name_cstr = str_dup(name);
-        printf("name: '%s'\n", name_cstr);
-        free(name_cstr);
+        printf("name: '%s'\n", name);
       }
+      free(name);
 
       int64_t age = 0;
       err = table_int(val, "age", &age);
