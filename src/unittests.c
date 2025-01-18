@@ -147,7 +147,7 @@ static void test_str_to_int_negative() {
     INFO("test #%zu: input=%s", i, tests[i]);
 
     int64_t v = 0;
-    Error err = str_to_int(str_from_cstr(tests[i]), &v);
+    Error err = str_to_int(str_from_cstr(tests[i]), 0, &v);
 
     INFO("test #%zu: err=%s, value=%ld", i, err, v);
     assert(err != NULL);
@@ -206,7 +206,7 @@ static void test_str_to_int_positive() {
          tests[i].expected);
 
     int64_t v = 0;
-    Error err = str_to_int(str_from_cstr(tests[i].input), &v);
+    Error err = str_to_int(str_from_cstr(tests[i].input), 0, &v);
 
     INFO("test #%zu: err=%s, value=%ld", i, err, v);
     assert(err == NULL);
