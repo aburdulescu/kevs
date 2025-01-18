@@ -27,6 +27,7 @@ typedef struct {
 static void string_reserve(String *self, size_t cap) {
   self->cap = cap;
   self->ptr = realloc(self->ptr, cap * sizeof(char) + 1);
+  self->ptr[self->len] = 0;
 }
 
 static void string_append(String *self, char v) {
