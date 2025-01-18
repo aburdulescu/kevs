@@ -54,52 +54,6 @@ char *str_dup(Str self) {
   return ptr;
 }
 
-char *str_norm(Str self) {
-  String dst = {};
-  string_reserve(&dst, self.len);
-
-  for (size_t i = 0; i < self.len;) {
-    if (self.ptr[i] == '\\') {
-      i++;
-      switch (self.ptr[i]) {
-      case 'b':
-        string_append(&dst, '\b');
-        break;
-      case 'f':
-        string_append(&dst, '\f');
-        break;
-      case 'n':
-        string_append(&dst, '\n');
-        break;
-      case 'r':
-        string_append(&dst, '\r');
-        break;
-      case 't':
-        string_append(&dst, '\t');
-        break;
-      case '"':
-        // TODO: test this
-        string_append(&dst, '"');
-        break;
-      case 'u':
-      case 'U':
-        // TODO: unicode
-      default:
-        string_append(&dst, self.ptr[i]);
-        break;
-        // TODO:
-        // free(dst.ptr);
-        // return NULL;
-      }
-    } else {
-      string_append(&dst, self.ptr[i]);
-    }
-    i++;
-  }
-
-  return dst.ptr;
-}
-
 static bool str_starts_with_char(Str self, char c) {
   if (self.len < 1) {
     return false;
@@ -191,38 +145,43 @@ Str str_trim_right(Str self, Str cutset) {
   return self;
 }
 
-static Error str_to_uint(Str self, uint64_t *out) {
+static Error str_to_uint(Str self, uint64_t base, uint64_t *out) {
   if (self.len == 0) {
     return "empty input";
   }
 
-  uint64_t base = 10;
-  if (self.ptr[0] == '0') {
-    // stop if 0
-    if (self.len == 1) {
-      *out = 0;
-      return NULL;
+  if (base == 0) {
+    if (self.ptr[0] == '0') {
+      // stop if 0
+      if (self.len == 1) {
+        *out = 0;
+        return NULL;
+      }
+      if (self.len < 3) {
+        return "leading 0 requires at least 2 more chars";
+      }
+      switch (self.ptr[1]) {
+      case 'x': {
+        base = 16;
+        self = str_slice_low(self, 2);
+      } break;
+      case 'o': {
+        base = 8;
+        self = str_slice_low(self, 2);
+      } break;
+      case 'b': {
+        base = 2;
+        self = str_slice_low(self, 2);
+      } break;
+      default:
+        return "invalid base char, must be 'x', 'o' or 'b'";
+      }
+    } else {
+      base = 10;
     }
-
-    if (self.len < 3) {
-      return "leading 0 requires at least 2 more chars";
-    }
-
-    switch (self.ptr[1]) {
-    case 'x': {
-      base = 16;
-      self = str_slice_low(self, 2);
-    } break;
-    case 'o': {
-      base = 8;
-      self = str_slice_low(self, 2);
-    } break;
-    case 'b': {
-      base = 2;
-      self = str_slice_low(self, 2);
-    } break;
-    default:
-      return "invalid base char, must be 'x', 'o' or 'b'";
+  } else {
+    if (base != 2 && base != 8 && base != 16) {
+      return "invalid base";
     }
   }
 
@@ -265,7 +224,7 @@ static Error str_to_uint(Str self, uint64_t *out) {
   return NULL;
 }
 
-Error str_to_int(Str self, int64_t *out) {
+Error str_to_int(Str self, uint64_t base, int64_t *out) {
   if (self.len == 0) {
     return "empty input";
   }
@@ -279,7 +238,7 @@ Error str_to_int(Str self, int64_t *out) {
   }
 
   uint64_t un = 0;
-  Error err = str_to_uint(self, &un);
+  Error err = str_to_uint(self, base, &un);
   if (err != NULL) {
     return err;
   }
@@ -301,6 +260,157 @@ Error str_to_int(Str self, int64_t *out) {
   *out = n;
 
   return NULL;
+}
+
+// TODO: validate unicode code point?
+// TODO: review this
+// TODO: see https://unicode.org/glossary/#unicode_scalar_value
+int ucs_to_utf8(uint64_t code, char buf[6]) {
+  // http://stackoverflow.com/questions/6240055/manually-converting-unicode-codepoints-into-utf-8-and-utf-16
+  // The UCS code values 0xd800–0xdfff (UTF-16 surrogates) as well
+  // as 0xfffe and 0xffff (UCS noncharacters) should not appear in
+  // conforming UTF-8 streams.
+  if (0xd800 <= code && code <= 0xdfff) {
+    return -1;
+  }
+  if (0xfffe <= code && code <= 0xffff) {
+    return -1;
+  }
+
+  /* 0x00000000 - 0x0000007F:
+     0xxxxxxx
+  */
+  if (code < 0) {
+    return -1;
+  }
+  if (code <= 0x7F) {
+    buf[0] = (unsigned char)code;
+    return 1;
+  }
+
+  /* 0x00000080 - 0x000007FF:
+     110xxxxx 10xxxxxx
+  */
+  if (code <= 0x000007FF) {
+    buf[0] = (unsigned char)(0xc0 | (code >> 6));
+    buf[1] = (unsigned char)(0x80 | (code & 0x3f));
+    return 2;
+  }
+
+  /* 0x00000800 - 0x0000FFFF:
+     1110xxxx 10xxxxxx 10xxxxxx
+  */
+  if (code <= 0x0000FFFF) {
+    buf[0] = (unsigned char)(0xe0 | (code >> 12));
+    buf[1] = (unsigned char)(0x80 | ((code >> 6) & 0x3f));
+    buf[2] = (unsigned char)(0x80 | (code & 0x3f));
+    return 3;
+  }
+
+  /* 0x00010000 - 0x001FFFFF:
+     11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+  */
+  if (code <= 0x001FFFFF) {
+    buf[0] = (unsigned char)(0xf0 | (code >> 18));
+    buf[1] = (unsigned char)(0x80 | ((code >> 12) & 0x3f));
+    buf[2] = (unsigned char)(0x80 | ((code >> 6) & 0x3f));
+    buf[3] = (unsigned char)(0x80 | (code & 0x3f));
+    return 4;
+  }
+
+  /* 0x00200000 - 0x03FFFFFF:
+     111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+  */
+  if (code <= 0x03FFFFFF) {
+    buf[0] = (unsigned char)(0xf8 | (code >> 24));
+    buf[1] = (unsigned char)(0x80 | ((code >> 18) & 0x3f));
+    buf[2] = (unsigned char)(0x80 | ((code >> 12) & 0x3f));
+    buf[3] = (unsigned char)(0x80 | ((code >> 6) & 0x3f));
+    buf[4] = (unsigned char)(0x80 | (code & 0x3f));
+    return 5;
+  }
+
+  /* 0x04000000 - 0x7FFFFFFF:
+     1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+  */
+  if (code <= 0x7FFFFFFF) {
+    buf[0] = (unsigned char)(0xfc | (code >> 30));
+    buf[1] = (unsigned char)(0x80 | ((code >> 24) & 0x3f));
+    buf[2] = (unsigned char)(0x80 | ((code >> 18) & 0x3f));
+    buf[3] = (unsigned char)(0x80 | ((code >> 12) & 0x3f));
+    buf[4] = (unsigned char)(0x80 | ((code >> 6) & 0x3f));
+    buf[5] = (unsigned char)(0x80 | (code & 0x3f));
+    return 6;
+  }
+
+  return -1;
+}
+
+static char *str_norm(Str self) {
+  String dst = {};
+  string_reserve(&dst, self.len);
+
+  for (size_t i = 0; i < self.len;) {
+    if (self.ptr[i] == '\\') {
+      i++;
+      switch (self.ptr[i]) {
+      case 'b':
+        string_append(&dst, '\b');
+        break;
+      case 'f':
+        string_append(&dst, '\f');
+        break;
+      case 'n':
+        string_append(&dst, '\n');
+        break;
+      case 'r':
+        string_append(&dst, '\r');
+        break;
+      case 't':
+        string_append(&dst, '\t');
+        break;
+      case '"':
+        // TODO: test this
+        string_append(&dst, '"');
+        break;
+      case 'u': {
+        // TODO: add error checks and tests
+        i++;
+        uint64_t out = 0;
+        str_to_uint(str_slice(self, i, i + 4), 16, &out);
+        i += 4;
+        char buf[6] = {};
+        int n = ucs_to_utf8(out, buf);
+        for (int i = 0; i < n; i++) {
+          string_append(&dst, buf[i]);
+        }
+      } break;
+      case 'U': {
+        // TODO: add error checks and tests
+        i++;
+        uint64_t out = 0;
+        str_to_uint(str_slice(self, i, i + 8), 16, &out);
+        i += 8;
+        char buf[6] = {};
+        int n = ucs_to_utf8(out, buf);
+        for (int i = 0; i < n; i++) {
+          string_append(&dst, buf[i]);
+        }
+      } break;
+      default:
+        string_append(&dst, self.ptr[i]);
+        break;
+        // TODO:
+        // free(dst.ptr);
+        // return NULL;
+      }
+    } else {
+      string_append(&dst, self.ptr[i]);
+    }
+    i++;
+  }
+
+  return dst.ptr;
 }
 
 typedef enum {
@@ -831,7 +941,7 @@ static bool parse_simple_value(Parser *self, Value *out) {
       out->data.boolean = false;
     } else {
       int64_t i = 0;
-      Error err = str_to_int(val, &i);
+      Error err = str_to_int(val, 0, &i);
       if (err != NULL) {
         char *s = str_dup(val);
         parse_errorf(self, "value '%s' is not an integer: %s", s, err);

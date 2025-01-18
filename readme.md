@@ -16,7 +16,7 @@ Keys are valid identifiers: `[_a-zA-Z][_a-zA-Z0-9]*`.
 - string(interpreted):
 
 ```
-x = "first line\nsecond\n\tthird has a tab\nSpock says: \U001F596"
+x = "first line\nsecond\n\tthird has a tab\nSpock says: \U0001F596"
 ```
 
 - string(raw):
