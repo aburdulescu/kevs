@@ -34,6 +34,11 @@ char *str_dup(Str self) {
   return ptr;
 }
 
+char *str_norm(Str self) {
+  // TODO: handle escapes
+  return str_dup(self);
+}
+
 static bool str_starts_with_char(Str self, char c) {
   if (self.len < 1) {
     return false;
@@ -750,8 +755,10 @@ static bool parse_simple_value(Parser *self, Value *out) {
 
   bool ok = true;
 
-  if (str_starts_with_char(val, kStringBegin) ||
-      str_starts_with_char(val, kRawStringBegin)) {
+  if (str_starts_with_char(val, kStringBegin)) {
+    out->tag = kValueTagString;
+    out->data.string = str_norm(str_slice(val, 1, val.len - 1));
+  } else if (str_starts_with_char(val, kRawStringBegin)) {
     out->tag = kValueTagString;
     out->data.string = str_dup(str_slice(val, 1, val.len - 1));
   } else {
