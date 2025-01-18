@@ -13,33 +13,30 @@ Keys are valid identifiers: `[_a-zA-Z][_a-zA-Z0-9]*`.
 
 ### Values
 
-
 #### String
 
 Strings must contain only valid UTF-8 characters.
 
 There are two type of strings: raw and interpreted.
 
-- interpreted(enclosed in `""`):
+Interpreted strings are enclosed in `""`.
+Escape sequences are interpreted and replaced in the final string.
 
-Escape sequences are interpreted and replaced in the final string:
+Raw strings are enclosed in ` `` `.
+The final string is as written, escape sequences are ignored.
 
 ```
-# interpreted string, enclosed in ""
-# escape sequences are interpreted and replaced in the final string
 string_escaped = "first line\nsecond\n\tthird has a tab\nSpock says: \U0001F596"
 
-# raw string, enclosed in ``
-# escape sequences are ignored and the final string is as written
 raw_string = `first line
 second
     third has a tab
 Spock says: 🖖`;
-
-# the above strings are equal: string_escaped == raw_string
 ```
 
-Supported escape sequences:
+In the example from above, the two strings are equal: `string_escaped == raw_string`
+
+The supported escape sequences are:
 
 ```
 \b         - backspace       (U+0008)
@@ -53,7 +50,7 @@ Supported escape sequences:
 \UXXXXXXXX - unicode         (U+XXXXXXXX)
 ```
 
-### Integer
+#### Integer
 
 ```
 x1 = 42;  # positive(implicit)
@@ -70,14 +67,14 @@ x5 = +0o52;     # octal
 x6 = -0b101010; # binary
 ```
 
-- boolean:
+#### Boolean:
 
 ```
 x = true;
 y = false;
 ```
 
-- list(of values)
+#### List(of values)
 
 ```
 x = [
@@ -89,7 +86,7 @@ x = [
 y = [1; 2; 3; ];
 ```
 
-- table(of key-value pairs):
+#### Table(of key-value pairs):
 
 ```
 x = {
