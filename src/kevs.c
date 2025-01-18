@@ -346,7 +346,7 @@ int ucs_to_utf8(uint64_t code, char buf[6]) {
   return -1;
 }
 
-static char *str_norm(Str self) {
+static Error str_norm(Str self, char **out) {
   String dst = {};
   string_reserve(&dst, self.len);
 
@@ -374,35 +374,54 @@ static char *str_norm(Str self) {
         string_append(&dst, '"');
         break;
       case 'u': {
-        // TODO: add error checks and tests
+        // TODO: add tests
         i++;
+
         uint64_t out = 0;
-        str_to_uint(str_slice(self, i, i + 4), 16, &out);
+        const Error err = str_to_uint(str_slice(self, i, i + 4), 16, &out);
+        if (err != NULL) {
+          free(dst.ptr);
+          return err;
+        }
         i += 4;
+
         char buf[6] = {};
-        int n = ucs_to_utf8(out, buf);
+        const int n = ucs_to_utf8(out, buf);
+        if (n == -1) {
+          free(dst.ptr);
+          return "could not convert Unicode code point to UTF-8";
+        }
+
         for (int i = 0; i < n; i++) {
           string_append(&dst, buf[i]);
         }
       } break;
       case 'U': {
-        // TODO: add error checks and tests
+        // TODO: add tests
         i++;
+
         uint64_t out = 0;
-        str_to_uint(str_slice(self, i, i + 8), 16, &out);
+        const Error err = str_to_uint(str_slice(self, i, i + 8), 16, &out);
+        if (err != NULL) {
+          free(dst.ptr);
+          return err;
+        }
         i += 8;
+
         char buf[6] = {};
-        int n = ucs_to_utf8(out, buf);
+        const int n = ucs_to_utf8(out, buf);
+        if (n == -1) {
+          free(dst.ptr);
+          return "could not convert Unicode code point to UTF-8";
+        }
+
         for (int i = 0; i < n; i++) {
           string_append(&dst, buf[i]);
         }
       } break;
       default:
-        string_append(&dst, self.ptr[i]);
-        break;
-        // TODO:
-        // free(dst.ptr);
-        // return NULL;
+        free(dst.ptr);
+        return "unexpected escape sequence";
       }
     } else {
       string_append(&dst, self.ptr[i]);
@@ -410,7 +429,9 @@ static char *str_norm(Str self) {
     i++;
   }
 
-  return dst.ptr;
+  *out = dst.ptr;
+
+  return NULL;
 }
 
 typedef enum {
@@ -759,13 +780,17 @@ static void list_free(List *self);
 
 static void value_free(Value *self) {
   switch (self->tag) {
-  case kValueTagList: {
-    list_free(&self->data.list);
-  } break;
+  case kValueTagString:
+    free(self->data.string);
+    break;
 
-  case kValueTagTable: {
+  case kValueTagList:
+    list_free(&self->data.list);
+    break;
+
+  case kValueTagTable:
     table_free(&self->data.table);
-  } break;
+    break;
 
   default:
     break;
@@ -927,8 +952,14 @@ static bool parse_simple_value(Parser *self, Value *out) {
   bool ok = true;
 
   if (str_starts_with_char(val, kStringBegin)) {
+    char *data = NULL;
+    Error err = str_norm(str_slice(val, 1, val.len - 1), &data);
+    if (err != NULL) {
+      parse_errorf(self, "could not normalize string: %s\n", err);
+      return false;
+    }
     out->tag = kValueTagString;
-    out->data.string = str_norm(str_slice(val, 1, val.len - 1));
+    out->data.string = data;
   } else if (str_starts_with_char(val, kRawStringBegin)) {
     out->tag = kValueTagString;
     out->data.string = str_dup(str_slice(val, 1, val.len - 1));

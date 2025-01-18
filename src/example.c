@@ -40,7 +40,6 @@ int main() {
     } else {
       printf("string: '%s'\n", val);
     }
-    free(val);
   }
 
   // integer
@@ -96,7 +95,6 @@ int main() {
         } else {
           printf("list1[1]: '%s'\n", v);
         }
-        free(v);
       }
       // 3rd is boolean
       {
@@ -129,7 +127,6 @@ int main() {
         } else {
           printf("list2[%zu]: '%s'\n", i, v);
         }
-        free(v);
       }
     }
   }
@@ -150,7 +147,6 @@ int main() {
       } else {
         printf("name: '%s'\n", name);
       }
-      free(name);
 
       int64_t age = 0;
       err = table_int(val, "age", &age);
