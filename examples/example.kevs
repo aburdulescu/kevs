@@ -1,5 +1,5 @@
 # interpreted strings
-str = "first line\nsecond\n\tthird has a tab also\nSpock says: \U0001F596";
+str = "first line\nsecond\n\tthird has a tab\nSpock says: \U0001F596";
 
 # raw strings
 raw_str = `first line
