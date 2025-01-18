@@ -18,6 +18,26 @@ static inline bool is_letter(char c) {
   return lower(c) >= 'a' && lower(c) <= 'z';
 }
 
+typedef struct {
+  char *ptr;
+  size_t cap;
+  size_t len;
+} String;
+
+static void string_reserve(String *self, size_t cap) {
+  self->cap = cap;
+  self->ptr = realloc(self->ptr, cap * sizeof(char) + 1);
+}
+
+static void string_append(String *self, char v) {
+  if (self->len == self->cap) {
+    string_reserve(self, (self->cap + 1) * 2);
+  }
+  memcpy(self->ptr + self->len, &v, sizeof(v));
+  self->len += 1;
+  self->ptr[self->len] = 0;
+}
+
 Str str_from_cstr(const char *s) {
   assert(s != NULL);
   Str self = {
@@ -35,8 +55,49 @@ char *str_dup(Str self) {
 }
 
 char *str_norm(Str self) {
-  // TODO: handle escapes
-  return str_dup(self);
+  String dst = {};
+  string_reserve(&dst, self.len);
+
+  for (size_t i = 0; i < self.len;) {
+    if (self.ptr[i] == '\\') {
+      i++;
+      switch (self.ptr[i]) {
+      case 'b':
+        string_append(&dst, '\b');
+        break;
+      case 'f':
+        string_append(&dst, '\f');
+        break;
+      case 'n':
+        string_append(&dst, '\n');
+        break;
+      case 'r':
+        string_append(&dst, '\r');
+        break;
+      case 't':
+        string_append(&dst, '\t');
+        break;
+      case '"':
+        // TODO: test this
+        string_append(&dst, '"');
+        break;
+      case 'u':
+      case 'U':
+        // TODO: unicode
+      default:
+        string_append(&dst, self.ptr[i]);
+        break;
+        // TODO:
+        // free(dst.ptr);
+        // return NULL;
+      }
+    } else {
+      string_append(&dst, self.ptr[i]);
+    }
+    i++;
+  }
+
+  return dst.ptr;
 }
 
 static bool str_starts_with_char(Str self, char c) {
