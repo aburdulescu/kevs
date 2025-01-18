@@ -6,7 +6,8 @@
 #include "util.h"
 
 static void usage() {
-  fprintf(stderr, "usage: ./kevs [-abort] [-dump] [-no-err] [-free] file\n");
+  fprintf(stderr,
+          "usage: ./kevs [-abort] [-dump] [-json] [-no-err] [-free] file\n");
 }
 
 int main(int argc, char **argv) {
@@ -21,6 +22,7 @@ int main(int argc, char **argv) {
   Context ctx = {};
 
   bool dump = false;
+  bool json = false;
   bool pass_on_error = false;
   bool free_heap = false;
 
@@ -37,6 +39,9 @@ int main(int argc, char **argv) {
       args_index++;
     } else if (strcmp(args[args_index], "-free") == 0) {
       free_heap = true;
+      args_index++;
+    } else if (strcmp(args[args_index], "-json") == 0) {
+      json = true;
       args_index++;
     } else if (strlen(args[args_index]) > 0 && args[args_index][0] == '-') {
       fprintf(stderr, "error: unknown option '%s'\n", args[args_index]);
@@ -73,7 +78,11 @@ int main(int argc, char **argv) {
   }
 
   if (dump) {
-    table_dump(table);
+    if (json) {
+      table_dump_json(table);
+    } else {
+      table_dump(table);
+    }
   }
 
   if (free_heap) {

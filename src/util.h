@@ -15,6 +15,9 @@ Error str_to_int(Str self, uint64_t base, int64_t *out);
 void table_dump(Table self);
 void list_dump(List self);
 
+void table_dump_json(Table self);
+void list_dump_json(List self);
+
 Error read_file(Str path, char **out);
 
 #endif
