@@ -378,7 +378,7 @@ static Error str_norm(Str self, char **out) {
         // TODO: add tests
         i++;
 
-        if ((i + 4) >= self.len) {
+        if ((i + 4) > self.len) {
           free(dst.ptr);
           return "\\u must be preceded by 4 hex digits: \\uXXXX";
         }
@@ -406,7 +406,7 @@ static Error str_norm(Str self, char **out) {
         // TODO: add tests
         i++;
 
-        if ((i + 8) >= self.len) {
+        if ((i + 8) > self.len) {
           free(dst.ptr);
           return "\\U must be preceded by 8 hex digits: \\UXXXXXXXX";
         }
