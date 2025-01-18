@@ -263,85 +263,45 @@ Error str_to_int(Str self, uint64_t base, int64_t *out) {
   return NULL;
 }
 
-// TODO: validate unicode code point?
-// TODO: review this
-// TODO: see https://unicode.org/glossary/#unicode_scalar_value
-int ucs_to_utf8(uint64_t code, char buf[6]) {
-  // http://stackoverflow.com/questions/6240055/manually-converting-unicode-codepoints-into-utf-8-and-utf-16
-  // The UCS code values 0xd800–0xdfff (UTF-16 surrogates) as well
-  // as 0xfffe and 0xffff (UCS noncharacters) should not appear in
-  // conforming UTF-8 streams.
+// Convert UCS code point to UTF-8
+int ucs_to_utf8(uint64_t code, char buf[4]) {
+  // Code points in the surrogate range are not valid for UTF-8.
   if (0xd800 <= code && code <= 0xdfff) {
     return -1;
   }
-  if (0xfffe <= code && code <= 0xffff) {
-    return -1;
-  }
 
-  /* 0x00000000 - 0x0000007F:
-     0xxxxxxx
-  */
-  if (code < 0) {
-    return -1;
-  }
+  // 0x00000000 - 0x0000007F:
+  // 0xxxxxxx
   if (code <= 0x7F) {
-    buf[0] = (unsigned char)code;
+    buf[0] = (char)code;
     return 1;
   }
 
-  /* 0x00000080 - 0x000007FF:
-     110xxxxx 10xxxxxx
-  */
+  // 0x00000080 - 0x000007FF:
+  // 110xxxxx 10xxxxxx
   if (code <= 0x000007FF) {
-    buf[0] = (unsigned char)(0xc0 | (code >> 6));
-    buf[1] = (unsigned char)(0x80 | (code & 0x3f));
+    buf[0] = (char)(0xc0 | (code >> 6));
+    buf[1] = (char)(0x80 | (code & 0x3f));
     return 2;
   }
 
-  /* 0x00000800 - 0x0000FFFF:
-     1110xxxx 10xxxxxx 10xxxxxx
-  */
+  // 0x00000800 - 0x0000FFFF:
+  // 1110xxxx 10xxxxxx 10xxxxxx
   if (code <= 0x0000FFFF) {
-    buf[0] = (unsigned char)(0xe0 | (code >> 12));
-    buf[1] = (unsigned char)(0x80 | ((code >> 6) & 0x3f));
-    buf[2] = (unsigned char)(0x80 | (code & 0x3f));
+    buf[0] = (char)(0xe0 | (code >> 12));
+    buf[1] = (char)(0x80 | ((code >> 6) & 0x3f));
+    buf[2] = (char)(0x80 | (code & 0x3f));
     return 3;
   }
 
-  /* 0x00010000 - 0x001FFFFF:
-     11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-  */
+  // 0x00010000 - 0x001FFFFF:
+  // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
   if (code <= 0x001FFFFF) {
-    buf[0] = (unsigned char)(0xf0 | (code >> 18));
-    buf[1] = (unsigned char)(0x80 | ((code >> 12) & 0x3f));
-    buf[2] = (unsigned char)(0x80 | ((code >> 6) & 0x3f));
-    buf[3] = (unsigned char)(0x80 | (code & 0x3f));
+    buf[0] = (char)(0xf0 | (code >> 18));
+    buf[1] = (char)(0x80 | ((code >> 12) & 0x3f));
+    buf[2] = (char)(0x80 | ((code >> 6) & 0x3f));
+    buf[3] = (char)(0x80 | (code & 0x3f));
     return 4;
-  }
-
-  /* 0x00200000 - 0x03FFFFFF:
-     111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-  */
-  if (code <= 0x03FFFFFF) {
-    buf[0] = (unsigned char)(0xf8 | (code >> 24));
-    buf[1] = (unsigned char)(0x80 | ((code >> 18) & 0x3f));
-    buf[2] = (unsigned char)(0x80 | ((code >> 12) & 0x3f));
-    buf[3] = (unsigned char)(0x80 | ((code >> 6) & 0x3f));
-    buf[4] = (unsigned char)(0x80 | (code & 0x3f));
-    return 5;
-  }
-
-  /* 0x04000000 - 0x7FFFFFFF:
-     1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-  */
-  if (code <= 0x7FFFFFFF) {
-    buf[0] = (unsigned char)(0xfc | (code >> 30));
-    buf[1] = (unsigned char)(0x80 | ((code >> 24) & 0x3f));
-    buf[2] = (unsigned char)(0x80 | ((code >> 18) & 0x3f));
-    buf[3] = (unsigned char)(0x80 | ((code >> 12) & 0x3f));
-    buf[4] = (unsigned char)(0x80 | ((code >> 6) & 0x3f));
-    buf[5] = (unsigned char)(0x80 | (code & 0x3f));
-    return 6;
   }
 
   return -1;
@@ -391,7 +351,7 @@ static Error str_norm(Str self, char **out) {
         }
         i += 4;
 
-        char buf[6] = {};
+        char buf[4] = {};
         const int n = ucs_to_utf8(out, buf);
         if (n == -1) {
           free(dst.ptr);

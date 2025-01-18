@@ -13,13 +13,38 @@ Keys are valid identifiers: `[_a-zA-Z][_a-zA-Z0-9]*`.
 
 ### Values
 
-- string(interpreted):
+
+#### String
+
+Strings must contain only valid UTF-8 characters.
+
+There are two type of strings: raw and interpreted.
+
+- interpreted(enclosed in `""`):
+
+Escape sequences are interpreted and replaced in the final string:
 
 ```
 x = "first line\nsecond\n\tthird has a tab\nSpock says: \U0001F596"
 ```
 
-- string(raw):
+Supported escape sequences:
+
+```
+\b         - backspace       (U+0008)
+\t         - tab             (U+0009)
+\n         - linefeed        (U+000A)
+\f         - form feed       (U+000C)
+\r         - carriage return (U+000D)
+\"         - quote           (U+0022)
+\\         - backslash       (U+005C)
+\uXXXX     - unicode         (U+XXXX)
+\UXXXXXXXX - unicode         (U+XXXXXXXX)
+```
+
+- raw(enclosed in `\`\``):
+
+Escape sequences are ignores and the final string is copy as read:
 
 ```
 x = `first line
@@ -28,15 +53,21 @@ second
 Spock says: 🖖`;
 ```
 
-- integer:
+### Integer
 
 ```
-x1 = 42;
-x2 = +42;
-x3 = -42;
-x4 = 0x2a; # hex
-x5 = 0o52; # octal
+x1 = 42;  # positive(implicit)
+x2 = +42; # positive(explicit)
+x3 = -42; # negative
+
+x4 = 0x2a;     # hexadeciaml
+x5 = 0o52;     # octal
 x6 = 0b101010; # binary
+
+# same but signed
+x4 = -0x2a;     # hexadeciaml
+x5 = +0o52;     # octal
+x6 = -0b101010; # binary
 ```
 
 - boolean:
