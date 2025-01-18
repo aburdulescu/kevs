@@ -13,15 +13,15 @@ Keys are valid identifiers: `[_a-zA-Z][_a-zA-Z0-9]*`.
 
 ### Values
 
-- string(escape sequences are ignored):
+- interpreted string:
 
 ```
-x = "foo";
+x = "first line\nsecond\n\tthird has a tab also\nSpock says: \U001F596"
 ```
 
 - raw string:
 
-for example a multi-line string with tabs:
+for example a multi-line string with tabs and unicode:
 
 ```
 x = `first line
@@ -29,7 +29,7 @@ second
 and
 	so
 on	and so forth
-`;
+Spock says: 🖖`;
 ```
 
 - integer:

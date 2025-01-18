@@ -1,11 +1,19 @@
-# strings
+# interpreted strings
 str = "aa";
+str2 = "first line\nsecond\n\tthird has a tab also\nSpock says: \U001F596";
 
 # raw strings
 raw_str = `aa
 bb
 cc
 `;
+
+raw_str2 = `first line
+second
+and
+	so
+on and so forth
+Spock says: 🖖`;
 
 # numbers
 int = 42;            # integer
