@@ -44,7 +44,7 @@ Supported escape sequences:
 
 - raw(enclosed in ` `` `):
 
-Escape sequences are ignores and the final string is as written:
+Escape sequences are ignored and the final string is as written:
 
 ```
 x = `first line
