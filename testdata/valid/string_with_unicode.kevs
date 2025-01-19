@@ -1,0 +1,10 @@
+utf8_1byte_u = "\u0046\u004f\u004f";
+utf8_1byte_U = "\U00000046\U0000004f\U0000004f";
+
+utf8_2byte_u = "\u00A9 \u00AE \u00B5";
+utf8_2byte_U = "\U000000A9 \U000000AE \U000000B5";
+
+utf8_3byte_u = "\u15e4 \u15e3 \u15e2 \u15e7";
+utf8_3byte_U = "\U000015e4 \U000015e3 \U000015e2 \U000015e7";
+
+utf8_4byte = "\U0001d160 \U0001f0a1 \U0001f596 \U0001f983";

@@ -317,33 +317,41 @@ static Error str_norm(Str self, char **out) {
       switch (self.ptr[i]) {
       case 'a':
         string_append(&dst, '\a');
+        i++;
         break;
       case 'b':
         string_append(&dst, '\b');
+        i++;
         break;
       case 'f':
         string_append(&dst, '\f');
+        i++;
         break;
       case 'n':
         string_append(&dst, '\n');
+        i++;
         break;
       case 'r':
         string_append(&dst, '\r');
+        i++;
         break;
       case 't':
         string_append(&dst, '\t');
+        i++;
         break;
       case 'v':
         string_append(&dst, '\v');
+        i++;
         break;
       case '"':
         string_append(&dst, '"');
+        i++;
         break;
       case '\\':
         string_append(&dst, '\\');
+        i++;
         break;
       case 'u': {
-        // TODO: add tests
         i++;
 
         if ((i + 4) > self.len) {
@@ -363,7 +371,7 @@ static Error str_norm(Str self, char **out) {
         const int n = ucs_to_utf8(code, utf8);
         if (n == 0) {
           free(dst.ptr);
-          return "could not convert Unicode code point to UTF-8";
+          return "could not encode Unicode code point to UTF-8";
         }
 
         for (int i = 0; i < n; i++) {
@@ -371,7 +379,6 @@ static Error str_norm(Str self, char **out) {
         }
       } break;
       case 'U': {
-        // TODO: add tests
         i++;
 
         if ((i + 8) > self.len) {
@@ -391,7 +398,7 @@ static Error str_norm(Str self, char **out) {
         const int n = ucs_to_utf8(code, utf8);
         if (n == 0) {
           free(dst.ptr);
-          return "could not convert Unicode code point to UTF-8";
+          return "could not encode Unicode code point to UTF-8";
         }
 
         for (int i = 0; i < n; i++) {
@@ -404,8 +411,8 @@ static Error str_norm(Str self, char **out) {
       }
     } else {
       string_append(&dst, self.ptr[i]);
+      i++;
     }
-    i++;
   }
 
   *out = dst.ptr;
@@ -935,7 +942,7 @@ static bool parse_simple_value(Parser *self, Value *out) {
     char *data = NULL;
     Error err = str_norm(str_slice(val, 1, val.len - 1), &data);
     if (err != NULL) {
-      parse_errorf(self, "could not normalize string: %s\n", err);
+      parse_errorf(self, "could not normalize string: %s", err);
       return false;
     }
     out->tag = kValueTagString;

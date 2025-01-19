@@ -1,0 +1,7 @@
+utf8_1byte_u string 'FOO'
+utf8_1byte_U string 'FOO'
+utf8_2byte_u string '© ® µ'
+utf8_2byte_U string '© ® µ'
+utf8_3byte_u string 'ᗤ ᗣ ᗢ ᗧ'
+utf8_3byte_U string 'ᗤ ᗣ ᗢ ᗧ'
+utf8_4byte string '𝅘𝅥𝅮 🂡 🖖 🦃'
