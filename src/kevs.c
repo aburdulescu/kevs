@@ -351,23 +351,23 @@ static Error str_norm(Str self, char **out) {
           return "\\u must be preceded by 4 hex digits: \\uXXXX";
         }
 
-        uint64_t out = 0;
-        const Error err = str_to_uint(str_slice(self, i, i + 4), 16, &out);
+        uint64_t code = 0;
+        const Error err = str_to_uint(str_slice(self, i, i + 4), 16, &code);
         if (err != NULL) {
           free(dst.ptr);
           return err;
         }
         i += 4;
 
-        char buf[4] = {};
-        const int n = ucs_to_utf8(out, buf);
+        char utf8[4] = {};
+        const int n = ucs_to_utf8(code, utf8);
         if (n == 0) {
           free(dst.ptr);
           return "could not convert Unicode code point to UTF-8";
         }
 
         for (int i = 0; i < n; i++) {
-          string_append(&dst, buf[i]);
+          string_append(&dst, utf8[i]);
         }
       } break;
       case 'U': {
@@ -379,23 +379,23 @@ static Error str_norm(Str self, char **out) {
           return "\\U must be preceded by 8 hex digits: \\UXXXXXXXX";
         }
 
-        uint64_t out = 0;
-        const Error err = str_to_uint(str_slice(self, i, i + 8), 16, &out);
+        uint64_t code = 0;
+        const Error err = str_to_uint(str_slice(self, i, i + 8), 16, &code);
         if (err != NULL) {
           free(dst.ptr);
           return err;
         }
         i += 8;
 
-        char buf[4] = {};
-        const int n = ucs_to_utf8(out, buf);
+        char utf8[4] = {};
+        const int n = ucs_to_utf8(code, utf8);
         if (n == 0) {
           free(dst.ptr);
           return "could not convert Unicode code point to UTF-8";
         }
 
         for (int i = 0; i < n; i++) {
-          string_append(&dst, buf[i]);
+          string_append(&dst, utf8[i]);
         }
       } break;
       default:
