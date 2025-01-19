@@ -6,8 +6,8 @@
 #include "util.h"
 
 static void usage() {
-  fprintf(stderr, "usage: ./kevs [-abort] [-dump] [-json] [-scan] [-no-err] "
-                  "[-free] file\n");
+  fprintf(stderr,
+          "usage: ./kevs [-abort] [-dump] [-scan] [-no-err] [-free] file\n");
 }
 
 int main(int argc, char **argv) {
@@ -23,7 +23,6 @@ int main(int argc, char **argv) {
 
   bool only_scan = false;
   bool dump = false;
-  bool json = false;
   bool pass_on_error = false;
   bool free_heap = false;
 
@@ -43,9 +42,6 @@ int main(int argc, char **argv) {
       args_index++;
     } else if (strcmp(args[args_index], "-free") == 0) {
       free_heap = true;
-      args_index++;
-    } else if (strcmp(args[args_index], "-json") == 0) {
-      json = true;
       args_index++;
     } else if (strlen(args[args_index]) > 0 && args[args_index][0] == '-') {
       fprintf(stderr, "error: unknown option '%s'\n", args[args_index]);
@@ -91,23 +87,14 @@ int main(int argc, char **argv) {
   }
 
   if (dump) {
-    if (json) {
-      if (only_scan) {
-        fprintf(stderr, "error: cannot dump tokens as JSON\n");
-        rc = 1;
-      } else {
-        table_dump_json(table);
+    if (only_scan) {
+      for (size_t i = 0; i < tokens.len; i++) {
+        char *v = str_dup(tokens.ptr[i].value);
+        printf("%s %s\n", tokentype_str(tokens.ptr[i].type), v);
+        free(v);
       }
     } else {
-      if (only_scan) {
-        for (size_t i = 0; i < tokens.len; i++) {
-          char *v = str_dup(tokens.ptr[i].value);
-          printf("%s %s\n", tokentype_str(tokens.ptr[i].type), v);
-          free(v);
-        }
-      } else {
-        table_dump(table);
-      }
+      table_dump(table);
     }
   }
 

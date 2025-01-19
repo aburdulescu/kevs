@@ -21,10 +21,6 @@ const char *tokentype_str(TokenType v);
 // util.c
 void table_dump(Table self);
 void list_dump(List self);
-
-void table_dump_json(Table self);
-void list_dump_json(List self);
-
 Error read_file(Str path, char **out);
 
 #endif
