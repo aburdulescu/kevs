@@ -216,6 +216,63 @@ static void test_str_to_int_positive() {
   }
 }
 
+static void test_ucs_to_utf8() {
+  const struct {
+    uint64_t in;
+    uint8_t n;
+    char out[4];
+  } tests[] = {
+      // valid
+
+      // single byte
+      {0x00000000, 1, {0x00}}, // min
+      {0x00000042, 1, {0x42}},
+      {0x0000007f, 1, {0x7f}}, // max
+
+      // two byte
+      {0x00000080, 2, {(char)0xc2, (char)0x80}}, // min
+      {0x000007ff, 2, {(char)0xdf, (char)0xbf}}, // max
+
+      // three byte
+      {0x00000800, 3, {(char)0xe0, (char)0xa0, (char)0x80}}, // min
+      {0x0000d7ff, 3, {(char)0xed, (char)0x9f, (char)0xbf}}, // max < surogate
+      {0x0000e000, 3, {(char)0xee, (char)0x80, (char)0x80}}, // min > surogate
+      {0x0000ffff, 3, {(char)0xef, (char)0xbf, (char)0xbf}}, // max
+
+      // four byte
+      {0x00010000, 4, {(char)0xf0, (char)0x90, (char)0x80, (char)0x80}}, // min
+      {0x0010ffff, 4, {(char)0xf4, (char)0x8f, (char)0xbf, (char)0xbf}}, // max
+
+      // invalid
+      {0x0000d800, 0, {}}, // low surogate start
+      {0x0000dbff, 0, {}}, // low surogate end
+      {0x0000dc00, 0, {}}, // high surogate start
+      {0x0000dfff, 0, {}}, // high surogate end
+
+      // edge cases
+      {0x00110000, 0, {}}, // after max
+  };
+
+  const size_t tests_len = sizeof(tests) / sizeof(tests[0]);
+
+  for (size_t i = 0; i < tests_len; i++) {
+    char out[4] = {};
+    const uint8_t n = ucs_to_utf8(tests[i].in, out);
+    INFO("test #%zu: in=0x%08lx", i, tests[i].in);
+    INFO("test #%zu: want: n=%d, out=%02x %02x %02x %02x", i,
+         (uint8_t)tests[i].n, (uint8_t)tests[i].out[0],
+         (uint8_t)tests[i].out[1], (uint8_t)tests[i].out[2],
+         (uint8_t)tests[i].out[3]);
+    INFO("test #%zu: have: n=%d, out=%02x %02x %02x %02x", i, n,
+         (uint8_t)out[0], (uint8_t)out[1], (uint8_t)out[2], (uint8_t)out[3]);
+    assert(n == tests[i].n);
+    assert(out[0] == tests[i].out[0]);
+    assert(out[1] == tests[i].out[1]);
+    assert(out[2] == tests[i].out[2]);
+    assert(out[3] == tests[i].out[3]);
+  }
+}
+
 int main() {
   test_str_index_char();
   test_str_slice_low();
@@ -224,5 +281,6 @@ int main() {
   test_str_trim_right();
   test_str_to_int_negative();
   test_str_to_int_positive();
+  test_ucs_to_utf8();
   return 0;
 }

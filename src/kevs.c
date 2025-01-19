@@ -264,47 +264,47 @@ Error str_to_int(Str self, uint64_t base, int64_t *out) {
 }
 
 // Convert UCS code point to UTF-8
-int ucs_to_utf8(uint64_t code, char buf[4]) {
+uint8_t ucs_to_utf8(uint64_t code, char out[4]) {
   // Code points in the surrogate range are not valid for UTF-8.
   if (0xd800 <= code && code <= 0xdfff) {
-    return -1;
+    return 0;
   }
 
   // 0x00000000 - 0x0000007F:
   // 0xxxxxxx
-  if (code <= 0x7F) {
-    buf[0] = (char)code;
+  if (code <= 0x0000007F) {
+    out[0] = (char)code;
     return 1;
   }
 
   // 0x00000080 - 0x000007FF:
   // 110xxxxx 10xxxxxx
   if (code <= 0x000007FF) {
-    buf[0] = (char)(0xc0 | (code >> 6));
-    buf[1] = (char)(0x80 | (code & 0x3f));
+    out[0] = (char)(0xc0 | (code >> 6));
+    out[1] = (char)(0x80 | (code & 0x3f));
     return 2;
   }
 
   // 0x00000800 - 0x0000FFFF:
   // 1110xxxx 10xxxxxx 10xxxxxx
   if (code <= 0x0000FFFF) {
-    buf[0] = (char)(0xe0 | (code >> 12));
-    buf[1] = (char)(0x80 | ((code >> 6) & 0x3f));
-    buf[2] = (char)(0x80 | (code & 0x3f));
+    out[0] = (char)(0xe0 | (code >> 12));
+    out[1] = (char)(0x80 | ((code >> 6) & 0x3f));
+    out[2] = (char)(0x80 | (code & 0x3f));
     return 3;
   }
 
-  // 0x00010000 - 0x001FFFFF:
+  // 0x00010000 - 0x0010FFFF:
   // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-  if (code <= 0x001FFFFF) {
-    buf[0] = (char)(0xf0 | (code >> 18));
-    buf[1] = (char)(0x80 | ((code >> 12) & 0x3f));
-    buf[2] = (char)(0x80 | ((code >> 6) & 0x3f));
-    buf[3] = (char)(0x80 | (code & 0x3f));
+  if (code <= 0x0010FFFF) {
+    out[0] = (char)(0xf0 | (code >> 18));
+    out[1] = (char)(0x80 | ((code >> 12) & 0x3f));
+    out[2] = (char)(0x80 | ((code >> 6) & 0x3f));
+    out[3] = (char)(0x80 | (code & 0x3f));
     return 4;
   }
 
-  return -1;
+  return 0;
 }
 
 static Error str_norm(Str self, char **out) {
@@ -353,7 +353,7 @@ static Error str_norm(Str self, char **out) {
 
         char buf[4] = {};
         const int n = ucs_to_utf8(out, buf);
-        if (n == -1) {
+        if (n == 0) {
           free(dst.ptr);
           return "could not convert Unicode code point to UTF-8";
         }
@@ -379,9 +379,9 @@ static Error str_norm(Str self, char **out) {
         }
         i += 8;
 
-        char buf[6] = {};
+        char buf[4] = {};
         const int n = ucs_to_utf8(out, buf);
-        if (n == -1) {
+        if (n == 0) {
           free(dst.ptr);
           return "could not convert Unicode code point to UTF-8";
         }
