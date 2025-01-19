@@ -1,6 +1,4 @@
-- escape strings when dumping to json
-
-- add tests for string escape sequences
+- better more readable/detailed errors
 
 - use latest llvm release
 
