@@ -39,15 +39,18 @@ In the example from above, the two strings are equal: `string_escaped == raw_str
 The supported escape sequences are:
 
 ```
-\b         - backspace       (U+0008)
-\t         - tab             (U+0009)
-\n         - linefeed        (U+000A)
-\f         - form feed       (U+000C)
-\r         - carriage return (U+000D)
-\"         - quote           (U+0022)
-\\         - backslash       (U+005C)
-\uXXXX     - unicode         (U+XXXX)
-\UXXXXXXXX - unicode         (U+XXXXXXXX)
+\a   U+0007 alert or bell
+\b   U+0008 backspace
+\f   U+000C form feed
+\n   U+000A line feed or newline
+\r   U+000D carriage return
+\t   U+0009 horizontal tab
+\v   U+000B vertical tab
+\\   U+005C backslash
+\"   U+0022 double quote
+
+\uXXXX       U+XXXX     unicode
+\UXXXXXXXX   U+XXXXXXXX unicode
 ```
 
 #### Integer

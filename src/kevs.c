@@ -315,6 +315,9 @@ static Error str_norm(Str self, char **out) {
     if (self.ptr[i] == '\\') {
       i++;
       switch (self.ptr[i]) {
+      case 'a':
+        string_append(&dst, '\a');
+        break;
       case 'b':
         string_append(&dst, '\b');
         break;
@@ -330,8 +333,14 @@ static Error str_norm(Str self, char **out) {
       case 't':
         string_append(&dst, '\t');
         break;
+      case 'v':
+        string_append(&dst, '\v');
+        break;
       case '"':
         string_append(&dst, '"');
+        break;
+      case '\\':
+        string_append(&dst, '\\');
         break;
       case 'u': {
         // TODO: add tests

@@ -1,0 +1,1 @@
+s = "begin \a foo \b \f \n \r \t \v \" \\ end";
