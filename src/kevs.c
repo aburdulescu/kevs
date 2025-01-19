@@ -405,14 +405,7 @@ static Error str_norm(Str self, char **out) {
   return NULL;
 }
 
-typedef enum {
-  kTokenUndefined = 0,
-  kTokenKey,
-  kTokenDelim,
-  kTokenValue,
-} TokenType;
-
-static const char *tokentype_str(TokenType v) {
+const char *tokentype_str(TokenType v) {
   switch (v) {
   case kTokenUndefined:
     return "undefined";
@@ -439,26 +432,9 @@ static const char kTableEnd = '}';
 
 static const char *spaces = " \t";
 
-typedef struct {
-  Str value;
-  TokenType type;
-  int line;
-} Token;
-
-typedef struct {
-  Token *ptr;
-  size_t cap;
-  size_t len;
-} Tokens;
-
 static void tokens_reserve(Tokens *self, size_t cap) {
   self->cap = cap;
   self->ptr = realloc(self->ptr, cap * sizeof(Token));
-}
-
-static void tokens_free(Tokens *self) {
-  free(self->ptr);
-  *self = (Tokens){};
 }
 
 static void tokens_append(Tokens *self, Token v) {
@@ -722,7 +698,9 @@ static bool scan_key_value(Scanner *self) {
   return true;
 }
 
-static bool scan(Context ctx, Str file, Str content, Tokens *tokens) {
+bool scan(Tokens *tokens, Context ctx, Str file, Str content) {
+  // pre-aloc some memory
+  tokens_reserve(tokens, kDefaultCapacity);
   Scanner s = {
       .file = file,
       .content = content,
@@ -1059,7 +1037,7 @@ static bool parse_key_value(Parser *self, Table parent, KeyValue *out) {
   return true;
 }
 
-static bool parse(Context ctx, Str file, Tokens tokens, Table *table) {
+bool parse(Table *table, Context ctx, Str file, Tokens tokens) {
   Parser p = {
       .file = file,
       .tokens = tokens,
@@ -1088,15 +1066,12 @@ bool table_parse(Table *table, Context ctx, Str file, Str content) {
 
   Tokens tokens = {};
 
-  // pre-aloc some memory
-  tokens_reserve(&tokens, kDefaultCapacity);
-
-  ok = scan(ctx, file, content, &tokens);
+  ok = scan(&tokens, ctx, file, content);
   if (ok) {
-    ok = parse(ctx, file, tokens, table);
+    ok = parse(table, ctx, file, tokens);
   }
 
-  tokens_free(&tokens);
+  free(tokens.ptr);
 
   return ok;
 }

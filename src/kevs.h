@@ -14,6 +14,25 @@ typedef struct {
   size_t len;
 } Str;
 
+typedef enum {
+  kTokenUndefined = 0,
+  kTokenKey,
+  kTokenDelim,
+  kTokenValue,
+} TokenType;
+
+typedef struct {
+  Str value;
+  TokenType type;
+  int line;
+} Token;
+
+typedef struct {
+  Token *ptr;
+  size_t cap;
+  size_t len;
+} Tokens;
+
 typedef struct KeyValue KeyValue;
 typedef struct Value Value;
 
