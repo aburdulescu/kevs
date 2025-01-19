@@ -25,8 +25,9 @@ int main() {
 
   Context ctx = {};
   Table table = {};
-  const bool ok = table_parse(&table, ctx, file, str_from_cstr(data));
-  if (!ok) {
+  err = table_parse(&table, ctx, file, str_from_cstr(data));
+  if (err != NULL) {
+    fprintf(stderr, "error: %s\n", err);
     rc = 1;
   }
 

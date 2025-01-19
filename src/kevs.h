@@ -77,7 +77,7 @@ typedef struct {
   bool abort_on_error;
 } Context;
 
-bool table_parse(Table *table, Context ctx, Str file, Str content);
+Error table_parse(Table *table, Context ctx, Str file, Str content);
 void table_free(Table *self);
 Error table_string(Table self, const char *key, char **out);
 Error table_int(Table self, const char *key, int64_t *out);

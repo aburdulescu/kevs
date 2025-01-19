@@ -315,48 +315,48 @@ static Error str_norm(Str self, char **out) {
     if (self.ptr[i] == '\\') {
       i++;
       switch (self.ptr[i]) {
-      case 'a':
+      case 'a': {
         string_append(&dst, '\a');
         i++;
-        break;
-      case 'b':
+      } break;
+      case 'b': {
         string_append(&dst, '\b');
         i++;
-        break;
-      case 'f':
+      } break;
+      case 'f': {
         string_append(&dst, '\f');
         i++;
-        break;
-      case 'n':
+      } break;
+      case 'n': {
         string_append(&dst, '\n');
         i++;
-        break;
-      case 'r':
+      } break;
+      case 'r': {
         string_append(&dst, '\r');
         i++;
-        break;
-      case 't':
+      } break;
+      case 't': {
         string_append(&dst, '\t');
         i++;
-        break;
-      case 'v':
+      } break;
+      case 'v': {
         string_append(&dst, '\v');
         i++;
-        break;
-      case '"':
+      } break;
+      case '"': {
         string_append(&dst, '"');
         i++;
-        break;
-      case '\\':
+      } break;
+      case '\\': {
         string_append(&dst, '\\');
         i++;
-        break;
+      } break;
       case 'u': {
         i++;
 
         if ((i + 4) > self.len) {
           free(dst.ptr);
-          return "\\u must be preceded by 4 hex digits: \\uXXXX";
+          return "\\u must be followed by 4 hex digits: \\uXXXX";
         }
 
         uint64_t code = 0;
@@ -383,7 +383,7 @@ static Error str_norm(Str self, char **out) {
 
         if ((i + 8) > self.len) {
           free(dst.ptr);
-          return "\\U must be preceded by 8 hex digits: \\UXXXXXXXX";
+          return "\\U must be followed by 8 hex digits: \\UXXXXXXXX";
         }
 
         uint64_t code = 0;
@@ -405,9 +405,10 @@ static Error str_norm(Str self, char **out) {
           string_append(&dst, utf8[i]);
         }
       } break;
-      default:
+      default: {
         free(dst.ptr);
-        return "unexpected escape sequence";
+        return "unknown escape sequence";
+      }
       }
     } else {
       string_append(&dst, self.ptr[i]);
@@ -1097,7 +1098,7 @@ bool parse(Table *table, Context ctx, Str file, Tokens tokens) {
   return true;
 }
 
-bool table_parse(Table *table, Context ctx, Str file, Str content) {
+Error table_parse(Table *table, Context ctx, Str file, Str content) {
   global_ctx = ctx;
 
   bool ok = false;
@@ -1111,7 +1112,7 @@ bool table_parse(Table *table, Context ctx, Str file, Str content) {
 
   free(tokens.ptr);
 
-  return ok;
+  return NULL;
 }
 
 void table_free(Table *self) {
