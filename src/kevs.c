@@ -331,7 +331,6 @@ static Error str_norm(Str self, char **out) {
         string_append(&dst, '\t');
         break;
       case '"':
-        // TODO: test this
         string_append(&dst, '"');
         break;
       case 'u': {
@@ -548,13 +547,36 @@ static bool scan_delim(Scanner *self, char c) {
 }
 
 static bool scan_string_value(Scanner *self) {
-  const int end = str_index_char(str_slice_low(self->content, 1), kStringBegin);
-  if (end == -1) {
-    scan_errorf(self, "string value does not end with quote");
-    return false;
+  // advance past leading quote
+  Str s = str_slice_low(self->content, 1);
+
+  while (true) {
+    // search for trailing quote
+    const int i = str_index_char(s, kStringBegin);
+
+    if (i == -1) {
+      scan_errorf(self, "string value does not end with quote");
+      return false;
+    }
+
+    // get previous char
+    const char prev = s.ptr[i - 1];
+
+    // advance
+    s = str_slice_low(s, i + 1);
+
+    // stop if quote is not escaped
+    if (prev != '\\') {
+      break;
+    }
   }
-  // +2 for leading and trailing quotes
-  scanner_append(self, kTokenValue, end + 2);
+
+  // calculate the end, includes trailing quote
+  const size_t end = s.ptr - self->content.ptr - 1;
+
+  // +1 for leading quote
+  scanner_append(self, kTokenValue, end + 1);
+
   return true;
 }
 
