@@ -1098,7 +1098,7 @@ bool parse(Table *table, Context ctx, Str file, Tokens tokens) {
   return true;
 }
 
-Error table_parse(Table *table, Context ctx, Str file, Str content) {
+bool table_parse(Table *table, Context ctx, Str file, Str content) {
   global_ctx = ctx;
 
   bool ok = false;
@@ -1112,7 +1112,7 @@ Error table_parse(Table *table, Context ctx, Str file, Str content) {
 
   free(tokens.ptr);
 
-  return NULL;
+  return ok;
 }
 
 void table_free(Table *self) {
