@@ -9,18 +9,20 @@ import (
 )
 
 func main() {
-	data, err := os.ReadFile("../example.kevs")
+	const file = "../example.kevs"
+
+	data, err := os.ReadFile(file)
 	if err != nil {
 		panic(err)
 	}
 
 	var root C.Table
-	ctx := C.Context{}
-	file := C.str_from_cstr(C.CString("example.kevs"))
-	content := C.str_from_cstr(C.CString(string(data)))
-
-	ok := C.table_parse(&root, ctx, file, content)
-	if !ok {
+	if ok := C.table_parse(
+		&root,
+		C.Context{},
+		C.str_from_cstr(C.CString("example.kevs")),
+		C.str_from_cstr(C.CString(string(data))),
+	); !ok {
 		panic("parse failed")
 	}
 	defer C.table_free(&root)

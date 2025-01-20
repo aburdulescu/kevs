@@ -26,7 +26,9 @@ typedef struct {
 
 static void string_reserve(String *self, size_t cap) {
   self->cap = cap;
-  self->ptr = realloc(self->ptr, cap * sizeof(char) + 1);
+  void *ptr = realloc(self->ptr, cap * sizeof(char) + 1);
+  assert(ptr != NULL);
+  self->ptr = ptr;
   self->ptr[self->len] = 0;
 }
 
@@ -450,7 +452,9 @@ static const char *spaces = " \t";
 
 static void tokens_reserve(Tokens *self, size_t cap) {
   self->cap = cap;
-  self->ptr = realloc(self->ptr, cap * sizeof(Token));
+  void *ptr = realloc(self->ptr, cap * sizeof(Token));
+  assert(ptr != NULL);
+  self->ptr = ptr;
 }
 
 static void tokens_append(Tokens *self, Token v) {
@@ -789,7 +793,9 @@ static void value_free(Value *self) {
 
 static void list_reserve(List *self, size_t cap) {
   self->cap = cap;
-  self->ptr = realloc(self->ptr, cap * sizeof(Value));
+  void *ptr = realloc(self->ptr, cap * sizeof(Value));
+  assert(ptr != NULL);
+  self->ptr = ptr;
 }
 
 static void list_free(List *self) {
@@ -811,7 +817,9 @@ static void list_append(List *self, Value v) {
 
 static void table_reserve(Table *self, size_t cap) {
   self->cap = cap;
-  self->ptr = realloc(self->ptr, cap * sizeof(KeyValue));
+  void *ptr = realloc(self->ptr, cap * sizeof(KeyValue));
+  assert(ptr != NULL);
+  self->ptr = ptr;
 }
 
 static void table_append(Table *self, KeyValue v) {
