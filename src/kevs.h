@@ -77,13 +77,17 @@ typedef struct {
   bool abort_on_error;
 } Context;
 
+Str str_from_cstr(const char *s);
+
 bool table_parse(Table *table, Context ctx, Str file, Str content);
 void table_free(Table *self);
+
 Error table_string(Table self, const char *key, char **out);
 Error table_int(Table self, const char *key, int64_t *out);
 Error table_bool(Table self, const char *key, bool *out);
 Error table_list(Table self, const char *key, List *out);
 Error table_table(Table self, const char *key, Table *out);
+
 Error list_string(List self, size_t i, char **out);
 Error list_int(List self, size_t i, int64_t *out);
 Error list_bool(List self, size_t i, bool *out);
