@@ -25,6 +25,11 @@ func main() {
 	}
 	defer C.table_free(&root)
 
+	var stringEscaped *C.char
+	if err := C.table_string(root, C.CString("string_escaped"), &stringEscaped); err != nil {
+		panic(C.GoString(err))
+	}
+
 	var table2 C.Table
 	if err := C.table_table(root, C.CString("table2"), &table2); err != nil {
 		panic(C.GoString(err))
@@ -40,6 +45,7 @@ func main() {
 		panic(C.GoString(err))
 	}
 
+	println("string_escaped:", C.GoString(stringEscaped))
 	println("name:", C.GoString(name))
 	println("age:", age)
 }
