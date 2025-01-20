@@ -20,7 +20,7 @@ func main() {
 	if ok := C.table_parse(
 		&root,
 		C.Context{},
-		C.str_from_cstr(C.CString("example.kevs")),
+		C.str_from_cstr(C.CString(file)),
 		C.str_from_cstr(C.CString(string(data))),
 	); !ok {
 		panic("parse failed")
