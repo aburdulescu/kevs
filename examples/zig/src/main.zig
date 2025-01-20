@@ -15,7 +15,7 @@ pub fn main() !void {
     buf[data.len] = 0;
     const content = @as([*:0]const u8, @ptrCast(data));
 
-    var root: c.Table = undefined;
+    var root: c.Table = .{};
     const ok = c.table_parse(
         &root,
         .{},
