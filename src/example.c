@@ -15,7 +15,8 @@ int main() {
   Str file = str_from_cstr("examples/example.kevs");
 
   char *data = NULL;
-  Error err = read_file(file, &data);
+  size_t data_len = 0;
+  Error err = read_file(file, &data, &data_len);
   if (err != NULL) {
     fprintf(stderr, "error: failed to read file: %s\n", err);
     return 1;
@@ -23,9 +24,11 @@ int main() {
 
   int rc = 0;
 
-  Context ctx = {};
   Table table = {};
-  const bool ok = table_parse(&table, ctx, file, str_from_cstr(data));
+  Context ctx = {};
+  Str content = {.ptr = data, .len = data_len};
+
+  const bool ok = table_parse(&table, ctx, file, content);
   if (!ok) {
     rc = 1;
   }

@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-Error read_file(Str path, char **out) {
+Error read_file(Str path, char **out, size_t *out_len) {
   int fd = open(path.ptr, O_RDONLY);
   if (fd == -1) {
     return strerror(errno);
@@ -38,6 +38,7 @@ Error read_file(Str path, char **out) {
   }
 
   *out = ptr;
+  *out_len = len;
 
 cleanup:
   if (err != NULL) {
