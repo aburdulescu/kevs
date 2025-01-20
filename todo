@@ -1,3 +1,4 @@
+- don't write errors to stdout, return them to user
 - better more readable/detailed errors
 
 - use latest llvm release
