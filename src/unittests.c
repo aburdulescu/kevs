@@ -5,24 +5,16 @@
 #include "kevs.h"
 #include "util.h"
 
-static void kevs_logf(const char *level, const char *fn, int ln,
-                      const char *fmt, ...) {
-  assert(level != NULL);
-  assert(fn != NULL);
-  assert(fmt != NULL);
-
+static void logf(const char *fn, int ln, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-
-  fprintf(stdout, "%s %s() %d ", level, fn, ln);
+  fprintf(stdout, "%s() %d ", fn, ln);
   vfprintf(stdout, fmt, args);
   fprintf(stdout, "\n");
-
   va_end(args);
 }
 
-#define INFO(...) kevs_logf("INFO ", __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ERROR(...) kevs_logf("ERROR", __FUNCTION__, __LINE__, __VA_ARGS__)
+#define INFO(...) logf(__FUNCTION__, __LINE__, __VA_ARGS__)
 
 static void test_str_index_char() {
   Str s = str_from_cstr("0123456789");
