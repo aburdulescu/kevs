@@ -13,16 +13,23 @@ pub fn main() !void {
     buf[data.len] = 0; // add null terminator
     const content_ptr = @as([*:0]const u8, @ptrCast(data));
 
+    var err_buf: [8193]u8 = undefined;
+
     var root: c.Table = .{};
-    const ok = c.table_parse(
-        &root,
-        .{},
-        c.str_from_cstr(file),
-        c.str_from_cstr(content_ptr),
-    );
-    if (!ok) {
-        try std.debug.panic("parse failed\n", .{});
-        return;
+    {
+        const err = c.table_parse(
+            &root,
+            .{
+                .file = c.str_from_cstr(file),
+                .content = c.str_from_cstr(content_ptr),
+                .err_buf = &err_buf,
+                .err_buf_len = err_buf.len - 1,
+            },
+        );
+        if (err != null) {
+            try std.debug.panic("{s}\n", .{err});
+            return;
+        }
     }
     defer c.table_free(&root);
 

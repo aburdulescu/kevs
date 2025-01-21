@@ -8,8 +8,6 @@
 
 static const size_t kDefaultCapacity = 32;
 
-static Context global_ctx = {};
-
 static inline bool is_digit(char c) { return c >= '0' && c <= '9'; }
 
 static inline char lower(char c) { return (char)(c | ('x' - 'X')); }
@@ -17,6 +15,11 @@ static inline char lower(char c) { return (char)(c | ('x' - 'X')); }
 static inline bool is_letter(char c) {
   return lower(c) >= 'a' && lower(c) <= 'z';
 }
+
+typedef struct {
+  Error err;
+  size_t n;
+} FormatResult;
 
 typedef struct {
   char *ptr;
@@ -466,45 +469,60 @@ static void tokens_append(Tokens *self, Token v) {
 }
 
 typedef struct {
-  Str file;
-  Str content;
+  Params params;
   Tokens *tokens;
   int line;
-  Context ctx;
 } Scanner;
 
 static bool scan_key_value(Scanner *self);
 static bool scan_value(Scanner *self);
 
 static void scan_errorf(const Scanner *self, const char *fmt, ...) {
+  char *ptr = self->params.err_buf;
+  size_t len = self->params.err_buf_len;
+
+  int n = snprintf(ptr, len, "%s:%d: error: scan: ", self->params.file.ptr,
+                   self->line);
+
+  assert(n >= 0);
+  assert((size_t)n < len);
+  ptr += n;
+  len -= n;
+
   va_list args;
   va_start(args, fmt);
-  fprintf(stdout, "%s:%d: error: scan: ", self->file.ptr, self->line);
-  vfprintf(stdout, fmt, args);
-  fprintf(stdout, "\n");
+  n = vsnprintf(ptr, len, fmt, args);
   va_end(args);
-  if (self->ctx.abort_on_error) {
+
+  assert(n >= 0);
+  assert((size_t)n < len);
+  ptr += n;
+  len -= n;
+
+  if (self->params.abort_on_error) {
+    printf("%s\n", self->params.err_buf);
     abort();
   }
 }
 
 static bool scanner_expect(Scanner *self, char c) {
-  if (self->content.len == 0) {
+  if (self->params.content.len == 0) {
     return false;
   }
-  return self->content.ptr[0] == c;
+  return self->params.content.ptr[0] == c;
 }
 
 static void scanner_advance(Scanner *self, size_t n) {
-  self->content = str_slice_low(self->content, n);
+  self->params.content = str_slice_low(self->params.content, n);
 }
 
 static void scanner_trim_space(Scanner *self) {
-  self->content = str_trim_left(self->content, str_from_cstr(spaces));
+  self->params.content =
+      str_trim_left(self->params.content, str_from_cstr(spaces));
 }
 
 static void scanner_append(Scanner *self, TokenType type, size_t end) {
-  Str val = str_slice(self->content, 0, end);
+  Str val = str_slice(self->params.content, 0, end);
   val = str_trim_right(val, str_from_cstr(spaces));
 
   const Token t = {
@@ -521,7 +539,7 @@ static void scanner_append(Scanner *self, TokenType type, size_t end) {
 static void scanner_append_delim(Scanner *self) {
   const Token t = {
       .type = kTokenDelim,
-      .value = str_slice(self->content, 0, 1),
+      .value = str_slice(self->params.content, 0, 1),
       .line = self->line,
   };
   tokens_append(self->tokens, t);
@@ -535,7 +553,7 @@ static bool scan_newline(Scanner *self) {
 }
 
 static bool scan_comment(Scanner *self) {
-  const int newline = str_index_char(self->content, '\n');
+  const int newline = str_index_char(self->params.content, '\n');
   if (newline == -1) {
     scan_errorf(self, "comment does not end with newline");
     return false;
@@ -546,7 +564,7 @@ static bool scan_comment(Scanner *self) {
 
 static bool scan_key(Scanner *self) {
   char c = 0;
-  const int end = str_index_any(self->content, str_from_cstr("=\n"), &c);
+  const int end = str_index_any(self->params.content, str_from_cstr("=\n"), &c);
   if (end == -1 || c != kKeyValSep) {
     scan_errorf(self, "key-value pair is missing separator");
     return false;
@@ -569,7 +587,7 @@ static bool scan_delim(Scanner *self, char c) {
 
 static bool scan_string_value(Scanner *self) {
   // advance past leading quote
-  Str s = str_slice_low(self->content, 1);
+  Str s = str_slice_low(self->params.content, 1);
 
   while (true) {
     // search for trailing quote
@@ -593,7 +611,7 @@ static bool scan_string_value(Scanner *self) {
   }
 
   // calculate the end, includes trailing quote
-  const size_t end = s.ptr - self->content.ptr - 1;
+  const size_t end = s.ptr - self->params.content.ptr - 1;
 
   // +1 for leading quote
   scanner_append(self, kTokenValue, end + 1);
@@ -603,7 +621,7 @@ static bool scan_string_value(Scanner *self) {
 
 static bool scan_raw_string(Scanner *self) {
   const int end =
-      str_index_char(str_slice_low(self->content, 1), kRawStringBegin);
+      str_index_char(str_slice_low(self->params.content, 1), kRawStringBegin);
   if (end == -1) {
     scan_errorf(self, "raw string value does not end with backtick");
     return false;
@@ -623,7 +641,8 @@ static bool scan_int_or_bool_value(Scanner *self) {
   // search for all possible value endings(;]}\n)
   // if semicolon(or none of them) is not found => error
   char c = 0;
-  const int end = str_index_any(self->content, str_from_cstr(";]}\n"), &c);
+  const int end =
+      str_index_any(self->params.content, str_from_cstr(";]}\n"), &c);
   if (end == -1 || c != kKeyValEnd) {
     scan_errorf(self, "integer or boolean value does not end with semicolon");
     return false;
@@ -636,7 +655,7 @@ static bool scan_list_value(Scanner *self) {
   scanner_append_delim(self);
   while (true) {
     scanner_trim_space(self);
-    if (self->content.len == 0) {
+    if (self->params.content.len == 0) {
       scan_errorf(self, "end of input without list end");
       return false;
     }
@@ -671,7 +690,7 @@ static bool scan_table_value(Scanner *self) {
   scanner_append_delim(self);
   while (true) {
     scanner_trim_space(self);
-    if (self->content.len == 0) {
+    if (self->params.content.len == 0) {
       scan_errorf(self, "end of input without table end");
       return false;
     }
@@ -741,17 +760,15 @@ static bool scan_key_value(Scanner *self) {
   return true;
 }
 
-bool scan(Tokens *tokens, Context ctx, Str file, Str content) {
+Error scan(Tokens *tokens, Params params) {
   // pre-aloc some memory
   tokens_reserve(tokens, kDefaultCapacity);
   Scanner s = {
-      .file = file,
-      .content = content,
+      .params = params,
       .tokens = tokens,
       .line = 1,
-      .ctx = ctx,
   };
-  while (s.content.len != 0) {
+  while (s.params.content.len != 0) {
     scanner_trim_space(&s);
     bool ok = false;
     if (scanner_expect(&s, '\n')) {
@@ -762,10 +779,10 @@ bool scan(Tokens *tokens, Context ctx, Str file, Str content) {
       ok = scan_key_value(&s);
     }
     if (!ok) {
-      return false;
+      return s.params.err_buf;
     }
   }
-  return true;
+  return NULL;
 }
 
 static void list_free(List *self);
@@ -831,11 +848,10 @@ static void table_append(Table *self, KeyValue v) {
 }
 
 typedef struct {
-  Str file;
+  Params params;
   Tokens tokens;
   Table *table;
   size_t i;
-  Context ctx;
 } Parser;
 
 static bool parse_value(Parser *self, Value *out);
@@ -848,14 +864,28 @@ static Token parser_get(const Parser *self) {
 static void parser_pop(Parser *self) { self->i++; }
 
 static void parse_errorf(const Parser *self, const char *fmt, ...) {
+  char *ptr = self->params.err_buf;
+  size_t len = self->params.err_buf_len;
+
+  int n = snprintf(ptr, len, "%s:%d: error: parse: ", self->params.file.ptr,
+                   parser_get(self).line);
+  assert(n >= 0);
+  assert((size_t)n < len);
+  ptr += n;
+  len -= n;
+
   va_list args;
   va_start(args, fmt);
-  fprintf(stdout, "%s:%d: error: parse: ", self->file.ptr,
-          parser_get(self).line);
-  vfprintf(stdout, fmt, args);
-  fprintf(stdout, "\n");
+  n = vsnprintf(ptr, len, fmt, args);
   va_end(args);
-  if (self->ctx.abort_on_error) {
+
+  assert(n >= 0);
+  assert((size_t)n < len);
+  ptr += n;
+  len -= n;
+
+  if (self->params.abort_on_error) {
+    printf("%s\n", self->params.err_buf);
     abort();
   }
 }
@@ -1084,13 +1114,12 @@ static bool parse_key_value(Parser *self, Table parent, KeyValue *out) {
   return true;
 }
 
-bool parse(Table *table, Context ctx, Str file, Tokens tokens) {
+Error parse(Table *table, Params params, Tokens tokens) {
   Parser p = {
-      .file = file,
+      .params = params,
       .tokens = tokens,
       .table = table,
       .i = 0,
-      .ctx = ctx,
   };
 
   table_reserve(table, kDefaultCapacity);
@@ -1098,33 +1127,32 @@ bool parse(Table *table, Context ctx, Str file, Tokens tokens) {
   while (p.i < tokens.len) {
     KeyValue kv = {};
     if (!parse_key_value(&p, *table, &kv)) {
-      return false;
+      return params.err_buf;
     }
     table_append(p.table, kv);
   }
 
-  return true;
+  return NULL;
 }
 
-Error table_parse(Table *table, Context ctx, Str file, Str content) {
-  global_ctx = ctx;
-
-  bool ok = false;
+Error table_parse(Table *table, Params params) {
+  if (params.err_buf_len == 0) {
+    return "params.err_buf_len == 0";
+  }
+  if (params.err_buf == NULL) {
+    return "params.err_buf == null";
+  }
 
   Tokens tokens = {};
 
-  ok = scan(&tokens, ctx, file, content);
-  if (ok) {
-    ok = parse(table, ctx, file, tokens);
+  Error err = scan(&tokens, params);
+  if (err == NULL) {
+    err = parse(table, params, tokens);
   }
 
   free(tokens.ptr);
 
-  if (!ok) {
-    return "failed";
-  }
-
-  return NULL;
+  return err;
 }
 
 void table_free(Table *self) {

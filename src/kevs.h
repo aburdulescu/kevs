@@ -74,12 +74,16 @@ typedef struct KeyValue {
 } KeyValue;
 
 typedef struct {
+  Str file;
+  Str content;
+  char *err_buf;
+  size_t err_buf_len;
   bool abort_on_error;
-} Context;
+} Params;
 
 Str str_from_cstr(const char *s);
 
-Error table_parse(Table *table, Context ctx, Str file, Str content);
+Error table_parse(Table *table, Params params);
 void table_free(Table *self);
 
 Error table_string(Table self, const char *key, char **out);

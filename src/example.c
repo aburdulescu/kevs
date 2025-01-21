@@ -25,10 +25,15 @@ int main() {
   int rc = 0;
 
   Table table = {};
-  Context ctx = {};
-  Str content = {.ptr = data, .len = data_len};
+  char err_buf[8193] = {};
+  const Params params = {
+      .file = file,
+      .err_buf = err_buf,
+      .err_buf_len = sizeof(err_buf) - 1,
+      .content = {.ptr = data, .len = data_len},
+  };
 
-  err = table_parse(&table, ctx, file, content);
+  err = table_parse(&table, params);
   if (err != NULL) {
     fprintf(stderr, "error: failed parse root table: %s\n", err);
     rc = 1;

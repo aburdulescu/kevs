@@ -19,17 +19,16 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  Context ctx = {};
-
   bool only_scan = false;
   bool dump = false;
   bool pass_on_error = false;
   bool free_heap = false;
+  bool abort_on_error = false;
 
   int args_index = 0;
   while (args_index < nargs) {
     if (strcmp(args[args_index], "-abort") == 0) {
-      ctx.abort_on_error = true;
+      abort_on_error = true;
       args_index++;
     } else if (strcmp(args[args_index], "-scan") == 0) {
       only_scan = true;
@@ -71,17 +70,25 @@ int main(int argc, char **argv) {
   int rc = 0;
 
   Tokens tokens = {};
-  Str content = {.ptr = data, .len = data_len};
   Table table = {};
+  char err_buf[8193] = {};
+  const Params params = {
+      .file = file,
+      .content = {.ptr = data, .len = data_len},
+      .err_buf = err_buf,
+      .err_buf_len = sizeof(err_buf) - 1,
+      .abort_on_error = abort_on_error,
+  };
 
-  bool ok = scan(&tokens, ctx, file, content);
+  err = scan(&tokens, params);
   if (!only_scan) {
-    if (ok) {
-      ok = parse(&table, ctx, file, tokens);
+    if (err == NULL) {
+      err = parse(&table, params, tokens);
     }
   }
 
-  if (!ok) {
+  if (err != NULL) {
+    printf("%s\n", err);
     if (!pass_on_error) {
       rc = 1;
     }

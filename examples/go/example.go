@@ -16,14 +16,19 @@ func main() {
 		panic(err)
 	}
 
+	var errBuf [8193]byte
+
 	var root C.Table
-	if ok := C.table_parse(
+	if err := C.table_parse(
 		&root,
-		C.Context{},
-		C.str_from_cstr(C.CString(file)),
-		C.str_from_cstr(C.CString(string(data))),
-	); !ok {
-		panic("parse failed")
+		C.Params{
+			file:        C.str_from_cstr(C.CString(file)),
+			content:     C.str_from_cstr(C.CString(string(data))),
+			err_buf:     C.CString(string(errBuf[:])),
+			err_buf_len: C.size_t(len(errBuf) - 1),
+		},
+	); err != nil {
+		panic(C.GoString(err))
 	}
 	defer C.table_free(&root)
 
