@@ -79,7 +79,7 @@ typedef struct {
 
 Str str_from_cstr(const char *s);
 
-bool table_parse(Table *table, Context ctx, Str file, Str content);
+Error table_parse(Table *table, Context ctx, Str file, Str content);
 void table_free(Table *self);
 
 Error table_string(Table self, const char *key, char **out);

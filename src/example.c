@@ -28,8 +28,9 @@ int main() {
   Context ctx = {};
   Str content = {.ptr = data, .len = data_len};
 
-  const bool ok = table_parse(&table, ctx, file, content);
-  if (!ok) {
+  err = table_parse(&table, ctx, file, content);
+  if (err != NULL) {
+    fprintf(stderr, "error: failed parse root table: %s\n", err);
     rc = 1;
   }
 
