@@ -30,6 +30,7 @@ var (
 	disableCodeCoverage     = flag.Bool("no-cc", false, "Disable code coverage")
 	enableFuzzer            = flag.Bool("fuzz", false, "Run fuzzer")
 	fuzzTime                = flag.Int("fuzz-time", 30, "Run fuzzer for that number of seconds")
+	fuzzMaxLen              = flag.Int("fuzz-max-len", 8192, "Run fuzzer that max input size")
 	osTag                   = flag.String("os", "linux", "Os tag: linux or windows")
 )
 
@@ -187,6 +188,7 @@ func runFuzzer() error {
 			exe,
 			"-max_total_time="+strconv.Itoa(*fuzzTime),
 			"-create_missing_dirs=1",
+			"-max_len="+strconv.Itoa(*fuzzMaxLen),
 			"-artifact_prefix="+fuzzOutDir,
 			tempCorpusDir,
 		)
