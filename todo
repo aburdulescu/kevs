@@ -1,3 +1,5 @@
+- implement arena allocator
+
 - better more readable/detailed errors
 
 - use latest llvm release
