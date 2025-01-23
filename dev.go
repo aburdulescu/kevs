@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -25,6 +26,7 @@ var (
 	disableIntegrationTests = flag.Bool("no-it", false, "Disable integration tests")
 	disableCodeCoverage     = flag.Bool("no-cc", false, "Disable code coverage")
 	enableFuzzer            = flag.Bool("fuzz", false, "Run fuzzer")
+	fuzzTime                = flag.Int("fuzz-time", 60, "Run fuzzer for that number of seconds")
 	osTag                   = flag.String("os", "linux", "Os tag: linux or windows")
 )
 
@@ -101,7 +103,6 @@ var globalResult GlobalResult
 
 func runFuzzer() error {
 	const (
-		maxTotalTime  = "60"
 		mainCorpusDir = "testdata/corpus"
 	)
 	var (
@@ -110,21 +111,45 @@ func runFuzzer() error {
 		covProfile    = filepath.Join(fuzzOutDir, "coverage.profraw")
 	)
 
+	outBuf := new(bytes.Buffer)
+	errBuf := new(bytes.Buffer)
+
+	os.RemoveAll(fuzzOutDir)
+
 	// add testdata to corpus
 	{
+
 		dirs := []string{"testdata/not_valid/", "testdata/valid/"}
 		for _, dir := range dirs {
 			exe := filepath.Join(*buildDir, "fuzzer")
+
 			cmd := exec.Command(exe, "-create_missing_dirs=1", "-merge=1", mainCorpusDir, dir)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			if err := cmd.Run(); err != nil {
+			cmd.Stdout = outBuf
+			cmd.Stderr = errBuf
+
+			fmt.Printf("add %s to corpus ... ", dir)
+			err := cmd.Run()
+			fmt.Println("done")
+			if err != nil {
 				return err
 			}
+
+			// write logs
+			outFile := filepath.Join(fuzzOutDir, "logs", dir, "out")
+			errFile := filepath.Join(fuzzOutDir, "logs", dir, "err")
+			os.MkdirAll(filepath.Dir(outFile), 0755)
+			if err := os.WriteFile(outFile, outBuf.Bytes(), 0600); err != nil {
+				return fmt.Errorf("failed to write stdout file: %w", err)
+			}
+			if err := os.WriteFile(errFile, errBuf.Bytes(), 0600); err != nil {
+				return fmt.Errorf("failed to write stderr file: %w", err)
+			}
+
+			outBuf.Reset()
+			errBuf.Reset()
 		}
 	}
 
-	os.RemoveAll(fuzzOutDir)
 	os.MkdirAll(tempCorpusDir, 0755)
 
 	// add main corpus to temp
@@ -142,19 +167,38 @@ func runFuzzer() error {
 	// run fuzzer
 	{
 		exe := filepath.Join(*buildDir, "fuzzer")
+
 		cmd := exec.Command(
 			exe,
-			"-max_total_time="+maxTotalTime,
+			"-max_total_time="+strconv.Itoa(*fuzzTime),
 			"-create_missing_dirs=1",
 			"-artifact_prefix="+fuzzOutDir,
 			tempCorpusDir,
 		)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		cmd.Stdout = outBuf
+		cmd.Stderr = errBuf
 		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
-		if err := cmd.Run(); err != nil {
+
+		fmt.Print("run fuzzer ... ")
+		err := cmd.Run()
+		fmt.Println("done")
+		if err != nil {
 			return err
 		}
+
+		// write logs
+		outFile := filepath.Join(fuzzOutDir, "logs", "fuzzer", "out")
+		errFile := filepath.Join(fuzzOutDir, "logs", "fuzzer", "err")
+		os.MkdirAll(filepath.Dir(outFile), 0755)
+		if err := os.WriteFile(outFile, outBuf.Bytes(), 0600); err != nil {
+			return fmt.Errorf("failed to write stdout file: %w", err)
+		}
+		if err := os.WriteFile(errFile, errBuf.Bytes(), 0600); err != nil {
+			return fmt.Errorf("failed to write stderr file: %w", err)
+		}
+
+		outBuf.Reset()
+		errBuf.Reset()
 	}
 
 	os.RemoveAll(mainCorpusDir)
@@ -162,12 +206,31 @@ func runFuzzer() error {
 	// merge corpus
 	{
 		exe := filepath.Join(*buildDir, "fuzzer")
+
 		cmd := exec.Command(exe, "-create_missing_dirs=1", "-merge=1", mainCorpusDir, tempCorpusDir)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
+		cmd.Stdout = outBuf
+		cmd.Stderr = errBuf
+
+		fmt.Print("merge corpus ... ")
+		err := cmd.Run()
+		fmt.Println("done")
+		if err != nil {
 			return err
 		}
+
+		// write logs
+		outFile := filepath.Join(fuzzOutDir, "logs", "merge", "out")
+		errFile := filepath.Join(fuzzOutDir, "logs", "merge", "err")
+		os.MkdirAll(filepath.Dir(outFile), 0755)
+		if err := os.WriteFile(outFile, outBuf.Bytes(), 0600); err != nil {
+			return fmt.Errorf("failed to write stdout file: %w", err)
+		}
+		if err := os.WriteFile(errFile, errBuf.Bytes(), 0600); err != nil {
+			return fmt.Errorf("failed to write stderr file: %w", err)
+		}
+
+		outBuf.Reset()
+		errBuf.Reset()
 	}
 
 	// generate coverage
