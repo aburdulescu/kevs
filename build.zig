@@ -59,7 +59,7 @@ pub fn build(b: *std.Build) void {
             });
             exe.addCSourceFiles(.{
                 .files = executable.srcs,
-                .flags = &.{ "-std=c11", "-g", "-Wall", "-Wextra", "-Werror" },
+                .flags = &.{ "-std=c99", "-g", "-Wall", "-Wextra", "-Werror" },
             });
 
             const install = b.addInstallArtifact(exe, .{});

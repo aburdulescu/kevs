@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
     });
     exe.addCSourceFiles(.{
         .files = &[_][]const u8{"../../src/kevs.c"},
-        .flags = &.{ "-std=c11", "-g", "-Wall", "-Wextra", "-Werror" },
+        .flags = &.{ "-std=c99", "-g", "-Wall", "-Wextra", "-Werror" },
     });
     exe.addIncludePath(.{
         .cwd_relative = "../../src/",

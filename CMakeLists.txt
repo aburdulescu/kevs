@@ -7,7 +7,7 @@ project(kevs)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-string(APPEND CMAKE_C_FLAGS " -std=c11 -g -Wall -Wextra -Werror")
+string(APPEND CMAKE_C_FLAGS " -std=c99 -g -Wall -Wextra -Werror")
 string(APPEND CMAKE_C_FLAGS " -fsanitize=address,undefined -fno-sanitize-recover=all")
 string(APPEND CMAKE_C_FLAGS " -fprofile-instr-generate -fcoverage-mapping")
 

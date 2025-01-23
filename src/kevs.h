@@ -33,9 +33,6 @@ typedef struct {
   size_t len;
 } Tokens;
 
-typedef struct KeyValue KeyValue;
-typedef struct Value Value;
-
 typedef enum {
   kValueTagUndefined = 0,
   kValueTagString,
@@ -45,14 +42,18 @@ typedef enum {
   kValueTagTable,
 } ValueTag;
 
+struct Value;
+
 typedef struct {
-  Value *ptr;
+  struct Value *ptr;
   size_t cap;
   size_t len;
 } List;
 
+struct KeyValue;
+
 typedef struct {
-  KeyValue *ptr;
+  struct KeyValue *ptr;
   size_t cap;
   size_t len;
 } Table;
