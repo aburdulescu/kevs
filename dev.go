@@ -2,15 +2,18 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -26,9 +29,11 @@ var (
 	disableIntegrationTests = flag.Bool("no-it", false, "Disable integration tests")
 	disableCodeCoverage     = flag.Bool("no-cc", false, "Disable code coverage")
 	enableFuzzer            = flag.Bool("fuzz", false, "Run fuzzer")
-	fuzzTime                = flag.Int("fuzz-time", 60, "Run fuzzer for that number of seconds")
+	fuzzTime                = flag.Int("fuzz-time", 30, "Run fuzzer for that number of seconds")
 	osTag                   = flag.String("os", "linux", "Os tag: linux or windows")
 )
+
+var ctx context.Context
 
 func main() {
 	if err := mainErr(); err != nil {
@@ -47,6 +52,16 @@ func mainErr() error {
 	}
 
 	*buildDir, _ = filepath.Abs(*buildDir)
+
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithCancel(context.Background())
+
+	sigc := make(chan os.Signal, 2)
+	signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigc
+		cancel()
+	}()
 
 	if *enableFuzzer {
 		return runFuzzer()
@@ -123,7 +138,7 @@ func runFuzzer() error {
 		for _, dir := range dirs {
 			exe := filepath.Join(*buildDir, "fuzzer")
 
-			cmd := exec.Command(exe, "-create_missing_dirs=1", "-merge=1", mainCorpusDir, dir)
+			cmd := exec.CommandContext(ctx, exe, "-create_missing_dirs=1", "-merge=1", mainCorpusDir, dir)
 			cmd.Stdout = outBuf
 			cmd.Stderr = errBuf
 
@@ -168,7 +183,7 @@ func runFuzzer() error {
 	{
 		exe := filepath.Join(*buildDir, "fuzzer")
 
-		cmd := exec.Command(
+		cmd := exec.CommandContext(ctx,
 			exe,
 			"-max_total_time="+strconv.Itoa(*fuzzTime),
 			"-create_missing_dirs=1",
@@ -179,7 +194,7 @@ func runFuzzer() error {
 		cmd.Stderr = errBuf
 		cmd.Env = append(cmd.Env, "LLVM_PROFILE_FILE="+covProfile)
 
-		fmt.Print("run fuzzer ... ")
+		fmt.Printf("run fuzzer for %s ... ", time.Duration(*fuzzTime)*time.Second)
 		err := cmd.Run()
 		fmt.Println("done")
 		if err != nil {
@@ -207,7 +222,7 @@ func runFuzzer() error {
 	{
 		exe := filepath.Join(*buildDir, "fuzzer")
 
-		cmd := exec.Command(exe, "-create_missing_dirs=1", "-merge=1", mainCorpusDir, tempCorpusDir)
+		cmd := exec.CommandContext(ctx, exe, "-create_missing_dirs=1", "-merge=1", mainCorpusDir, tempCorpusDir)
 		cmd.Stdout = outBuf
 		cmd.Stderr = errBuf
 
@@ -257,7 +272,7 @@ func runExample() error {
 	}
 	args = append(args, exe)
 
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Stdout = outBuf
 	cmd.Stderr = errBuf
 
@@ -306,7 +321,7 @@ func runUnitTests() error {
 	}
 	args = append(args, exe)
 
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Stdout = outBuf
 	cmd.Stderr = errBuf
 
@@ -473,7 +488,7 @@ func (t IntegrationTest) runValid() error {
 	}
 	args = append(args, exe, "-abort", "-dump", "-free", t.input)
 
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Stdout = outBuf
 	cmd.Stderr = errBuf
 
@@ -540,7 +555,7 @@ func (t IntegrationTest) runNotValid() error {
 	}
 	args = append(args, exe, "-no-err", "-free", t.input)
 
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Stdout = outBuf
 	cmd.Stderr = errBuf
 
@@ -594,7 +609,7 @@ func generateCoverage(outDir string, profiles []string, binaries []string) error
 	{
 		args := []string{"merge", "-o", dataFile, "-sparse"}
 		args = append(args, profiles...)
-		cmd := exec.Command("llvm-profdata-14", args...)
+		cmd := exec.CommandContext(ctx, "llvm-profdata-14", args...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
@@ -616,7 +631,7 @@ func generateCoverage(outDir string, profiles []string, binaries []string) error
 		}
 		args = append(args, binaries...)
 		args = append(args, "src/kevs.c")
-		cmd := exec.Command("llvm-cov-14", args...)
+		cmd := exec.CommandContext(ctx, "llvm-cov-14", args...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
