@@ -16,6 +16,7 @@ Error read_file(Str path, char **out, size_t *out_len) {
   }
 
   Error err = NULL;
+  char *ptr = NULL;
 
   struct stat stbuf = {};
   if (fstat(fd, &stbuf) == -1) {
@@ -24,7 +25,10 @@ Error read_file(Str path, char **out, size_t *out_len) {
   }
 
   const size_t len = stbuf.st_size;
-  char *ptr = malloc(len + 1);
+  ptr = malloc(len + 1);
+  if (ptr == NULL) {
+    return "out of memory";
+  }
   ptr[len] = 0;
 
   ssize_t nread = read(fd, ptr, len);

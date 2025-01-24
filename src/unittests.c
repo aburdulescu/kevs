@@ -5,7 +5,7 @@
 #include "kevs.h"
 #include "util.h"
 
-static void logf(const char *fn, int ln, const char *fmt, ...) {
+static void print_log(const char *fn, int ln, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   fprintf(stdout, "%s() %d ", fn, ln);
@@ -14,7 +14,7 @@ static void logf(const char *fn, int ln, const char *fmt, ...) {
   va_end(args);
 }
 
-#define INFO(...) logf(__FUNCTION__, __LINE__, __VA_ARGS__)
+#define INFO(...) print_log(__FUNCTION__, __LINE__, __VA_ARGS__)
 
 static void test_str_index_char() {
   Str s = str_from_cstr("0123456789");
