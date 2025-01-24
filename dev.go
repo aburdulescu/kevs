@@ -611,7 +611,7 @@ func generateCoverage(outDir string, profiles []string, binaries []string) error
 	{
 		args := []string{"merge", "-o", dataFile, "-sparse"}
 		args = append(args, profiles...)
-		cmd := exec.CommandContext(ctx, "llvm-profdata-14", args...)
+		cmd := exec.CommandContext(ctx, "llvm-profdata", args...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
@@ -633,7 +633,7 @@ func generateCoverage(outDir string, profiles []string, binaries []string) error
 		}
 		args = append(args, binaries...)
 		args = append(args, "src/kevs.c")
-		cmd := exec.CommandContext(ctx, "llvm-cov-14", args...)
+		cmd := exec.CommandContext(ctx, "llvm-cov", args...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
