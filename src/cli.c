@@ -69,12 +69,19 @@ int main(int argc, char **argv) {
 
   int rc = 0;
 
+  const size_t arena_len = 16 << 20;
+  void *arena_ptr = malloc(arena_len);
+
+  Arena arena = {};
+  arena_init(&arena, arena_ptr, arena_len);
+
   Tokens tokens = {};
   Table table = {};
   char err_buf[8193] = {};
   const Params params = {
       .file = file,
       .content = {.ptr = data, .len = data_len},
+      .arena = arena,
       .err_buf = err_buf,
       .err_buf_len = sizeof(err_buf) - 1,
       .abort_on_error = abort_on_error,
@@ -97,18 +104,16 @@ int main(int argc, char **argv) {
   if (dump) {
     if (only_scan) {
       for (size_t i = 0; i < tokens.len; i++) {
-        char *v = str_dup(tokens.ptr[i].value);
+        char *v = str_dup(tokens.ptr[i].value, &arena);
         printf("%s %s\n", tokentype_str(tokens.ptr[i].type), v);
-        free(v);
       }
     } else {
-      table_dump(table);
+      table_dump(table, &arena);
     }
   }
 
   if (free_heap) {
-    table_free(&table);
-    free(tokens.ptr);
+    free(arena_ptr);
     free(data);
   }
 

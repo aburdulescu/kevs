@@ -75,14 +75,23 @@ typedef struct KeyValue {
 } KeyValue;
 
 typedef struct {
+  void *ptr;
+  size_t cap;
+  size_t index;
+} Arena;
+
+typedef struct {
   Str file;
   Str content;
+  Arena arena;
   char *err_buf;
   size_t err_buf_len;
   bool abort_on_error;
 } Params;
 
 Str str_from_cstr(const char *s);
+
+void arena_init(Arena *self, void *ptr, size_t len);
 
 Error table_parse(Table *table, Params params);
 void table_free(Table *self);

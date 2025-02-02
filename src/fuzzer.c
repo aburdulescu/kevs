@@ -10,6 +10,5 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
       .err_buf_len = sizeof(err_buf) - 1,
   };
   table_parse(&t, params);
-  table_free(&t);
   return 0;
 }

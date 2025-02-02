@@ -6,6 +6,39 @@
 #include <stdlib.h>
 #include <string.h>
 
+void arena_init(Arena *self, void *ptr, size_t len) {
+  *self = (Arena){};
+  self->ptr = ptr;
+  self->cap = len;
+}
+
+void *arena_alloc(Arena *self, size_t size) {
+  assert((self->index + size) < self->cap);
+  void *ptr = self->ptr + self->index;
+  self->index += size;
+  return ptr;
+}
+
+void *arena_extend(Arena *self, void *old_ptr, size_t old_size,
+                   size_t new_size) {
+  assert(new_size > old_size);
+  if (old_ptr == NULL) {
+    return arena_alloc(self, new_size);
+  }
+  // check if is last alloc
+  if (old_ptr == (self->ptr + self->index - old_size)) {
+    // update index
+    self->index = self->index - old_size + new_size;
+    assert(self->index < self->cap);
+    return old_ptr;
+  } else {
+    // new alloc + copy
+    void *new_ptr = arena_alloc(self, new_size);
+    memcpy(new_ptr, old_ptr, old_size);
+    return new_ptr;
+  }
+}
+
 static const size_t kDefaultCapacity = 32;
 
 static inline bool is_digit(char c) { return c >= '0' && c <= '9'; }
@@ -27,17 +60,17 @@ typedef struct {
   size_t len;
 } String;
 
-static void string_reserve(String *self, size_t cap) {
-  self->cap = cap;
-  char *ptr = realloc(self->ptr, cap * sizeof(char) + 1);
+static void string_reserve(String *self, size_t cap, Arena *arena) {
+  char *ptr = arena_extend(arena, self->ptr, self->cap, cap * sizeof(char) + 1);
   assert(ptr != NULL);
+  self->cap = cap;
   self->ptr = ptr;
   self->ptr[self->len] = 0;
 }
 
-static void string_append(String *self, char v) {
+static void string_append(String *self, char v, Arena *arena) {
   if (self->len == self->cap) {
-    string_reserve(self, (self->cap + 1) * 2);
+    string_reserve(self, (self->cap + 1) * 2, arena);
   }
   memcpy(self->ptr + self->len, &v, sizeof(v));
   self->len += 1;
@@ -53,8 +86,8 @@ Str str_from_cstr(const char *s) {
   return self;
 }
 
-char *str_dup(Str self) {
-  char *ptr = malloc(self.len + 1);
+char *str_dup(Str self, Arena *arena) {
+  char *ptr = arena_alloc(arena, self.len + 1);
   ptr[self.len] = 0;
   memcpy(ptr, self.ptr, self.len);
   return ptr;
@@ -312,62 +345,60 @@ uint8_t ucs_to_utf8(uint64_t code, char out[4]) {
   return 0;
 }
 
-static Error str_norm(Str self, char **out) {
+static Error str_norm(Str self, Arena *arena, char **out) {
   String dst = {};
-  string_reserve(&dst, self.len);
+  string_reserve(&dst, self.len, arena);
 
   for (size_t i = 0; i < self.len;) {
     if (self.ptr[i] == '\\') {
       i++;
       switch (self.ptr[i]) {
       case 'a': {
-        string_append(&dst, '\a');
+        string_append(&dst, '\a', arena);
         i++;
       } break;
       case 'b': {
-        string_append(&dst, '\b');
+        string_append(&dst, '\b', arena);
         i++;
       } break;
       case 'f': {
-        string_append(&dst, '\f');
+        string_append(&dst, '\f', arena);
         i++;
       } break;
       case 'n': {
-        string_append(&dst, '\n');
+        string_append(&dst, '\n', arena);
         i++;
       } break;
       case 'r': {
-        string_append(&dst, '\r');
+        string_append(&dst, '\r', arena);
         i++;
       } break;
       case 't': {
-        string_append(&dst, '\t');
+        string_append(&dst, '\t', arena);
         i++;
       } break;
       case 'v': {
-        string_append(&dst, '\v');
+        string_append(&dst, '\v', arena);
         i++;
       } break;
       case '"': {
-        string_append(&dst, '"');
+        string_append(&dst, '"', arena);
         i++;
       } break;
       case '\\': {
-        string_append(&dst, '\\');
+        string_append(&dst, '\\', arena);
         i++;
       } break;
       case 'u': {
         i++;
 
         if ((i + 4) > self.len) {
-          free(dst.ptr);
           return "\\u must be followed by 4 hex digits: \\uXXXX";
         }
 
         uint64_t code = 0;
         const Error err = str_to_uint(str_slice(self, i, i + 4), 16, &code);
         if (err != NULL) {
-          free(dst.ptr);
           return err;
         }
         i += 4;
@@ -375,26 +406,23 @@ static Error str_norm(Str self, char **out) {
         char utf8[4] = {};
         const int n = ucs_to_utf8(code, utf8);
         if (n == 0) {
-          free(dst.ptr);
           return "could not encode Unicode code point to UTF-8";
         }
 
         for (int i = 0; i < n; i++) {
-          string_append(&dst, utf8[i]);
+          string_append(&dst, utf8[i], arena);
         }
       } break;
       case 'U': {
         i++;
 
         if ((i + 8) > self.len) {
-          free(dst.ptr);
           return "\\U must be followed by 8 hex digits: \\UXXXXXXXX";
         }
 
         uint64_t code = 0;
         const Error err = str_to_uint(str_slice(self, i, i + 8), 16, &code);
         if (err != NULL) {
-          free(dst.ptr);
           return err;
         }
         i += 8;
@@ -402,21 +430,19 @@ static Error str_norm(Str self, char **out) {
         char utf8[4] = {};
         const int n = ucs_to_utf8(code, utf8);
         if (n == 0) {
-          free(dst.ptr);
           return "could not encode Unicode code point to UTF-8";
         }
 
         for (int i = 0; i < n; i++) {
-          string_append(&dst, utf8[i]);
+          string_append(&dst, utf8[i], arena);
         }
       } break;
       default: {
-        free(dst.ptr);
         return "unknown escape sequence";
       }
       }
     } else {
-      string_append(&dst, self.ptr[i]);
+      string_append(&dst, self.ptr[i], arena);
       i++;
     }
   }
@@ -453,16 +479,16 @@ static const char kTableEnd = '}';
 
 static const char *spaces = " \t";
 
-static void tokens_reserve(Tokens *self, size_t cap) {
-  self->cap = cap;
-  Token *ptr = realloc(self->ptr, cap * sizeof(Token));
+static void tokens_reserve(Tokens *self, size_t cap, Arena *arena) {
+  Token *ptr = arena_extend(arena, self->ptr, self->cap, cap * sizeof(Token));
   assert(ptr != NULL);
+  self->cap = cap;
   self->ptr = ptr;
 }
 
-static void tokens_append(Tokens *self, Token v) {
+static void tokens_append(Tokens *self, Token v, Arena *arena) {
   if (self->len == self->cap) {
-    tokens_reserve(self, (self->cap + 1) * 2);
+    tokens_reserve(self, (self->cap + 1) * 2, arena);
   }
   memcpy(self->ptr + self->len, &v, sizeof(v));
   self->len += 1;
@@ -531,7 +557,7 @@ static void scanner_append(Scanner *self, TokenType type, size_t end) {
       .line = self->line,
   };
 
-  tokens_append(self->tokens, t);
+  tokens_append(self->tokens, t, &self->params.arena);
 
   scanner_advance(self, end);
 }
@@ -542,7 +568,7 @@ static void scanner_append_delim(Scanner *self) {
       .value = str_slice(self->params.content, 0, 1),
       .line = self->line,
   };
-  tokens_append(self->tokens, t);
+  tokens_append(self->tokens, t, &self->params.arena);
   scanner_advance(self, 1);
 }
 
@@ -762,7 +788,7 @@ static bool scan_key_value(Scanner *self) {
 
 Error scan(Tokens *tokens, Params params) {
   // pre-aloc some memory
-  tokens_reserve(tokens, kDefaultCapacity);
+  tokens_reserve(tokens, kDefaultCapacity, &params.arena);
   Scanner s = {
       .params = params,
       .tokens = tokens,
@@ -785,63 +811,32 @@ Error scan(Tokens *tokens, Params params) {
   return NULL;
 }
 
-static void list_free(List *self);
-
-static void value_free(Value *self) {
-  switch (self->tag) {
-  case kValueTagString:
-    free(self->data.string);
-    break;
-
-  case kValueTagList:
-    list_free(&self->data.list);
-    break;
-
-  case kValueTagTable:
-    table_free(&self->data.table);
-    break;
-
-  default:
-    break;
-  }
-
-  *self = (Value){};
-}
-
-static void list_reserve(List *self, size_t cap) {
-  self->cap = cap;
-  Value *ptr = realloc(self->ptr, cap * sizeof(Value));
+static void list_reserve(List *self, size_t cap, Arena *arena) {
+  Value *ptr = arena_extend(arena, self->ptr, self->cap, cap * sizeof(Value));
   assert(ptr != NULL);
+  self->cap = cap;
   self->ptr = ptr;
 }
 
-static void list_free(List *self) {
-  for (size_t i = 0; i < self->len; i++) {
-    value_free(&self->ptr[i]);
-  }
-
-  free(self->ptr);
-  *self = (List){};
-}
-
-static void list_append(List *self, Value v) {
+static void list_append(List *self, Value v, Arena *arena) {
   if (self->len == self->cap) {
-    list_reserve(self, (self->cap + 1) * 2);
+    list_reserve(self, (self->cap + 1) * 2, arena);
   }
   memcpy(self->ptr + self->len, &v, sizeof(v));
   self->len += 1;
 }
 
-static void table_reserve(Table *self, size_t cap) {
-  self->cap = cap;
-  KeyValue *ptr = realloc(self->ptr, cap * sizeof(KeyValue));
+static void table_reserve(Table *self, size_t cap, Arena *arena) {
+  KeyValue *ptr =
+      arena_extend(arena, self->ptr, self->cap, cap * sizeof(KeyValue));
   assert(ptr != NULL);
+  self->cap = cap;
   self->ptr = ptr;
 }
 
-static void table_append(Table *self, KeyValue v) {
+static void table_append(Table *self, KeyValue v, Arena *arena) {
   if (self->len == self->cap) {
-    table_reserve(self, (self->cap + 1) * 2);
+    table_reserve(self, (self->cap + 1) * 2, arena);
   }
   memcpy(self->ptr + self->len, &v, sizeof(v));
   self->len += 1;
@@ -917,7 +912,7 @@ static bool parse_list_value(Parser *self, Value *out) {
   out->tag = kValueTagList;
 
   // pre-aloc some memory
-  list_reserve(&out->data.list, kDefaultCapacity);
+  list_reserve(&out->data.list, kDefaultCapacity, &self->params.arena);
 
   parser_pop(self);
 
@@ -930,7 +925,7 @@ static bool parse_list_value(Parser *self, Value *out) {
     if (!parse_value(self, &v)) {
       return false;
     }
-    list_append(&out->data.list, v);
+    list_append(&out->data.list, v, &self->params.arena);
 
     if (parse_delim(self, kListEnd)) {
       return true;
@@ -944,7 +939,7 @@ static bool parse_table_value(Parser *self, Value *out) {
   out->tag = kValueTagTable;
 
   // pre-alloc some memory
-  table_reserve(&out->data.table, kDefaultCapacity);
+  table_reserve(&out->data.table, kDefaultCapacity, &self->params.arena);
 
   parser_pop(self);
 
@@ -957,7 +952,7 @@ static bool parse_table_value(Parser *self, Value *out) {
     if (!parse_key_value(self, out->data.table, &kv)) {
       return false;
     }
-    table_append(&out->data.table, kv);
+    table_append(&out->data.table, kv, &self->params.arena);
 
     if (parse_delim(self, kTableEnd)) {
       return true;
@@ -979,7 +974,8 @@ static bool parse_simple_value(Parser *self, Value *out) {
 
   if (str_starts_with_char(val, kStringBegin)) {
     char *data = NULL;
-    Error err = str_norm(str_slice(val, 1, val.len - 1), &data);
+    Error err =
+        str_norm(str_slice(val, 1, val.len - 1), &self->params.arena, &data);
     if (err != NULL) {
       parse_errorf(self, "could not normalize string: %s", err);
       return false;
@@ -988,7 +984,8 @@ static bool parse_simple_value(Parser *self, Value *out) {
     out->data.string = data;
   } else if (str_starts_with_char(val, kRawStringBegin)) {
     out->tag = kValueTagString;
-    out->data.string = str_dup(str_slice(val, 1, val.len - 1));
+    out->data.string =
+        str_dup(str_slice(val, 1, val.len - 1), &self->params.arena);
   } else {
     if (str_equals(val, str_from_cstr("true"))) {
       out->tag = kValueTagBoolean;
@@ -1000,9 +997,8 @@ static bool parse_simple_value(Parser *self, Value *out) {
       int64_t i = 0;
       Error err = str_to_int(val, 0, &i);
       if (err != NULL) {
-        char *s = str_dup(val);
+        char *s = str_dup(val, &self->params.arena);
         parse_errorf(self, "value '%s' is not an integer: %s", s, err);
-        free(s);
         ok = false;
       } else {
         out->tag = kValueTagInteger;
@@ -1026,13 +1022,11 @@ static bool parse_value(Parser *self, Value *out) {
     ok = parse_simple_value(self, out);
   }
   if (!ok) {
-    value_free(out);
     return false;
   }
 
   if (!parse_delim(self, kKeyValEnd)) {
     parse_errorf(self, "missing key value end");
-    value_free(out);
     return false;
   }
 
@@ -1061,9 +1055,8 @@ static bool parse_key(Parser *self, Table parent, Str *key) {
   const Token tok = parser_get(self);
 
   if (!key_is_valid(tok.value)) {
-    char *s = str_dup(tok.value);
+    char *s = str_dup(tok.value, &self->params.arena);
     parse_errorf(self, "key is not a valid identifier: '%s'", s);
-    free(s);
     return false;
   }
 
@@ -1079,9 +1072,8 @@ static bool parse_key(Parser *self, Table parent, Str *key) {
     }
   }
   if (!is_unique) {
-    char *s = str_dup(temp);
+    char *s = str_dup(temp, &self->params.arena);
     parse_errorf(self, "key '%s' is not unique for current table", s);
-    free(s);
     return false;
   }
 
@@ -1122,26 +1114,25 @@ Error parse(Table *table, Params params, Tokens tokens) {
       .i = 0,
   };
 
-  table_reserve(table, kDefaultCapacity);
+  table_reserve(table, kDefaultCapacity, &params.arena);
 
   while (p.i < tokens.len) {
     KeyValue kv = {};
     if (!parse_key_value(&p, *table, &kv)) {
       return params.err_buf;
     }
-    table_append(p.table, kv);
+    table_append(p.table, kv, &params.arena);
   }
 
   return NULL;
 }
 
 Error table_parse(Table *table, Params params) {
-  if (params.err_buf_len == 0) {
-    return "params.err_buf_len == 0";
-  }
-  if (params.err_buf == NULL) {
-    return "params.err_buf == null";
-  }
+  assert(params.arena.cap != 0);
+  assert(params.arena.ptr != NULL);
+
+  assert(params.err_buf_len != 0);
+  assert(params.err_buf != NULL);
 
   Tokens tokens = {};
 
@@ -1150,18 +1141,7 @@ Error table_parse(Table *table, Params params) {
     err = parse(table, params, tokens);
   }
 
-  free(tokens.ptr);
-
   return err;
-}
-
-void table_free(Table *self) {
-  for (size_t i = 0; i < self->len; i++) {
-    value_free(&self->ptr[i].val);
-  }
-
-  free(self->ptr);
-  *self = (Table){};
 }
 
 static bool value_is(Value self, ValueTag tag) { return self.tag == tag; }

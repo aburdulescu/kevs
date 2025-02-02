@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "kevs.h"
 #include "util.h"
@@ -265,6 +267,48 @@ static void test_ucs_to_utf8() {
   }
 }
 
+static void test_arena() {
+  const size_t len = 1024;
+  void *ptr = malloc(len);
+
+  Arena a = {};
+  arena_init(&a, ptr, len);
+
+  // alloc a chunk
+  size_t size0 = 10;
+  void *p0 = arena_alloc(&a, size0);
+  INFO("index: want=%zu, have=%zu", size0, a.index);
+  assert(a.index == size0);
+  INFO("ptr: want=%p, have=%p", p0, a.ptr + a.index - size0);
+  assert(p0 == (a.ptr + a.index - size0));
+
+  // extend the same chunk => nothing inbetween => just update index
+  size_t size1 = size0 + 10;
+  void *p1 = arena_extend(&a, p0, size0, size1);
+  INFO("index: want=%zu, have=%zu", size1, a.index);
+  assert(a.index == size1);
+  INFO("ptr: want=%p, have=%p", p0, a.ptr + a.index);
+  assert(p1 == (a.ptr + a.index - size1));
+
+  // alloc new chunk
+  size_t size2 = 10;
+  void *p2 = arena_alloc(&a, size0);
+  INFO("index: want=%zu, have=%zu", size2, a.index);
+  assert(a.index == (size1 + size2));
+  INFO("ptr: want=%p, have=%p", p2, a.ptr + a.index - size2);
+  assert(p2 == (a.ptr + a.index - size2));
+
+  // extend the first chunk => something inbetween => re-alloc
+  size_t size3 = size1 + 10;
+  void *p3 = arena_extend(&a, p1, size1, size3);
+  INFO("index: want=%zu, have=%zu", size3, a.index);
+  assert(a.index == (size1 + size2 + size3));
+  INFO("ptr: want=%p, have=%p", p3, a.ptr + a.index);
+  assert(p3 == (a.ptr + a.index - size3));
+
+  free(ptr);
+}
+
 int main() {
   test_str_index_char();
   test_str_slice_low();
@@ -274,5 +318,6 @@ int main() {
   test_str_to_int_negative();
   test_str_to_int_positive();
   test_ucs_to_utf8();
+  test_arena();
   return 0;
 }

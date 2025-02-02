@@ -168,7 +168,6 @@ int main() {
     }
   }
 
-  table_free(&table);
   free(data);
 
   return rc;
