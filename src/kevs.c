@@ -28,8 +28,9 @@ void *arena_extend(Arena *self, void *old_ptr, size_t old_size,
   // check if is last alloc
   if (old_ptr == (self->ptr + self->index - old_size)) {
     // update index
-    self->index = self->index - old_size + new_size;
-    assert(self->index < self->cap);
+    const size_t new_index = self->index - old_size + new_size;
+    assert(new_index < self->cap);
+    self->index = new_index;
     return old_ptr;
   } else {
     // new alloc + copy
