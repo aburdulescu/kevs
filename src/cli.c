@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
   const Params params = {
       .file = file,
       .content = {.ptr = data, .len = data_len},
-      .arena = arena,
+      .arena = &arena,
       .err_buf = err_buf,
       .err_buf_len = sizeof(err_buf) - 1,
       .abort_on_error = abort_on_error,

@@ -16,6 +16,8 @@ void *arena_alloc(Arena *self, size_t size) {
   assert((self->index + size) < self->cap);
   void *ptr = self->ptr + self->index;
   self->index += size;
+  fprintf(stderr, "%s: ptr=%p size=%zu index=%zu\n", __FUNCTION__, ptr, size,
+          self->index);
   return ptr;
 }
 
@@ -31,11 +33,15 @@ void *arena_extend(Arena *self, void *old_ptr, size_t old_size,
     const size_t new_index = self->index - old_size + new_size;
     assert(new_index < self->cap);
     self->index = new_index;
+    fprintf(stderr, "%s: ptr=%p old_size=%zu new_size=%zu index=%zu\n",
+            __FUNCTION__, old_ptr, old_size, new_size, self->index);
     return old_ptr;
   } else {
     // new alloc + copy
     void *new_ptr = arena_alloc(self, new_size);
     memcpy(new_ptr, old_ptr, old_size);
+    fprintf(stderr, "%s: ptr=%p old_size=%zu new_size=%zu index=%zu\n",
+            __FUNCTION__, new_ptr, old_size, new_size, self->index);
     return new_ptr;
   }
 }
@@ -560,7 +566,7 @@ static void scanner_append(Scanner *self, TokenType type, size_t end) {
       .line = self->line,
   };
 
-  tokens_append(self->tokens, t, &self->params.arena);
+  tokens_append(self->tokens, t, self->params.arena);
 
   scanner_advance(self, end);
 }
@@ -571,7 +577,7 @@ static void scanner_append_delim(Scanner *self) {
       .value = str_slice(self->params.content, 0, 1),
       .line = self->line,
   };
-  tokens_append(self->tokens, t, &self->params.arena);
+  tokens_append(self->tokens, t, self->params.arena);
   scanner_advance(self, 1);
 }
 
@@ -791,7 +797,7 @@ static bool scan_key_value(Scanner *self) {
 
 Error scan(Tokens *tokens, Params params) {
   // pre-aloc some memory
-  tokens_reserve(tokens, kDefaultCapacity, &params.arena);
+  tokens_reserve(tokens, kDefaultCapacity, params.arena);
   Scanner s = {
       .params = params,
       .tokens = tokens,
@@ -916,7 +922,7 @@ static bool parse_list_value(Parser *self, Value *out) {
   out->tag = kValueTagList;
 
   // pre-aloc some memory
-  list_reserve(&out->data.list, kDefaultCapacity, &self->params.arena);
+  list_reserve(&out->data.list, kDefaultCapacity, self->params.arena);
 
   parser_pop(self);
 
@@ -929,7 +935,7 @@ static bool parse_list_value(Parser *self, Value *out) {
     if (!parse_value(self, &v)) {
       return false;
     }
-    list_append(&out->data.list, v, &self->params.arena);
+    list_append(&out->data.list, v, self->params.arena);
 
     if (parse_delim(self, kListEnd)) {
       return true;
@@ -943,7 +949,7 @@ static bool parse_table_value(Parser *self, Value *out) {
   out->tag = kValueTagTable;
 
   // pre-alloc some memory
-  table_reserve(&out->data.table, kDefaultCapacity, &self->params.arena);
+  table_reserve(&out->data.table, kDefaultCapacity, self->params.arena);
 
   parser_pop(self);
 
@@ -956,7 +962,7 @@ static bool parse_table_value(Parser *self, Value *out) {
     if (!parse_key_value(self, out->data.table, &kv)) {
       return false;
     }
-    table_append(&out->data.table, kv, &self->params.arena);
+    table_append(&out->data.table, kv, self->params.arena);
 
     if (parse_delim(self, kTableEnd)) {
       return true;
@@ -979,7 +985,7 @@ static bool parse_simple_value(Parser *self, Value *out) {
   if (str_starts_with_char(val, kStringBegin)) {
     char *data = NULL;
     Error err =
-        str_norm(str_slice(val, 1, val.len - 1), &self->params.arena, &data);
+        str_norm(str_slice(val, 1, val.len - 1), self->params.arena, &data);
     if (err != NULL) {
       parse_errorf(self, "could not normalize string: %s", err);
       return false;
@@ -989,7 +995,7 @@ static bool parse_simple_value(Parser *self, Value *out) {
   } else if (str_starts_with_char(val, kRawStringBegin)) {
     out->tag = kValueTagString;
     out->data.string =
-        str_dup(str_slice(val, 1, val.len - 1), &self->params.arena);
+        str_dup(str_slice(val, 1, val.len - 1), self->params.arena);
   } else {
     if (str_equals(val, str_from_cstr("true"))) {
       out->tag = kValueTagBoolean;
@@ -1001,7 +1007,7 @@ static bool parse_simple_value(Parser *self, Value *out) {
       int64_t i = 0;
       Error err = str_to_int(val, 0, &i);
       if (err != NULL) {
-        char *s = str_dup(val, &self->params.arena);
+        char *s = str_dup(val, self->params.arena);
         parse_errorf(self, "value '%s' is not an integer: %s", s, err);
         ok = false;
       } else {
@@ -1059,7 +1065,7 @@ static bool parse_key(Parser *self, Table parent, Str *key) {
   const Token tok = parser_get(self);
 
   if (!key_is_valid(tok.value)) {
-    char *s = str_dup(tok.value, &self->params.arena);
+    char *s = str_dup(tok.value, self->params.arena);
     parse_errorf(self, "key is not a valid identifier: '%s'", s);
     return false;
   }
@@ -1076,7 +1082,7 @@ static bool parse_key(Parser *self, Table parent, Str *key) {
     }
   }
   if (!is_unique) {
-    char *s = str_dup(temp, &self->params.arena);
+    char *s = str_dup(temp, self->params.arena);
     parse_errorf(self, "key '%s' is not unique for current table", s);
     return false;
   }
@@ -1118,22 +1124,22 @@ Error parse(Table *table, Params params, Tokens tokens) {
       .i = 0,
   };
 
-  table_reserve(table, kDefaultCapacity, &params.arena);
+  table_reserve(table, kDefaultCapacity, params.arena);
 
   while (p.i < tokens.len) {
     KeyValue kv = {};
     if (!parse_key_value(&p, *table, &kv)) {
       return params.err_buf;
     }
-    table_append(p.table, kv, &params.arena);
+    table_append(p.table, kv, params.arena);
   }
 
   return NULL;
 }
 
 Error table_parse(Table *table, Params params) {
-  assert(params.arena.cap != 0);
-  assert(params.arena.ptr != NULL);
+  assert(params.arena->cap != 0);
+  assert(params.arena->ptr != NULL);
 
   assert(params.err_buf_len != 0);
   assert(params.err_buf != NULL);

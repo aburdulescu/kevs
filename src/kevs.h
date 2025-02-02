@@ -83,7 +83,7 @@ typedef struct {
 typedef struct {
   Str file;
   Str content;
-  Arena arena;
+  Arena* arena;
   char *err_buf;
   size_t err_buf_len;
   bool abort_on_error;
