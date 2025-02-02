@@ -24,18 +24,16 @@ int main() {
 
   int rc = 0;
 
-  const size_t arena_len = 16 << 10;
-  void *arena_ptr = malloc(arena_len);
-
-  Arena arena = {};
-  arena_init(&arena, arena_ptr, arena_len);
+  const size_t mem_buf_len = 16 << 20;
+  void *mem_buf = malloc(mem_buf_len);
 
   Table table = {};
   char err_buf[8193] = {};
   const Params params = {
       .file = file,
       .content = {.ptr = data, .len = data_len},
-      .arena = &arena,
+      .mem_buf = mem_buf,
+      .mem_buf_len = mem_buf_len,
       .err_buf = err_buf,
       .err_buf_len = sizeof(err_buf) - 1,
   };
@@ -175,7 +173,7 @@ int main() {
     }
   }
 
-  free(arena_ptr);
+  free(mem_buf);
   free(data);
 
   return rc;
