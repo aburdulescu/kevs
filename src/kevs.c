@@ -62,7 +62,8 @@ typedef struct {
 } String;
 
 static void string_reserve(String *self, size_t cap, Arena *arena) {
-  char *ptr = arena_extend(arena, self->ptr, self->cap, cap * sizeof(char) + 1);
+  char *ptr = arena_extend(arena, self->ptr, self->cap * sizeof(char) + 1,
+                           cap * sizeof(char) + 1);
   assert(ptr != NULL);
   self->cap = cap;
   self->ptr = ptr;
@@ -481,7 +482,8 @@ static const char kTableEnd = '}';
 static const char *spaces = " \t";
 
 static void tokens_reserve(Tokens *self, size_t cap, Arena *arena) {
-  Token *ptr = arena_extend(arena, self->ptr, self->cap, cap * sizeof(Token));
+  Token *ptr = arena_extend(arena, self->ptr, self->cap * sizeof(Token),
+                            cap * sizeof(Token));
   assert(ptr != NULL);
   self->cap = cap;
   self->ptr = ptr;
@@ -813,7 +815,8 @@ Error scan(Tokens *tokens, Params params) {
 }
 
 static void list_reserve(List *self, size_t cap, Arena *arena) {
-  Value *ptr = arena_extend(arena, self->ptr, self->cap, cap * sizeof(Value));
+  Value *ptr = arena_extend(arena, self->ptr, self->cap * sizeof(Value),
+                            cap * sizeof(Value));
   assert(ptr != NULL);
   self->cap = cap;
   self->ptr = ptr;
@@ -828,8 +831,8 @@ static void list_append(List *self, Value v, Arena *arena) {
 }
 
 static void table_reserve(Table *self, size_t cap, Arena *arena) {
-  KeyValue *ptr =
-      arena_extend(arena, self->ptr, self->cap, cap * sizeof(KeyValue));
+  KeyValue *ptr = arena_extend(arena, self->ptr, self->cap * sizeof(KeyValue),
+                               cap * sizeof(KeyValue));
   assert(ptr != NULL);
   self->cap = cap;
   self->ptr = ptr;
