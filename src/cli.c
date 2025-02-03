@@ -69,21 +69,39 @@ int main(int argc, char **argv) {
 
   int rc = 0;
 
+  const size_t tables_buf_len = 100;
+  KeyValue tables_buf[tables_buf_len];
+
+  const size_t lists_buf_len = 100;
+  Value lists_buf[lists_buf_len];
+
+  const size_t tokens_buf_len = 1000;
+  Token tokens_buf[tokens_buf_len];
+
+  char strings_buf[16 << 10];
+
+  Allocators alls = {};
+  arena_init(&alls.tables, tables_buf, tables_buf_len * sizeof(tables_buf[0]));
+  arena_init(&alls.lists, lists_buf, lists_buf_len * sizeof(lists_buf[0]));
+  arena_init(&alls.tokens, tokens_buf, tokens_buf_len * sizeof(tokens_buf[0]));
+  arena_init(&alls.strings, strings_buf, sizeof(strings_buf));
+
   Tokens tokens = {};
   Table table = {};
   char err_buf[8193] = {};
   const Params params = {
       .file = file,
       .content = {.ptr = data, .len = data_len},
+      .alls = alls,
       .err_buf = err_buf,
       .err_buf_len = sizeof(err_buf) - 1,
       .abort_on_error = abort_on_error,
   };
 
-  err = scan(&tokens, params);
+  err = scan(&tokens, params, &alls);
   if (!only_scan) {
     if (err == NULL) {
-      err = parse(&table, params, tokens);
+      err = parse(&table, params, tokens, &alls);
     }
   }
 
@@ -95,20 +113,22 @@ int main(int argc, char **argv) {
   }
 
   if (dump) {
+    const size_t len = 512 << 10;
+    void *ptr = malloc(len);
+    Arena a = {};
+    arena_init(&a, ptr, len);
     if (only_scan) {
       for (size_t i = 0; i < tokens.len; i++) {
-        char *v = str_dup(tokens.ptr[i].value);
+        char *v = str_dup(tokens.ptr[i].value, &a);
         printf("%s %s\n", tokentype_str(tokens.ptr[i].type), v);
-        free(v);
       }
     } else {
-      table_dump(table);
+      table_dump(table, &a);
     }
+    free(ptr);
   }
 
   if (free_heap) {
-    table_free(&table);
-    free(tokens.ptr);
     free(data);
   }
 

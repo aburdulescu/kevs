@@ -72,19 +72,19 @@ static const char *valuetag_str(ValueTag v) {
   }
 }
 
-void list_dump(List self) {
+void list_dump(List self, Arena *arena) {
   for (size_t i = 0; i < self.len; i++) {
     const Value v = self.ptr[i];
 
     switch (v.tag) {
     case kValueTagTable: {
       printf("%s\n", valuetag_str(v.tag));
-      table_dump(v.data.table);
+      table_dump(v.data.table, arena);
     } break;
 
     case kValueTagList: {
       printf("%s\n", valuetag_str(v.tag));
-      list_dump(v.data.list);
+      list_dump(v.data.list, arena);
     } break;
 
     case kValueTagString: {
@@ -107,21 +107,21 @@ void list_dump(List self) {
   }
 }
 
-void table_dump(Table self) {
+void table_dump(Table self, Arena *arena) {
   for (size_t i = 0; i < self.len; i++) {
     const KeyValue kv = self.ptr[i];
 
-    char *k = str_dup(kv.key);
+    char *k = str_dup(kv.key, arena);
 
     switch (kv.val.tag) {
     case kValueTagTable: {
       printf("%s %s\n", k, valuetag_str(kv.val.tag));
-      table_dump(kv.val.data.table);
+      table_dump(kv.val.data.table, arena);
     } break;
 
     case kValueTagList: {
       printf("%s %s\n", k, valuetag_str(kv.val.tag));
-      list_dump(kv.val.data.list);
+      list_dump(kv.val.data.list, arena);
     } break;
 
     case kValueTagString: {
@@ -142,7 +142,5 @@ void table_dump(Table self) {
       printf("%s %s\n", k, valuetag_str(kv.val.tag));
     } break;
     }
-
-    free(k);
   }
 }
