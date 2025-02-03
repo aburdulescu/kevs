@@ -88,10 +88,9 @@ typedef struct {
 } Allocators;
 
 typedef struct {
+  Allocators alls;
   Str file;
   Str content;
-  void *mem_buf;
-  size_t mem_buf_len;
   char *err_buf;
   size_t err_buf_len;
   bool abort_on_error;

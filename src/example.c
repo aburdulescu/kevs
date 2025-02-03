@@ -1,12 +1,8 @@
-#include <errno.h>
-#include <fcntl.h>
 #include <inttypes.h>
-#include <stdarg.h>
+#include <stdalign.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include "kevs.h"
 #include "util.h"
@@ -24,16 +20,29 @@ int main() {
 
   int rc = 0;
 
-  const size_t mem_buf_len = 16 << 20;
-  void *mem_buf = malloc(mem_buf_len);
+  const size_t tables_buf_len = 100;
+  KeyValue tables_buf[tables_buf_len];
+
+  const size_t lists_buf_len = 100;
+  Value lists_buf[lists_buf_len];
+
+  const size_t tokens_buf_len = 1000;
+  Token tokens_buf[tokens_buf_len];
+
+  char strings_buf[16 << 10];
+
+  Allocators alls = {};
+  arena_init(&alls.tables, tables_buf, tables_buf_len * sizeof(tables_buf[0]));
+  arena_init(&alls.lists, lists_buf, lists_buf_len * sizeof(lists_buf[0]));
+  arena_init(&alls.tokens, tokens_buf, tokens_buf_len * sizeof(tokens_buf[0]));
+  arena_init(&alls.strings, strings_buf, sizeof(strings_buf));
 
   Table table = {};
   char err_buf[8193] = {};
   const Params params = {
       .file = file,
       .content = {.ptr = data, .len = data_len},
-      .mem_buf = mem_buf,
-      .mem_buf_len = mem_buf_len,
+      .alls = alls,
       .err_buf = err_buf,
       .err_buf_len = sizeof(err_buf) - 1,
   };
@@ -173,7 +182,6 @@ int main() {
     }
   }
 
-  free(mem_buf);
   free(data);
 
   return rc;

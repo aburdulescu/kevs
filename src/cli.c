@@ -69,17 +69,22 @@ int main(int argc, char **argv) {
 
   int rc = 0;
 
-  const size_t mem_buf_len = 16 << 20;
-  void *mem_buf = malloc(mem_buf_len);
+  const size_t tables_buf_len = 100;
+  KeyValue tables_buf[tables_buf_len];
+
+  const size_t lists_buf_len = 100;
+  Value lists_buf[lists_buf_len];
+
+  const size_t tokens_buf_len = 1000;
+  Token tokens_buf[tokens_buf_len];
+
+  char strings_buf[16 << 10];
 
   Allocators alls = {};
-  {
-    const size_t n = mem_buf_len / 4;
-    arena_init(&alls.tables, mem_buf + n * 0, n);
-    arena_init(&alls.lists, mem_buf + n * 1, n);
-    arena_init(&alls.tokens, mem_buf + n * 2, n);
-    arena_init(&alls.strings, mem_buf + n * 3, n);
-  }
+  arena_init(&alls.tables, tables_buf, tables_buf_len * sizeof(tables_buf[0]));
+  arena_init(&alls.lists, lists_buf, lists_buf_len * sizeof(lists_buf[0]));
+  arena_init(&alls.tokens, tokens_buf, tokens_buf_len * sizeof(tokens_buf[0]));
+  arena_init(&alls.strings, strings_buf, sizeof(strings_buf));
 
   Tokens tokens = {};
   Table table = {};
@@ -87,8 +92,7 @@ int main(int argc, char **argv) {
   const Params params = {
       .file = file,
       .content = {.ptr = data, .len = data_len},
-      .mem_buf = &mem_buf,
-      .mem_buf_len = mem_buf_len,
+      .alls = alls,
       .err_buf = err_buf,
       .err_buf_len = sizeof(err_buf) - 1,
       .abort_on_error = abort_on_error,
@@ -125,7 +129,6 @@ int main(int argc, char **argv) {
   }
 
   if (free_heap) {
-    free(mem_buf);
     free(data);
   }
 

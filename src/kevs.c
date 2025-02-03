@@ -1124,25 +1124,14 @@ Error parse(Table *table, Params params, Tokens tokens, Allocators *alls) {
 }
 
 Error table_parse(Table *table, Params params) {
-  assert(params.mem_buf_len != 0);
-  assert(params.mem_buf != NULL);
   assert(params.err_buf_len != 0);
   assert(params.err_buf != NULL);
 
-  Allocators alls = {};
-  {
-    const size_t n = params.mem_buf_len / 4;
-    arena_init(&alls.tables, params.mem_buf + n * 0, n);
-    arena_init(&alls.lists, params.mem_buf + n * 1, n);
-    arena_init(&alls.tokens, params.mem_buf + n * 2, n);
-    arena_init(&alls.strings, params.mem_buf + n * 3, n);
-  }
-
   Tokens tokens = {};
 
-  Error err = scan(&tokens, params, &alls);
+  Error err = scan(&tokens, params, &params.alls);
   if (err == NULL) {
-    err = parse(table, params, tokens, &alls);
+    err = parse(table, params, tokens, &params.alls);
   }
 
   return err;
