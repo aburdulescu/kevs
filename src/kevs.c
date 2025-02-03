@@ -6,13 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct {
-  Arena tables;
-  Arena lists;
-  Arena tokens;
-  Arena strings;
-} Allocators;
-
 void arena_init(Arena *self, void *ptr, size_t len) {
   *self = (Arena){};
   self->ptr = ptr;
@@ -73,8 +66,8 @@ typedef struct {
 } String;
 
 static void string_reserve(String *self, size_t cap, Arena *arena) {
-  char *ptr = arena_extend(arena, self->ptr, self->cap * sizeof(char) + 1,
-                           cap * sizeof(char) + 1);
+  const size_t old_cap = (self->cap == 0) ? 0 : self->cap * sizeof(char) + 1;
+  char *ptr = arena_extend(arena, self->ptr, old_cap, cap * sizeof(char) + 1);
   assert(ptr != NULL);
   self->cap = cap;
   self->ptr = ptr;
@@ -1145,10 +1138,10 @@ Error table_parse(Table *table, Params params) {
   Allocators alls = {};
   {
     const size_t n = params.mem_buf_len / 4;
-    arena_init(&alls.tables, params.mem_buf + n * 1, n);
-    arena_init(&alls.lists, params.mem_buf + n * 2, n);
-    arena_init(&alls.tokens, params.mem_buf + n * 3, n);
-    arena_init(&alls.strings, params.mem_buf + n * 4, n);
+    arena_init(&alls.tables, params.mem_buf + n * 0, n);
+    arena_init(&alls.lists, params.mem_buf + n * 1, n);
+    arena_init(&alls.tokens, params.mem_buf + n * 2, n);
+    arena_init(&alls.strings, params.mem_buf + n * 3, n);
   }
 
   Tokens tokens = {};

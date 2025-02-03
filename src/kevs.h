@@ -81,6 +81,13 @@ typedef struct {
 } Arena;
 
 typedef struct {
+  Arena tables;
+  Arena lists;
+  Arena tokens;
+  Arena strings;
+} Allocators;
+
+typedef struct {
   Str file;
   Str content;
   void *mem_buf;

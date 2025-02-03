@@ -72,6 +72,15 @@ int main(int argc, char **argv) {
   const size_t mem_buf_len = 16 << 20;
   void *mem_buf = malloc(mem_buf_len);
 
+  Allocators alls = {};
+  {
+    const size_t n = mem_buf_len / 4;
+    arena_init(&alls.tables, mem_buf + n * 0, n);
+    arena_init(&alls.lists, mem_buf + n * 1, n);
+    arena_init(&alls.tokens, mem_buf + n * 2, n);
+    arena_init(&alls.strings, mem_buf + n * 3, n);
+  }
+
   Tokens tokens = {};
   Table table = {};
   char err_buf[8193] = {};
@@ -85,10 +94,10 @@ int main(int argc, char **argv) {
       .abort_on_error = abort_on_error,
   };
 
-  err = scan(&tokens, params);
+  err = scan(&tokens, params, &alls);
   if (!only_scan) {
     if (err == NULL) {
-      err = parse(&table, params, tokens);
+      err = parse(&table, params, tokens, &alls);
     }
   }
 
