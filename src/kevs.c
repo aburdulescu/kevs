@@ -16,8 +16,6 @@ void *arena_alloc(Arena *self, size_t size) {
   assert((self->index + size) < self->cap);
   void *ptr = self->ptr + self->index;
   self->index += size;
-  fprintf(stderr, "%s: ptr=%p size=%zu index=%zu\n", __FUNCTION__, ptr, size,
-          self->index);
   return ptr;
 }
 
@@ -33,15 +31,11 @@ void *arena_extend(Arena *self, void *old_ptr, size_t old_size,
     const size_t new_index = self->index - old_size + new_size;
     assert(new_index < self->cap);
     self->index = new_index;
-    fprintf(stderr, "%s: ptr=%p old_size=%zu new_size=%zu index=%zu\n",
-            __FUNCTION__, old_ptr, old_size, new_size, self->index);
     return old_ptr;
   } else {
     // new alloc + copy
     void *new_ptr = arena_alloc(self, new_size);
     memcpy(new_ptr, old_ptr, old_size);
-    fprintf(stderr, "%s: ptr=%p old_size=%zu new_size=%zu index=%zu\n",
-            __FUNCTION__, new_ptr, old_size, new_size, self->index);
     return new_ptr;
   }
 }
