@@ -346,6 +346,8 @@ static Error str_norm(Str self, Arena *arena, char **out) {
   String dst = {};
   string_reserve(&dst, self.len, arena);
 
+  // TODO: change this from char by char to memchr?
+
   for (size_t i = 0; i < self.len;) {
     if (self.ptr[i] == '\\') {
       i++;
