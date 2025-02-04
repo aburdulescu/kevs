@@ -444,6 +444,9 @@ static Error str_norm(Str self, Arena *arena, char **out) {
     }
   }
 
+  // TODO: here we might be wasting memory
+  // so check if dst.len==dst.cap, if not resize memory chunk
+
   *out = dst.ptr;
 
   return NULL;
