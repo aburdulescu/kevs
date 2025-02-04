@@ -60,19 +60,16 @@ typedef struct {
 } String;
 
 static void string_reserve(String *self, size_t cap, Arena *arena) {
-  const size_t old_cap = (self->cap == 0) ? 0 : self->cap * sizeof(char) + 1;
-  char *ptr = arena_extend(arena, self->ptr, old_cap, cap * sizeof(char) + 1);
+  char *ptr = arena_alloc(arena, cap + 1);
   assert(ptr != NULL);
   self->cap = cap;
   self->ptr = ptr;
   self->ptr[self->len] = 0;
 }
 
-static void string_append(String *self, char v, Arena *arena) {
-  if (self->len == self->cap) {
-    string_reserve(self, (self->cap + 1) * 2, arena);
-  }
-  memcpy(self->ptr + self->len, &v, sizeof(v));
+static void string_append(String *self, char v) {
+  assert(self->len < self->cap);
+  self->ptr[self->len] = v;
   self->len += 1;
   self->ptr[self->len] = 0;
 }
@@ -354,39 +351,39 @@ static Error str_norm(Str self, Arena *arena, char **out) {
       i++;
       switch (self.ptr[i]) {
       case 'a': {
-        string_append(&dst, '\a', arena);
+        string_append(&dst, '\a');
         i++;
       } break;
       case 'b': {
-        string_append(&dst, '\b', arena);
+        string_append(&dst, '\b');
         i++;
       } break;
       case 'f': {
-        string_append(&dst, '\f', arena);
+        string_append(&dst, '\f');
         i++;
       } break;
       case 'n': {
-        string_append(&dst, '\n', arena);
+        string_append(&dst, '\n');
         i++;
       } break;
       case 'r': {
-        string_append(&dst, '\r', arena);
+        string_append(&dst, '\r');
         i++;
       } break;
       case 't': {
-        string_append(&dst, '\t', arena);
+        string_append(&dst, '\t');
         i++;
       } break;
       case 'v': {
-        string_append(&dst, '\v', arena);
+        string_append(&dst, '\v');
         i++;
       } break;
       case '"': {
-        string_append(&dst, '"', arena);
+        string_append(&dst, '"');
         i++;
       } break;
       case '\\': {
-        string_append(&dst, '\\', arena);
+        string_append(&dst, '\\');
         i++;
       } break;
       case 'u': {
@@ -410,7 +407,7 @@ static Error str_norm(Str self, Arena *arena, char **out) {
         }
 
         for (int i = 0; i < n; i++) {
-          string_append(&dst, utf8[i], arena);
+          string_append(&dst, utf8[i]);
         }
       } break;
       case 'U': {
@@ -434,7 +431,7 @@ static Error str_norm(Str self, Arena *arena, char **out) {
         }
 
         for (int i = 0; i < n; i++) {
-          string_append(&dst, utf8[i], arena);
+          string_append(&dst, utf8[i]);
         }
       } break;
       default: {
@@ -442,7 +439,7 @@ static Error str_norm(Str self, Arena *arena, char **out) {
       }
       }
     } else {
-      string_append(&dst, self.ptr[i], arena);
+      string_append(&dst, self.ptr[i]);
       i++;
     }
   }
