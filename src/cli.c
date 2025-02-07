@@ -7,7 +7,21 @@
 
 static void usage() {
   fprintf(stderr,
-          "usage: ./kevs [-abort] [-dump] [-scan] [-no-err] [-free] file\n");
+
+          "usage: kevs [FLAGS] file\n"
+          "\n"
+          "Parse the given KEVS file and perform actions based on the given "
+          "flags.\n"
+          "\n"
+          "Flags:\n"
+          "  -help    Print this message\n"
+          "  -abort   Abort when encountering an error\n"
+          "  -scan    Run only the scanner and skip the parser\n"
+          "  -dump    Print keys and values, or tokens if -scan is active\n"
+          "  -no-err  Exit with code 0 even if an error was encountered\n"
+          "  -free    Free memory before exit\n"
+
+  );
 }
 
 int main(int argc, char **argv) {
@@ -27,7 +41,10 @@ int main(int argc, char **argv) {
 
   int args_index = 0;
   while (args_index < nargs) {
-    if (strcmp(args[args_index], "-abort") == 0) {
+    if (strcmp(args[args_index], "-help") == 0) {
+      usage();
+      return 0;
+    } else if (strcmp(args[args_index], "-abort") == 0) {
       abort_on_error = true;
       args_index++;
     } else if (strcmp(args[args_index], "-scan") == 0) {
