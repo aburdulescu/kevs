@@ -19,7 +19,7 @@ int ucs_to_utf8(uint64_t code, char buf[4]);
 Error scan(Tokens *tokens, Params params, Allocators *alls);
 Error parse(Table *table, Params params, Tokens tokens, Allocators *alls);
 
-const char *tokentype_str(TokenType v);
+const char *tokenkind_str(TokenKind v);
 
 void *arena_alloc(Arena *self, size_t size);
 void *arena_extend(Arena *self, void *old_ptr, size_t old_size,

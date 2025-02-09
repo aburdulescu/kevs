@@ -15,15 +15,15 @@ typedef struct {
 } Str;
 
 typedef enum {
-  kTokenUndefined = 0,
-  kTokenKey,
-  kTokenDelim,
-  kTokenValue,
-} TokenType;
+  TokenKindUndefined = 0,
+  TokenKindKey,
+  TokenKindDelim,
+  TokenKindValue,
+} TokenKind;
 
 typedef struct {
   Str value;
-  TokenType type;
+  TokenKind kind;
   int line;
 } Token;
 
@@ -34,13 +34,13 @@ typedef struct {
 } Tokens;
 
 typedef enum {
-  kValueTagUndefined = 0,
-  kValueTagString,
-  kValueTagInteger,
-  kValueTagBoolean,
-  kValueTagList,
-  kValueTagTable,
-} ValueTag;
+  ValueKindUndefined = 0,
+  ValueKindString,
+  ValueKindInteger,
+  ValueKindBoolean,
+  ValueKindList,
+  ValueKindTable,
+} ValueKind;
 
 struct Value;
 
@@ -66,7 +66,7 @@ typedef struct Value {
     List list;
     Table table;
   } data;
-  ValueTag tag;
+  ValueKind kind;
 } Value;
 
 typedef struct KeyValue {

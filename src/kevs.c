@@ -449,15 +449,15 @@ static Error str_norm(Str self, Arena *arena, char **out) {
   return NULL;
 }
 
-const char *tokentype_str(TokenType v) {
+const char *tokenkind_str(TokenKind v) {
   switch (v) {
-  case kTokenUndefined:
+  case TokenKindUndefined:
     return "undefined";
-  case kTokenKey:
+  case TokenKindKey:
     return "key";
-  case kTokenDelim:
+  case TokenKindDelim:
     return "delim";
-  case kTokenValue:
+  case TokenKindValue:
     return "value";
   default:
     return "unknown";
@@ -546,12 +546,12 @@ static void scanner_trim_space(Scanner *self) {
       str_trim_left(self->params.content, str_from_cstr(spaces));
 }
 
-static void scanner_append(Scanner *self, TokenType type, size_t end) {
+static void scanner_append(Scanner *self, TokenKind kind, size_t end) {
   Str val = str_slice(self->params.content, 0, end);
   val = str_trim_right(val, str_from_cstr(spaces));
 
   const Token t = {
-      .type = type,
+      .kind = kind,
       .value = val,
       .line = self->line,
   };
@@ -563,7 +563,7 @@ static void scanner_append(Scanner *self, TokenType type, size_t end) {
 
 static void scanner_append_delim(Scanner *self) {
   const Token t = {
-      .type = kTokenDelim,
+      .kind = TokenKindDelim,
       .value = str_slice(self->params.content, 0, 1),
       .line = self->line,
   };
@@ -594,7 +594,7 @@ static bool scan_key(Scanner *self) {
     scan_errorf(self, "key-value pair is missing separator");
     return false;
   }
-  scanner_append(self, kTokenKey, end);
+  scanner_append(self, TokenKindKey, end);
   if (self->tokens->ptr[self->tokens->len - 1].value.len == 0) {
     scan_errorf(self, "empty key");
     return false;
@@ -639,7 +639,7 @@ static bool scan_string_value(Scanner *self) {
   const size_t end = s.ptr - self->params.content.ptr - 1;
 
   // +1 for leading quote
-  scanner_append(self, kTokenValue, end + 1);
+  scanner_append(self, TokenKindValue, end + 1);
 
   return true;
 }
@@ -653,7 +653,7 @@ static bool scan_raw_string(Scanner *self) {
   }
 
   // +2 for leading and trailing quotes
-  scanner_append(self, kTokenValue, end + 2);
+  scanner_append(self, TokenKindValue, end + 2);
 
   // count newlines in raw string to keep line count accurate
   self->line +=
@@ -672,7 +672,7 @@ static bool scan_int_or_bool_value(Scanner *self) {
     scan_errorf(self, "integer or boolean value does not end with semicolon");
     return false;
   }
-  scanner_append(self, kTokenValue, end);
+  scanner_append(self, TokenKindValue, end);
   return true;
 }
 
@@ -885,16 +885,17 @@ static void parse_errorf(const Parser *self, const char *fmt, ...) {
   }
 }
 
-static bool parser_expect(const Parser *self, TokenType t) {
+static bool parser_expect(const Parser *self, TokenKind kind) {
   if (self->i >= self->tokens.len) {
-    parse_errorf(self, "expected token '%s', have nothing", tokentype_str(t));
+    parse_errorf(self, "expected token '%s', have nothing",
+                 tokenkind_str(kind));
     return false;
   }
-  return parser_get(self).type == t;
+  return parser_get(self).kind == kind;
 }
 
 static bool parser_expect_delim(const Parser *self, char delim) {
-  if (!parser_expect(self, kTokenDelim)) {
+  if (!parser_expect(self, TokenKindDelim)) {
     return false;
   }
   return str_equals_char(parser_get(self).value, delim);
@@ -909,7 +910,7 @@ static bool parse_delim(Parser *self, char c) {
 }
 
 static bool parse_list_value(Parser *self, Value *out) {
-  out->tag = kValueTagList;
+  out->kind = ValueKindList;
 
   parser_pop(self);
 
@@ -933,7 +934,7 @@ static bool parse_list_value(Parser *self, Value *out) {
 }
 
 static bool parse_table_value(Parser *self, Value *out) {
-  out->tag = kValueTagTable;
+  out->kind = ValueKindTable;
 
   parser_pop(self);
 
@@ -957,7 +958,7 @@ static bool parse_table_value(Parser *self, Value *out) {
 }
 
 static bool parse_simple_value(Parser *self, Value *out) {
-  if (!parser_expect(self, kTokenValue)) {
+  if (!parser_expect(self, TokenKindValue)) {
     parse_errorf(self, "expected value token");
     return false;
   }
@@ -974,18 +975,18 @@ static bool parse_simple_value(Parser *self, Value *out) {
       parse_errorf(self, "could not normalize string: %s", err);
       return false;
     }
-    out->tag = kValueTagString;
+    out->kind = ValueKindString;
     out->data.string = data;
   } else if (str_starts_with_char(val, kRawStringBegin)) {
-    out->tag = kValueTagString;
+    out->kind = ValueKindString;
     out->data.string =
         str_dup(str_slice(val, 1, val.len - 1), &self->alls->strings);
   } else {
     if (str_equals(val, str_from_cstr("true"))) {
-      out->tag = kValueTagBoolean;
+      out->kind = ValueKindBoolean;
       out->data.boolean = true;
     } else if (str_equals(val, str_from_cstr("false"))) {
-      out->tag = kValueTagBoolean;
+      out->kind = ValueKindBoolean;
       out->data.boolean = false;
     } else {
       int64_t i = 0;
@@ -995,7 +996,7 @@ static bool parse_simple_value(Parser *self, Value *out) {
         parse_errorf(self, "value '%s' is not an integer: %s", s, err);
         ok = false;
       } else {
-        out->tag = kValueTagInteger;
+        out->kind = ValueKindInteger;
         out->data.integer = i;
       }
     }
@@ -1041,7 +1042,7 @@ static bool key_is_valid(Str key) {
 }
 
 static bool parse_key(Parser *self, Table parent, Str *key) {
-  if (!parser_expect(self, kTokenKey)) {
+  if (!parser_expect(self, TokenKindKey)) {
     parse_errorf(self, "expected key token");
     return false;
   }
@@ -1142,7 +1143,7 @@ Error table_parse_simple(Table *table, Str file, Str content) {
   return "todo";
 }
 
-static bool value_is(Value self, ValueTag tag) { return self.tag == tag; }
+static bool value_is(Value self, ValueKind kind) { return self.kind == kind; }
 
 static Error table_get(Table self, const char *key, Value *val) {
   Str key_str = str_from_cstr(key);
@@ -1161,7 +1162,7 @@ Error table_string(Table self, const char *key, char **out) {
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, kValueTagString)) {
+  if (!value_is(val, ValueKindString)) {
     return "value is not string";
   }
   *out = val.data.string;
@@ -1174,7 +1175,7 @@ Error table_int(Table self, const char *key, int64_t *out) {
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, kValueTagInteger)) {
+  if (!value_is(val, ValueKindInteger)) {
     return "value is not integer";
   }
   *out = val.data.integer;
@@ -1187,7 +1188,7 @@ Error table_bool(Table self, const char *key, bool *out) {
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, kValueTagBoolean)) {
+  if (!value_is(val, ValueKindBoolean)) {
     return "value is not boolean";
   }
   *out = val.data.boolean;
@@ -1200,7 +1201,7 @@ Error table_list(Table self, const char *key, List *out) {
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, kValueTagList)) {
+  if (!value_is(val, ValueKindList)) {
     return "value is not list";
   }
   *out = val.data.list;
@@ -1213,7 +1214,7 @@ Error table_table(Table self, const char *key, Table *out) {
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, kValueTagTable)) {
+  if (!value_is(val, ValueKindTable)) {
     return "value is not table";
   }
   *out = val.data.table;
@@ -1234,7 +1235,7 @@ Error list_string(List self, size_t i, char **out) {
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, kValueTagString)) {
+  if (!value_is(val, ValueKindString)) {
     return "value is not string";
   }
   *out = val.data.string;
@@ -1247,7 +1248,7 @@ Error list_int(List self, size_t i, int64_t *out) {
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, kValueTagInteger)) {
+  if (!value_is(val, ValueKindInteger)) {
     return "value is not integer";
   }
   *out = val.data.integer;
@@ -1260,7 +1261,7 @@ Error list_bool(List self, size_t i, bool *out) {
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, kValueTagBoolean)) {
+  if (!value_is(val, ValueKindBoolean)) {
     return "value is not boolean";
   }
   *out = val.data.boolean;
@@ -1273,7 +1274,7 @@ Error list_list(List self, size_t i, List *out) {
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, kValueTagList)) {
+  if (!value_is(val, ValueKindList)) {
     return "value is not list";
   }
   *out = val.data.list;
@@ -1286,7 +1287,7 @@ Error list_table(List self, size_t i, Table *out) {
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, kValueTagTable)) {
+  if (!value_is(val, ValueKindTable)) {
     return "value is not table";
   }
   *out = val.data.table;

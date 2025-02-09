@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
     if (only_scan) {
       for (size_t i = 0; i < tokens.len; i++) {
         char *v = str_dup(tokens.ptr[i].value, &a);
-        printf("%s %s\n", tokentype_str(tokens.ptr[i].type), v);
+        printf("%s %s\n", tokenkind_str(tokens.ptr[i].kind), v);
       }
     } else {
       table_dump(table, &a);

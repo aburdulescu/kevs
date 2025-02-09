@@ -53,19 +53,19 @@ cleanup:
   return err;
 }
 
-static const char *valuetag_str(ValueTag v) {
+static const char *valuekind_str(ValueKind v) {
   switch (v) {
-  case kValueTagUndefined:
+  case ValueKindUndefined:
     return "undefined";
-  case kValueTagString:
+  case ValueKindString:
     return "string";
-  case kValueTagInteger:
+  case ValueKindInteger:
     return "integer";
-  case kValueTagBoolean:
+  case ValueKindBoolean:
     return "boolean";
-  case kValueTagList:
+  case ValueKindList:
     return "list";
-  case kValueTagTable:
+  case ValueKindTable:
     return "table";
   default:
     return "unknown";
@@ -76,32 +76,32 @@ void list_dump(List self, Arena *arena) {
   for (size_t i = 0; i < self.len; i++) {
     const Value v = self.ptr[i];
 
-    switch (v.tag) {
-    case kValueTagTable: {
-      printf("%s\n", valuetag_str(v.tag));
+    switch (v.kind) {
+    case ValueKindTable: {
+      printf("%s\n", valuekind_str(v.kind));
       table_dump(v.data.table, arena);
     } break;
 
-    case kValueTagList: {
-      printf("%s\n", valuetag_str(v.tag));
+    case ValueKindList: {
+      printf("%s\n", valuekind_str(v.kind));
       list_dump(v.data.list, arena);
     } break;
 
-    case kValueTagString: {
-      printf("%s '%s'\n", valuetag_str(v.tag), v.data.string);
+    case ValueKindString: {
+      printf("%s '%s'\n", valuekind_str(v.kind), v.data.string);
     } break;
 
-    case kValueTagBoolean: {
-      printf("%s %s\n", valuetag_str(v.tag),
+    case ValueKindBoolean: {
+      printf("%s %s\n", valuekind_str(v.kind),
              (v.data.boolean ? "true" : "false"));
     } break;
 
-    case kValueTagInteger: {
-      printf("%s %" PRId64 "\n", valuetag_str(v.tag), v.data.integer);
+    case ValueKindInteger: {
+      printf("%s %" PRId64 "\n", valuekind_str(v.kind), v.data.integer);
     } break;
 
     default: {
-      printf("%s\n", valuetag_str(v.tag));
+      printf("%s\n", valuekind_str(v.kind));
     } break;
     }
   }
@@ -113,33 +113,33 @@ void table_dump(Table self, Arena *arena) {
 
     char *k = str_dup(kv.key, arena);
 
-    switch (kv.val.tag) {
-    case kValueTagTable: {
-      printf("%s %s\n", k, valuetag_str(kv.val.tag));
+    switch (kv.val.kind) {
+    case ValueKindTable: {
+      printf("%s %s\n", k, valuekind_str(kv.val.kind));
       table_dump(kv.val.data.table, arena);
     } break;
 
-    case kValueTagList: {
-      printf("%s %s\n", k, valuetag_str(kv.val.tag));
+    case ValueKindList: {
+      printf("%s %s\n", k, valuekind_str(kv.val.kind));
       list_dump(kv.val.data.list, arena);
     } break;
 
-    case kValueTagString: {
-      printf("%s %s '%s'\n", k, valuetag_str(kv.val.tag), kv.val.data.string);
+    case ValueKindString: {
+      printf("%s %s '%s'\n", k, valuekind_str(kv.val.kind), kv.val.data.string);
     } break;
 
-    case kValueTagBoolean: {
-      printf("%s %s %s\n", k, valuetag_str(kv.val.tag),
+    case ValueKindBoolean: {
+      printf("%s %s %s\n", k, valuekind_str(kv.val.kind),
              (kv.val.data.boolean ? "true" : "false"));
     } break;
 
-    case kValueTagInteger: {
-      printf("%s %s %" PRId64 "\n", k, valuetag_str(kv.val.tag),
+    case ValueKindInteger: {
+      printf("%s %s %" PRId64 "\n", k, valuekind_str(kv.val.kind),
              kv.val.data.integer);
     } break;
 
     default: {
-      printf("%s %s\n", k, valuetag_str(kv.val.tag));
+      printf("%s %s\n", k, valuekind_str(kv.val.kind));
     } break;
     }
   }
