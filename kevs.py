@@ -5,10 +5,10 @@ from typing import Any
 
 
 class TokenKind(Enum):
-    UNDEFINED = 0
-    KEY = 1
-    DELIM = 2
-    VALUE = 3
+    undefined = 0
+    key = 1
+    delim = 2
+    value = 3
 
 
 @dataclass
@@ -23,7 +23,7 @@ def str_find_any(s, chars):
         i = s.find(c)
         if i != -1:
             return i, c
-    return -1, ""
+    return -1, None
 
 
 kSpaces = " \t"
@@ -87,7 +87,7 @@ class Scanner:
         if end == -1 or c != kKeyValSep:
             self.errorf("key-value pair is missing separator")
             return False
-        self.append(TokenKind.KEY, end)
+        self.append(TokenKind.key, end)
         if len(self.tokens[-1].value) == 0:
             self.errorf("empty key")
             return False
@@ -145,7 +145,7 @@ class Scanner:
             return False
 
         # +2 for leading and trailing quotes
-        self.append(TokenKind.VALUE, end + 2)
+        self.append(TokenKind.value, end + 2)
 
         # count newlines in raw string to keep line count accurate
         self.line += self.tokens[-1].value.count("\n")
@@ -202,7 +202,7 @@ class Scanner:
         end = self.content.find(s) - 1
 
         # +1 for leading quote
-        self.append(TokenKind.VALUE, end + 1)
+        self.append(TokenKind.value, end + 1)
 
         return True
 
@@ -213,7 +213,7 @@ class Scanner:
         if end == -1 or c != kKeyValEnd:
             self.errorf("integer or boolean value does not end with semicolon")
             return False
-        self.append(TokenKind.VALUE, end)
+        self.append(TokenKind.value, end)
         return True
 
     def scan_delim(self, c: str) -> bool:
@@ -239,7 +239,7 @@ class Scanner:
     def append_delim(self):
         self.tokens.append(
             Token(
-                kind=TokenKind.DELIM,
+                kind=TokenKind.delim,
                 value=self.content[:1],
                 line=self.line,
             )
@@ -279,6 +279,27 @@ class KeyValue:
     value: Value
 
 
+def is_digit(c: str) -> bool:
+    assert len(c) == 1
+    return c in "0123456789"
+
+
+def is_letter(c: str) -> bool:
+    assert len(c) == 1
+    c = c.lower()
+    return c in "abcdefghijklmnopqrstuvwxyz"
+
+
+def is_identifier(key: str) -> bool:
+    c = key[0]
+    if c != "_" and not is_letter(c):
+        return False
+    for c in key:
+        if not is_digit(c) and not is_letter(c) and c != "_":
+            return False
+    return True
+
+
 class Parser:
     def __init__(self, filepath: str, content: str, tokens: []):
         self.filepath = filepath
@@ -290,7 +311,7 @@ class Parser:
 
     def parse(self):
         while self.i < len(self.tokens):
-            kv, ok = self.parse_key_value()
+            kv, ok = self.parse_key_value(self.table)
             if not ok:
                 return None
             self.table.append(kv)
@@ -299,20 +320,65 @@ class Parser:
     def parse_key_value(self, parent) -> (KeyValue, bool):
         key, ok = self.parse_key(parent)
         if not ok:
-            return False
+            return None, False
 
         if not self.parse_delim(kKeyValSep):
             self.errorf("missing key value separator")
-            return False
+            return None, False
 
         val, ok = self.parse_value()
         if not ok:
-            return False
+            return None, False
 
         return KeyValue(key=key, value=val), True
 
+    def parse_key(self, parent) -> (str, bool):
+        if not self.expect(TokenKind.key):
+            self.errorf("expected key token")
+            return None, False
+
+        tok = self.get()
+        if not is_identifier(tok.value):
+            self.errorf(f"key is not a valid identifier: '{tok.value}'")
+            return None, False
+
+        # check if key is unique
+        for entry in parent:
+            if entry.key == tok.value:
+                self.errorf(f"key '{tok.value}' is not unique for current table")
+                return None, False
+
+        key = tok.value
+
+        self.pop()
+
+        return key, True
+
+    def parse_delim(self, c: str) -> bool:
+        if not self.expect_delim(c):
+            return False
+        self.pop()
+        return True
+
+    def expect_delim(self, delim: str) -> bool:
+        if not self.expect(TokenKind.delim):
+            return False
+        return self.get().value == delim
+
+    def expect(self, kind: TokenKind) -> bool:
+        if self.i >= len(self.tokens):
+            self.errorf(f"expected token '{kind.name}', have nothing")
+            return False
+        return self.get().kind == kind
+
+    def get(self) -> Token:
+        return self.tokens[self.i]
+
+    def pop(self):
+        self.i += 1
+
     def errorf(self, s: str):
-        self.error = f"{self.filepath}:{self.tokens[self.i]}: error: parse: {s}"
+        self.error = f"{self.filepath}:{self.tokens[self.i].line}: error: parse: {s}"
 
 
 parser = argparse.ArgumentParser(prog="kevs")
@@ -329,7 +395,7 @@ if tokens is None:
     print(s.error)
 else:
     for token in tokens:
-        print(f"{token.kind}\t{token.value}")
+        print(token.kind.name, token.value)
 
     p = Parser(args.filepath, content, tokens)
     table = p.parse()
