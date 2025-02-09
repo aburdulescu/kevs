@@ -7,3 +7,4 @@
 /dev-out/
 /.zig-cache/
 /zig-out/
+/testdata/corpus/

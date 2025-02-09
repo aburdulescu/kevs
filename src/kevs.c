@@ -49,11 +49,6 @@ static inline bool is_letter(char c) {
 }
 
 typedef struct {
-  Error err;
-  size_t n;
-} FormatResult;
-
-typedef struct {
   char *ptr;
   size_t cap;
   size_t len;
