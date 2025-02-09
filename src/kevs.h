@@ -101,7 +101,6 @@ Str str_from_cstr(const char *s);
 void arena_init(Arena *self, void *ptr, size_t len);
 
 Error table_parse(Table *table, Params params);
-void table_free(Table *self);
 
 Error table_string(Table self, const char *key, char **out);
 Error table_int(Table self, const char *key, int64_t *out);
