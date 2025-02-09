@@ -276,7 +276,7 @@ class Value:
 @dataclass
 class KeyValue:
     key: str
-    value: Value
+    val: Value
 
 
 def is_digit(c: str) -> bool:
@@ -305,17 +305,17 @@ class Parser:
         self.filepath = filepath
         self.content = content
         self.tokens = tokens
-        self.table = []
         self.i = 0
         self.error = ""
 
     def parse(self):
+        table = []
         while self.i < len(self.tokens):
-            kv, ok = self.parse_key_value(self.table)
+            kv, ok = self.parse_key_value(table)
             if not ok:
                 return None
-            self.table.append(kv)
-        return self.table
+            table.append(kv)
+        return table
 
     def parse_key_value(self, parent) -> (KeyValue, bool):
         key, ok = self.parse_key(parent)
@@ -330,7 +330,7 @@ class Parser:
         if not ok:
             return None, False
 
-        return KeyValue(key=key, value=val), True
+        return KeyValue(key=key, val=val), True
 
     def parse_key(self, parent) -> (str, bool):
         if not self.expect(TokenKind.key):
@@ -485,6 +485,13 @@ class Parser:
         self.error = f"{self.filepath}:{self.tokens[self.i].line}: error: parse: {s}"
 
 
+def table_dump(table):
+    for kv in table:
+        if kv.val.kind == ValueKind.table:
+            print(kv.key, kv.val.kind.name)
+            table_dump(kv.val.data)
+
+
 parser = argparse.ArgumentParser(prog="kevs")
 parser.add_argument("filepath")
 args = parser.parse_args()
@@ -507,4 +514,4 @@ else:
         print(p.error)
     else:
         # TODO: dump
-        pass
+        table_dump(table)
