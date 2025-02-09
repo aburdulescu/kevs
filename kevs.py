@@ -26,7 +26,7 @@ def str_find_any(s, chars):
 
 
 kSpaces = " \t"
-
+kNewline = "\n"
 kKeyValSep = "="
 kKeyValEnd = ";"
 kCommentBegin = "#"
@@ -50,7 +50,7 @@ class Scanner:
         while len(self.content) != 0:
             self.trim_space()
             ok = False
-            if self.expect("\n"):
+            if self.expect(kNewline):
                 ok = self.scan_newline()
             elif self.expect(kCommentBegin):
                 ok = self.scan_comment()
@@ -66,7 +66,7 @@ class Scanner:
         return True
 
     def scan_comment(self) -> bool:
-        end = self.content.find("\n")
+        end = self.content.find(kNewline)
         if end == -1:
             self.errorf("comment does not end with newline")
             return False
@@ -101,7 +101,7 @@ class Scanner:
             ok = self.scan_table_value()
         elif self.expect(kStringBegin):
             ok = self.scan_string_value()
-        elif self.expect(self, kRawStringBegin):
+        elif self.expect(kRawStringBegin):
             ok = self.scan_raw_string()
         else:
             ok = self.scan_int_or_bool_value()
@@ -119,7 +119,7 @@ class Scanner:
             if len(self.content) == 0:
                 self.errorf("end of input without list end")
                 return False
-            if self.expect("\n"):
+            if self.expect(kNewline):
                 if not self.scan_newline():
                     return False
                 continue
@@ -137,6 +137,20 @@ class Scanner:
                 return True
         return True
 
+    def scan_raw_string(self) -> bool:
+        end = self.content[1:].find(kRawStringBegin)
+        if end == -1:
+            self.errorf("raw string value does not end with backtick")
+            return False
+
+        # +2 for leading and trailing quotes
+        self.append(TokenKind.VALUE, end + 2)
+
+        # count newlines in raw string to keep line count accurate
+        self.line += self.tokens[-1].value.count("\n")
+
+        return True
+
     def scan_table_value(self) -> bool:
         self.append_delim()
         while True:
@@ -144,7 +158,7 @@ class Scanner:
             if len(self.content) == 0:
                 self.errorf("end of input without table end")
                 return False
-            if self.expect("\n"):
+            if self.expect(kNewline):
                 if not self.scan_newline():
                     return False
                 continue
@@ -189,6 +203,16 @@ class Scanner:
         # +1 for leading quote
         self.append(TokenKind.VALUE, end + 1)
 
+        return True
+
+    def scan_int_or_bool_value(self) -> bool:
+        # search for all possible value endings
+        # if semicolon(or none of them) is not found => error
+        end, c = str_find_any(self.content, ";]}\n")
+        if end == -1 or c != kKeyValEnd:
+            self.errorf("integer or boolean value does not end with semicolon")
+            return False
+        self.append(TokenKind.VALUE, end)
         return True
 
     def scan_delim(self, c: str) -> bool:
@@ -247,4 +271,4 @@ if tokens is None:
     print(s.error)
 else:
     for token in tokens:
-        print(token.kind, token.value, token.line)
+        print(f"{token.kind}\t{token.value}")

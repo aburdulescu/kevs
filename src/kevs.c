@@ -663,7 +663,7 @@ static bool scan_raw_string(Scanner *self) {
 }
 
 static bool scan_int_or_bool_value(Scanner *self) {
-  // search for all possible value endings(;]}\n)
+  // search for all possible value endings
   // if semicolon(or none of them) is not found => error
   char c = 0;
   const int end =
