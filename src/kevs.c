@@ -48,6 +48,19 @@ static inline bool is_letter(char c) {
   return lower(c) >= 'a' && lower(c) <= 'z';
 }
 
+static bool is_identifier(Str s) {
+  char c = s.ptr[0];
+  if (c != '_' && !is_letter(c)) {
+    return false;
+  }
+  for (size_t i = 1; i < s.len; i++) {
+    if (!is_digit(s.ptr[i]) && !is_letter(s.ptr[i]) && s.ptr[i] != '_') {
+      return false;
+    }
+  }
+  return true;
+}
+
 typedef struct {
   char *ptr;
   size_t cap;
@@ -1028,19 +1041,6 @@ static bool parse_value(Parser *self, Value *out) {
   return true;
 }
 
-static bool key_is_valid(Str key) {
-  char c = key.ptr[0];
-  if (c != '_' && !is_letter(c)) {
-    return false;
-  }
-  for (size_t i = 1; i < key.len; i++) {
-    if (!is_digit(key.ptr[i]) && !is_letter(key.ptr[i]) && key.ptr[i] != '_') {
-      return false;
-    }
-  }
-  return true;
-}
-
 static bool parse_key(Parser *self, Table parent, Str *key) {
   if (!parser_expect(self, TokenKindKey)) {
     parse_errorf(self, "expected key token");
@@ -1049,30 +1049,22 @@ static bool parse_key(Parser *self, Table parent, Str *key) {
 
   const Token tok = parser_get(self);
 
-  if (!key_is_valid(tok.value)) {
+  if (!is_identifier(tok.value)) {
     char *s = str_dup(tok.value, &self->alls->strings);
     parse_errorf(self, "key is not a valid identifier: '%s'", s);
     return false;
   }
 
   // check if key is unique
-  Str temp = tok.value;
-  bool is_unique = true;
-  {
-    for (size_t i = 0; i < parent.len; i++) {
-      if (str_equals(parent.ptr[i].key, temp)) {
-        is_unique = false;
-        break;
-      }
+  for (size_t i = 0; i < parent.len; i++) {
+    if (str_equals(parent.ptr[i].key, tok.value)) {
+      char *s = str_dup(tok.value, &self->alls->strings);
+      parse_errorf(self, "key '%s' is not unique for current table", s);
+      return false;
     }
   }
-  if (!is_unique) {
-    char *s = str_dup(temp, &self->alls->strings);
-    parse_errorf(self, "key '%s' is not unique for current table", s);
-    return false;
-  }
 
-  *key = temp;
+  *key = tok.value;
 
   parser_pop(self);
 
