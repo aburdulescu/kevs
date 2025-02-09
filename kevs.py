@@ -154,14 +154,8 @@ class Scanner:
         self.content = self.content[n:]
 
 
-parser = argparse.ArgumentParser(
-    prog="ProgramName",
-    description="What the program does",
-    epilog="Text at the bottom of help",
-)
-
+parser = argparse.ArgumentParser(prog="kevs")
 parser.add_argument("filepath")
-
 args = parser.parse_args()
 
 content = ""
