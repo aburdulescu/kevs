@@ -259,12 +259,12 @@ class Scanner:
 
 
 class ValueKind(Enum):
-    UNDEFINED = 0
-    STRING = 1
-    INTEGER = 2
-    BOOLEAN = 3
-    LIST = 4
-    TABLE = 4
+    undefined = 0
+    string = 1
+    integer = 2
+    boolean = 3
+    list = 4
+    table = 4
 
 
 @dataclass
@@ -353,6 +353,66 @@ class Parser:
         self.pop()
 
         return key, True
+
+    def parse_value(self) -> (Value, bool):
+        ok = False
+        val = None
+        if self.expect_delim(kListBegin):
+            val, ok = self.parse_list_value()
+        elif self.expect_delim(kTableBegin):
+            val, ok = self.parse_table_value()
+        else:
+            val, ok = self.parse_simple_value()
+        if not ok:
+            return None, False
+        if not self.parse_delim(kKeyValEnd):
+            self.errorf("missing key value end")
+            return None, False
+        return val, True
+
+    def parse_simple_value(self) -> (Value, bool):
+        if not self.expect(TokenKind.value):
+            self.errorf("expected value token")
+            return None, False
+
+        val = self.get().value
+
+        ok = True
+        out = None
+
+        if val.startswith(kStringBegin):
+            out = Value(
+                kind=ValueKind.string,
+                data=bytes(val[1:-1], "utf-8").decode("unicode_escape"),
+            )
+        elif val.startswith(kRawStringBegin):
+            out = Value(
+                kind=ValueKind.string,
+                data=val[1:-1],
+            )
+        elif val == "true":
+            out = Value(
+                kind=ValueKind.boolean,
+                data=True,
+            )
+        elif val == "false":
+            out = Value(
+                kind=ValueKind.boolean,
+                data=False,
+            )
+        else:
+            try:
+                out = Value(
+                    kind=ValueKind.integer,
+                    data=int(val, 0),
+                )
+            except ValueError:
+                self.errorf(f"value '{val}' is not an integer")
+                ok = False
+
+        self.pop()
+
+        return out, ok
 
     def parse_delim(self, c: str) -> bool:
         if not self.expect_delim(c):
