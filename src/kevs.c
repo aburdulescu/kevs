@@ -990,28 +990,30 @@ static bool parse_simple_value(Parser *self, Value *out) {
     }
     out->kind = ValueKindString;
     out->data.string = data;
+
   } else if (str_starts_with_char(val, kRawStringBegin)) {
     out->kind = ValueKindString;
     out->data.string =
         str_dup(str_slice(val, 1, val.len - 1), &self->alls->strings);
+
+  } else if (str_equals(val, str_from_cstr("true"))) {
+    out->kind = ValueKindBoolean;
+    out->data.boolean = true;
+
+  } else if (str_equals(val, str_from_cstr("false"))) {
+    out->kind = ValueKindBoolean;
+    out->data.boolean = false;
+
   } else {
-    if (str_equals(val, str_from_cstr("true"))) {
-      out->kind = ValueKindBoolean;
-      out->data.boolean = true;
-    } else if (str_equals(val, str_from_cstr("false"))) {
-      out->kind = ValueKindBoolean;
-      out->data.boolean = false;
+    int64_t i = 0;
+    Error err = str_to_int(val, 0, &i);
+    if (err != NULL) {
+      char *s = str_dup(val, &self->alls->strings);
+      parse_errorf(self, "value '%s' is not an integer: %s", s, err);
+      ok = false;
     } else {
-      int64_t i = 0;
-      Error err = str_to_int(val, 0, &i);
-      if (err != NULL) {
-        char *s = str_dup(val, &self->alls->strings);
-        parse_errorf(self, "value '%s' is not an integer: %s", s, err);
-        ok = false;
-      } else {
-        out->kind = ValueKindInteger;
-        out->data.integer = i;
-      }
+      out->kind = ValueKindInteger;
+      out->data.integer = i;
     }
   }
 
