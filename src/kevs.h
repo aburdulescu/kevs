@@ -100,6 +100,8 @@ Str str_from_cstr(const char *s);
 
 void arena_init(Arena *self, void *ptr, size_t len);
 
+Error table_parse_simple(Table *table, Str file, Str content);
+
 Error table_parse(Table *table, Params params);
 
 Error table_string(Table self, const char *key, char **out);

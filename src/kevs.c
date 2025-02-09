@@ -1134,6 +1134,14 @@ Error table_parse(Table *table, Params params) {
   return err;
 }
 
+Error table_parse_simple(Table *table, Str file, Str content) {
+  // TODO: simple wrapper over table_parse which uses defaults for Params
+  (void)table;
+  (void)file;
+  (void)content;
+  return "todo";
+}
+
 static bool value_is(Value self, ValueTag tag) { return self.tag == tag; }
 
 static Error table_get(Table self, const char *key, Value *val) {
