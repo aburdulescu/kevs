@@ -112,6 +112,85 @@ class Scanner:
             return False
         return True
 
+    def scan_list_value(self) -> bool:
+        self.append_delim()
+        while True:
+            self.trim_space()
+            if len(self.content) == 0:
+                self.errorf("end of input without list end")
+                return False
+            if self.expect("\n"):
+                if not self.scan_newline():
+                    return False
+                continue
+            if self.expect(kCommentBegin):
+                if not self.scan_comment():
+                    return False
+                continue
+            if self.expect(kListEnd):
+                self.append_delim()
+                return True
+            if not self.scan_value():
+                return False
+            if self.expect(kListEnd):
+                self.append_delim()
+                return True
+        return True
+
+    def scan_table_value(self) -> bool:
+        self.append_delim()
+        while True:
+            self.trim_space()
+            if len(self.content) == 0:
+                self.errorf("end of input without table end")
+                return False
+            if self.expect("\n"):
+                if not self.scan_newline():
+                    return False
+                continue
+            if self.expect(kCommentBegin):
+                if not self.scan_comment():
+                    return False
+                continue
+            if self.expect(kTableEnd):
+                self.append_delim()
+                return True
+            if not self.scan_key_value():
+                return False
+            if self.expect(kTableEnd):
+                self.append_delim()
+                return True
+        return True
+
+    def scan_string_value(self) -> bool:
+        # advance past leading quote
+        s = self.content[1:]
+
+        while True:
+            # search for trailing quote
+            i = s.find(kStringBegin)
+            if i == -1:
+                self.errorf("string value does not end with quote")
+                return False
+
+            # get previous char
+            prev = s[i - 1]
+
+            # advance
+            s = s[i + 1 :]
+
+            # stop if quote is not escaped
+            if prev != "\\":
+                break
+
+        # calculate the end, includes trailing quote
+        end = self.content.find(s) - 1
+
+        # +1 for leading quote
+        self.append(TokenKind.VALUE, end + 1)
+
+        return True
+
     def scan_delim(self, c: str) -> bool:
         if not self.expect(c):
             return False
