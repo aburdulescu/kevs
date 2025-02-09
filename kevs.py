@@ -414,6 +414,50 @@ class Parser:
 
         return out, ok
 
+    def parse_list_value(self) -> (Value, bool):
+        out = Value(
+            kind=ValueKind.list,
+            data=[],
+        )
+
+        self.pop()
+
+        while True:
+            if self.parse_delim(kListEnd):
+                return out, True
+
+            v, ok = self.parse_value()
+            if not ok:
+                return None, False
+            out.data.append(v)
+
+            if self.parse_delim(kListEnd):
+                return out, True
+
+        return out, True
+
+    def parse_table_value(self) -> (Value, bool):
+        out = Value(
+            kind=ValueKind.table,
+            data=[],
+        )
+
+        self.pop()
+
+        while True:
+            if self.parse_delim(kTableEnd):
+                return out, True
+
+            v, ok = self.parse_key_value(out.data)
+            if not ok:
+                return None, False
+            out.data.append(v)
+
+            if self.parse_delim(kTableEnd):
+                return out, True
+
+        return out, True
+
     def parse_delim(self, c: str) -> bool:
         if not self.expect_delim(c):
             return False
@@ -461,3 +505,6 @@ else:
     table = p.parse()
     if table is None:
         print(p.error)
+    else:
+        # TODO: dump
+        pass
