@@ -1,6 +1,7 @@
 import argparse
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 
 class TokenKind(Enum):
@@ -257,6 +258,63 @@ class Scanner:
         self.content = self.content[n:]
 
 
+class ValueKind(Enum):
+    UNDEFINED = 0
+    STRING = 1
+    INTEGER = 2
+    BOOLEAN = 3
+    LIST = 4
+    TABLE = 4
+
+
+@dataclass
+class Value:
+    kind: ValueKind
+    data: Any
+
+
+@dataclass
+class KeyValue:
+    key: str
+    value: Value
+
+
+class Parser:
+    def __init__(self, filepath: str, content: str, tokens: []):
+        self.filepath = filepath
+        self.content = content
+        self.tokens = tokens
+        self.table = []
+        self.i = 0
+        self.error = ""
+
+    def parse(self):
+        while self.i < len(self.tokens):
+            kv, ok = self.parse_key_value()
+            if not ok:
+                return None
+            self.table.append(kv)
+        return self.table
+
+    def parse_key_value(self, parent) -> (KeyValue, bool):
+        key, ok = self.parse_key(parent)
+        if not ok:
+            return False
+
+        if not self.parse_delim(kKeyValSep):
+            self.errorf("missing key value separator")
+            return False
+
+        val, ok = self.parse_value()
+        if not ok:
+            return False
+
+        return KeyValue(key=key, value=val), True
+
+    def errorf(self, s: str):
+        self.error = f"{self.filepath}:{self.tokens[self.i]}: error: parse: {s}"
+
+
 parser = argparse.ArgumentParser(prog="kevs")
 parser.add_argument("filepath")
 args = parser.parse_args()
@@ -272,3 +330,8 @@ if tokens is None:
 else:
     for token in tokens:
         print(f"{token.kind}\t{token.value}")
+
+    p = Parser(args.filepath, content, tokens)
+    table = p.parse()
+    if table is None:
+        print(p.error)
