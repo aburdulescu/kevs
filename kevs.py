@@ -381,10 +381,14 @@ class Parser:
         out = None
 
         if val.startswith(kStringBegin):
-            out = Value(
-                kind=ValueKind.string,
-                data=bytes(val[1:-1], "utf-8").decode("unicode_escape"),
-            )
+            try:
+                out = Value(
+                    kind=ValueKind.string,
+                    data=bytes(val[1:-1], "utf-8").decode("unicode_escape"),
+                )
+            except UnicodeDecodeError as e:
+                self.errorf(f"could not normalize string: {str(e)}")
+                ok = False
         elif val.startswith(kRawStringBegin):
             out = Value(
                 kind=ValueKind.string,
@@ -406,8 +410,8 @@ class Parser:
                     kind=ValueKind.integer,
                     data=int(val, 0),
                 )
-            except ValueError:
-                self.errorf(f"value '{val}' is not an integer")
+            except ValueError as e:
+                self.errorf(f"value '{val}' is not an integer: {str(e)}")
                 ok = False
 
         self.pop()
