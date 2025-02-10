@@ -16,7 +16,7 @@ static void usage() {
           "Flags:\n"
           "  -help    Print this message\n"
           "  -abort   Abort when encountering an error\n"
-          "  -scan    Run only the scanner and skip the parser\n"
+          "  -scan    Run only the scanner\n"
           "  -dump    Print keys and values, or tokens if -scan is active\n"
           "  -no-err  Exit with code 0 even if an error was encountered\n"
           "  -free    Free memory before exit\n"

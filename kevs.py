@@ -40,8 +40,8 @@ kTableEnd = "}"
 
 
 class Scanner:
-    def __init__(self, filepath: str, content: str):
-        self.filepath = filepath
+    def __init__(self, file: str, content: str):
+        self.file = file
         self.content = content
         self.tokens = []
         self.line = 1
@@ -223,7 +223,7 @@ class Scanner:
         return True
 
     def errorf(self, s: str):
-        self.error = f"{self.filepath}:{self.line}: error: scan: {s}"
+        self.error = f"{self.file}:{self.line}: error: scan: {s}"
 
     def append(self, kind: TokenKind, end: int):
         val = self.content[:end].rstrip(kSpaces)
@@ -264,7 +264,7 @@ class ValueKind(Enum):
     integer = 2
     boolean = 3
     list = 4
-    table = 4
+    table = 5
 
 
 @dataclass
@@ -301,8 +301,8 @@ def is_identifier(key: str) -> bool:
 
 
 class Parser:
-    def __init__(self, filepath: str, content: str, tokens: []):
-        self.filepath = filepath
+    def __init__(self, file: str, content: str, tokens: []):
+        self.file = file
         self.content = content
         self.tokens = tokens
         self.i = 0
@@ -482,36 +482,61 @@ class Parser:
         self.i += 1
 
     def errorf(self, s: str):
-        self.error = f"{self.filepath}:{self.tokens[self.i].line}: error: parse: {s}"
+        self.error = f"{self.file}:{self.tokens[self.i].line}: error: parse: {s}"
 
 
-def table_dump(table):
-    for kv in table:
+def list_dump(root):
+    for v in root:
+        if v.kind == ValueKind.table:
+            print(v.kind.name)
+            table_dump(v.data)
+        elif v.kind == ValueKind.list:
+            print(v.kind.name)
+            list_dump(v.data)
+        else:
+            print(v.kind.name, v.data)
+
+
+def table_dump(root):
+    for kv in root:
         if kv.val.kind == ValueKind.table:
             print(kv.key, kv.val.kind.name)
             table_dump(kv.val.data)
+        elif kv.val.kind == ValueKind.list:
+            print(kv.key, kv.val.kind.name)
+            list_dump(kv.val.data)
+        else:
+            print(kv.key, kv.val.kind.name, kv.val.data)
 
 
 parser = argparse.ArgumentParser(prog="kevs")
-parser.add_argument("filepath")
+parser.add_argument("file")
+parser.add_argument(
+    "--dump",
+    action="store_true",
+    help="Print keys and values, or tokens if --scan is active",
+)
+parser.add_argument("--scan", action="store_true", help="Run only the scanner")
 args = parser.parse_args()
 
 content = ""
-with open(args.filepath, "r") as f:
+with open(args.file, "r") as f:
     content = f.read()
 
-s = Scanner(args.filepath, content)
+s = Scanner(args.file, content)
 tokens = s.scan()
 if tokens is None:
     print(s.error)
 else:
-    for token in tokens:
-        print(token.kind.name, token.value)
+    if args.dump and args.scan:
+        for token in tokens:
+            print(token.kind.name, token.value)
 
-    p = Parser(args.filepath, content, tokens)
-    table = p.parse()
-    if table is None:
-        print(p.error)
-    else:
-        # TODO: dump
-        table_dump(table)
+    if not args.scan:
+        p = Parser(args.file, content, tokens)
+        table = p.parse()
+        if table is None:
+            print(p.error)
+        else:
+            if args.dump:
+                table_dump(table)
