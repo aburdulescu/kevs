@@ -1,4 +1,3 @@
-import argparse
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
@@ -497,6 +496,10 @@ def list_dump(root):
         elif v.kind == ValueKind.list:
             print(v.kind.name)
             list_dump(v.data)
+        elif v.kind == ValueKind.string:
+            print(f"{v.kind.name} '{v.data}'")
+        elif v.kind == ValueKind.boolean:
+            print(v.kind.name, "true" if v.data else "false")
         else:
             print(v.kind.name, v.data)
 
@@ -509,38 +512,9 @@ def table_dump(root):
         elif kv.val.kind == ValueKind.list:
             print(kv.key, kv.val.kind.name)
             list_dump(kv.val.data)
+        elif kv.val.kind == ValueKind.string:
+            print(f"{kv.key} {kv.val.kind.name} '{kv.val.data}'")
+        elif kv.val.kind == ValueKind.boolean:
+            print(kv.key, kv.val.kind.name, "true" if kv.val.data else "false")
         else:
             print(kv.key, kv.val.kind.name, kv.val.data)
-
-
-parser = argparse.ArgumentParser(prog="kevs")
-parser.add_argument("file")
-parser.add_argument(
-    "--dump",
-    action="store_true",
-    help="Print keys and values, or tokens if --scan is active",
-)
-parser.add_argument("--scan", action="store_true", help="Run only the scanner")
-args = parser.parse_args()
-
-content = ""
-with open(args.file, "r") as f:
-    content = f.read()
-
-s = Scanner(args.file, content)
-tokens = s.scan()
-if tokens is None:
-    print(s.error)
-else:
-    if args.dump and args.scan:
-        for token in tokens:
-            print(token.kind.name, token.value)
-
-    if not args.scan:
-        p = Parser(args.file, content, tokens)
-        table = p.parse()
-        if table is None:
-            print(p.error)
-        else:
-            if args.dump:
-                table_dump(table)

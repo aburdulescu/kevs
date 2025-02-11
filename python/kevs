@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+
+import argparse
+import kevs
+
+parser = argparse.ArgumentParser(prog="kevs")
+parser.add_argument("file")
+parser.add_argument(
+    "--dump",
+    action="store_true",
+    help="Print keys and values, or tokens if --scan is active",
+)
+parser.add_argument("--scan", action="store_true", help="Run only the scanner")
+parser.add_argument("--free", action="store_true", help="Not used")
+parser.add_argument("--no-err", action="store_true", help="Exit with code 0 even if an error was encountered")
+args = parser.parse_args()
+
+content = ""
+with open(args.file, "r") as f:
+    content = f.read()
+
+s = kevs.Scanner(args.file, content)
+tokens = s.scan()
+if tokens is None:
+    print(s.error)
+else:
+    if args.dump and args.scan:
+        for token in tokens:
+            print(token.kind.name, token.value)
+
+    if not args.scan:
+        p = kevs.Parser(args.file, content, tokens)
+        table = p.parse()
+        if table is None:
+            print(p.error)
+        else:
+            if args.dump:
+                kevs.table_dump(table)
