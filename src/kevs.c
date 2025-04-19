@@ -6,40 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-void arena_init(Arena *self, void *ptr, size_t len) {
-  *self = (Arena){};
-  self->ptr = ptr;
-  self->cap = len;
-}
-
-void *arena_alloc(Arena *self, size_t size) {
-  assert((self->index + size) < self->cap);
-  void *ptr = self->ptr + self->index;
-  self->index += size;
-  return ptr;
-}
-
-void *arena_extend(Arena *self, void *old_ptr, size_t old_size,
-                   size_t new_size) {
-  assert(new_size > old_size);
-  if (old_ptr == NULL) {
-    return arena_alloc(self, new_size);
-  }
-  // check if is last alloc
-  if (old_ptr == (self->ptr + self->index - old_size)) {
-    // update index
-    const size_t new_index = self->index - old_size + new_size;
-    assert(new_index < self->cap);
-    self->index = new_index;
-    return old_ptr;
-  } else {
-    // new alloc + copy
-    void *new_ptr = arena_alloc(self, new_size);
-    memcpy(new_ptr, old_ptr, old_size);
-    return new_ptr;
-  }
-}
-
 static inline bool is_digit(char c) { return c >= '0' && c <= '9'; }
 
 static inline char lower(char c) { return (char)(c | ('x' - 'X')); }
@@ -67,8 +33,8 @@ typedef struct {
   size_t len;
 } String;
 
-static void string_reserve(String *self, size_t cap, Arena *arena) {
-  char *ptr = arena_alloc(arena, cap + 1);
+static void string_reserve(String *self, size_t cap) {
+  char *ptr = malloc(cap + 1);
   assert(ptr != NULL);
   self->cap = cap;
   self->ptr = ptr;
@@ -91,8 +57,8 @@ Str str_from_cstr(const char *s) {
   return self;
 }
 
-char *str_dup(Str self, Arena *arena) {
-  char *ptr = arena_alloc(arena, self.len + 1);
+char *str_dup(Str self) {
+  char *ptr = malloc(self.len + 1);
   ptr[self.len] = 0;
   memcpy(ptr, self.ptr, self.len);
   return ptr;
@@ -350,9 +316,9 @@ uint8_t ucs_to_utf8(uint64_t code, char out[4]) {
   return 0;
 }
 
-static Error str_norm(Str self, Arena *arena, char **out) {
+static Error str_norm(Str self, char **out) {
   String dst = {};
-  string_reserve(&dst, self.len, arena);
+  string_reserve(&dst, self.len);
 
   // TODO: change this from char by char to memchr?
 
@@ -489,17 +455,16 @@ static const char kTableEnd = '}';
 
 static const char *spaces = " \t";
 
-static void tokens_reserve(Tokens *self, size_t cap, Arena *arena) {
-  Token *ptr = arena_extend(arena, self->ptr, self->cap * sizeof(Token),
-                            cap * sizeof(Token));
-  assert(ptr != NULL);
+static void tokens_reserve(Tokens *self, size_t cap) {
   self->cap = cap;
+  Token *ptr = realloc(self->ptr, cap * sizeof(Token));
+  assert(ptr != NULL);
   self->ptr = ptr;
 }
 
-static void tokens_append(Tokens *self, Token v, Arena *arena) {
+static void tokens_append(Tokens *self, Token v) {
   if (self->len == self->cap) {
-    tokens_reserve(self, (self->cap + 1) * 2, arena);
+    tokens_reserve(self, (self->cap + 1) * 2);
   }
   memcpy(self->ptr + self->len, &v, sizeof(v));
   self->len += 1;
@@ -507,7 +472,6 @@ static void tokens_append(Tokens *self, Token v, Arena *arena) {
 
 typedef struct {
   Params params;
-  Allocators *alls;
   Tokens *tokens;
   int line;
 } Scanner;
@@ -569,7 +533,7 @@ static void scanner_append(Scanner *self, TokenKind kind, size_t end) {
       .line = self->line,
   };
 
-  tokens_append(self->tokens, t, &self->alls->tokens);
+  tokens_append(self->tokens, t);
 
   scanner_advance(self, end);
 }
@@ -580,7 +544,7 @@ static void scanner_append_delim(Scanner *self) {
       .value = str_slice(self->params.content, 0, 1),
       .line = self->line,
   };
-  tokens_append(self->tokens, t, &self->alls->tokens);
+  tokens_append(self->tokens, t);
   scanner_advance(self, 1);
 }
 
@@ -798,10 +762,9 @@ static bool scan_key_value(Scanner *self) {
   return true;
 }
 
-Error scan(Tokens *tokens, Params params, Allocators *alls) {
+Error scan(Tokens *tokens, Params params) {
   Scanner s = {
       .params = params,
-      .alls = alls,
       .tokens = tokens,
       .line = 1,
   };
@@ -822,33 +785,31 @@ Error scan(Tokens *tokens, Params params, Allocators *alls) {
   return NULL;
 }
 
-static void list_reserve(List *self, size_t cap, Arena *arena) {
-  Value *ptr = arena_extend(arena, self->ptr, self->cap * sizeof(Value),
-                            cap * sizeof(Value));
-  assert(ptr != NULL);
+static void list_reserve(List *self, size_t cap) {
   self->cap = cap;
+  Value *ptr = realloc(self->ptr, cap * sizeof(Value));
+  assert(ptr != NULL);
   self->ptr = ptr;
 }
 
-static void list_append(List *self, Value v, Arena *arena) {
+static void list_append(List *self, Value v) {
   if (self->len == self->cap) {
-    list_reserve(self, (self->cap + 1) * 2, arena);
+    list_reserve(self, (self->cap + 1) * 2);
   }
   memcpy(self->ptr + self->len, &v, sizeof(v));
   self->len += 1;
 }
 
-static void table_reserve(Table *self, size_t cap, Arena *arena) {
-  KeyValue *ptr = arena_extend(arena, self->ptr, self->cap * sizeof(KeyValue),
-                               cap * sizeof(KeyValue));
-  assert(ptr != NULL);
+static void table_reserve(Table *self, size_t cap) {
   self->cap = cap;
+  KeyValue *ptr = realloc(self->ptr, cap * sizeof(KeyValue));
+  assert(ptr != NULL);
   self->ptr = ptr;
 }
 
-static void table_append(Table *self, KeyValue v, Arena *arena) {
+static void table_append(Table *self, KeyValue v) {
   if (self->len == self->cap) {
-    table_reserve(self, (self->cap + 1) * 2, arena);
+    table_reserve(self, (self->cap + 1) * 2);
   }
   memcpy(self->ptr + self->len, &v, sizeof(v));
   self->len += 1;
@@ -857,7 +818,6 @@ static void table_append(Table *self, KeyValue v, Arena *arena) {
 typedef struct {
   Params params;
   Tokens tokens;
-  Allocators *alls;
   Table *table;
   size_t i;
 } Parser;
@@ -936,7 +896,7 @@ static bool parse_list_value(Parser *self, Value *out) {
     if (!parse_value(self, &v)) {
       return false;
     }
-    list_append(&out->data.list, v, &self->alls->lists);
+    list_append(&out->data.list, v);
 
     if (parse_delim(self, kListEnd)) {
       return true;
@@ -960,7 +920,7 @@ static bool parse_table_value(Parser *self, Value *out) {
     if (!parse_key_value(self, out->data.table, &kv)) {
       return false;
     }
-    table_append(&out->data.table, kv, &self->alls->tables);
+    table_append(&out->data.table, kv);
 
     if (parse_delim(self, kTableEnd)) {
       return true;
@@ -982,10 +942,10 @@ static bool parse_simple_value(Parser *self, Value *out) {
 
   if (str_starts_with_char(val, kStringBegin)) {
     char *data = NULL;
-    Error err =
-        str_norm(str_slice(val, 1, val.len - 1), &self->alls->strings, &data);
+    Error err = str_norm(str_slice(val, 1, val.len - 1), &data);
     if (err != NULL) {
       parse_errorf(self, "could not normalize string: %s", err);
+      free(data);
       return false;
     }
     out->kind = ValueKindString;
@@ -993,8 +953,7 @@ static bool parse_simple_value(Parser *self, Value *out) {
 
   } else if (str_starts_with_char(val, kRawStringBegin)) {
     out->kind = ValueKindString;
-    out->data.string =
-        str_dup(str_slice(val, 1, val.len - 1), &self->alls->strings);
+    out->data.string = str_dup(str_slice(val, 1, val.len - 1));
 
   } else if (str_equals(val, str_from_cstr("true"))) {
     out->kind = ValueKindBoolean;
@@ -1008,8 +967,9 @@ static bool parse_simple_value(Parser *self, Value *out) {
     int64_t i = 0;
     Error err = str_to_int(val, 0, &i);
     if (err != NULL) {
-      char *s = str_dup(val, &self->alls->strings);
+      char *s = str_dup(val);
       parse_errorf(self, "value '%s' is not an integer: %s", s, err);
+      free(s);
       ok = false;
     } else {
       out->kind = ValueKindInteger;
@@ -1052,16 +1012,18 @@ static bool parse_key(Parser *self, Table parent, Str *key) {
   const Token tok = parser_get(self);
 
   if (!is_identifier(tok.value)) {
-    char *s = str_dup(tok.value, &self->alls->strings);
+    char *s = str_dup(tok.value);
     parse_errorf(self, "key is not a valid identifier: '%s'", s);
+    free(s);
     return false;
   }
 
   // check if key is unique
   for (size_t i = 0; i < parent.len; i++) {
     if (str_equals(parent.ptr[i].key, tok.value)) {
-      char *s = str_dup(tok.value, &self->alls->strings);
+      char *s = str_dup(tok.value);
       parse_errorf(self, "key '%s' is not unique for current table", s);
+      free(s);
       return false;
     }
   }
@@ -1095,10 +1057,9 @@ static bool parse_key_value(Parser *self, Table parent, KeyValue *out) {
   return true;
 }
 
-Error parse(Table *table, Params params, Tokens tokens, Allocators *alls) {
+Error parse(Table *table, Params params, Tokens tokens) {
   Parser p = {
       .params = params,
-      .alls = alls,
       .tokens = tokens,
       .table = table,
       .i = 0,
@@ -1109,7 +1070,7 @@ Error parse(Table *table, Params params, Tokens tokens, Allocators *alls) {
     if (!parse_key_value(&p, *table, &kv)) {
       return params.err_buf;
     }
-    table_append(p.table, kv, &alls->tables);
+    table_append(p.table, kv);
   }
 
   return NULL;
@@ -1121,12 +1082,55 @@ Error table_parse(Table *table, Params params) {
 
   Tokens tokens = {};
 
-  Error err = scan(&tokens, params, &params.alls);
+  Error err = scan(&tokens, params);
   if (err == NULL) {
-    err = parse(table, params, tokens, &params.alls);
+    err = parse(table, params, tokens);
   }
 
+  free(tokens.ptr);
+
   return err;
+}
+
+static void list_free(List *self);
+
+static void value_free(Value *self) {
+  switch (self->kind) {
+  case ValueKindString:
+    free(self->data.string);
+    break;
+
+  case ValueKindList:
+    list_free(&self->data.list);
+    break;
+
+  case ValueKindTable:
+    table_free(&self->data.table);
+    break;
+
+  default:
+    break;
+  }
+
+  *self = (Value){};
+}
+
+static void list_free(List *self) {
+  for (size_t i = 0; i < self->len; i++) {
+    value_free(&self->ptr[i]);
+  }
+
+  free(self->ptr);
+  *self = (List){};
+}
+
+void table_free(Table *self) {
+  for (size_t i = 0; i < self->len; i++) {
+    value_free(&self->ptr[i].val);
+  }
+
+  free(self->ptr);
+  *self = (Table){};
 }
 
 Error table_parse_simple(Table *table, Str file, Str content) {

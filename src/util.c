@@ -72,19 +72,19 @@ static const char *valuekind_str(ValueKind v) {
   }
 }
 
-void list_dump(List self, Arena *arena) {
+void list_dump(List self) {
   for (size_t i = 0; i < self.len; i++) {
     const Value v = self.ptr[i];
 
     switch (v.kind) {
     case ValueKindTable: {
       printf("%s\n", valuekind_str(v.kind));
-      table_dump(v.data.table, arena);
+      table_dump(v.data.table);
     } break;
 
     case ValueKindList: {
       printf("%s\n", valuekind_str(v.kind));
-      list_dump(v.data.list, arena);
+      list_dump(v.data.list);
     } break;
 
     case ValueKindString: {
@@ -107,21 +107,21 @@ void list_dump(List self, Arena *arena) {
   }
 }
 
-void table_dump(Table self, Arena *arena) {
+void table_dump(Table self) {
   for (size_t i = 0; i < self.len; i++) {
     const KeyValue kv = self.ptr[i];
 
-    char *k = str_dup(kv.key, arena);
+    char *k = str_dup(kv.key);
 
     switch (kv.val.kind) {
     case ValueKindTable: {
       printf("%s %s\n", k, valuekind_str(kv.val.kind));
-      table_dump(kv.val.data.table, arena);
+      table_dump(kv.val.data.table);
     } break;
 
     case ValueKindList: {
       printf("%s %s\n", k, valuekind_str(kv.val.kind));
-      list_dump(kv.val.data.list, arena);
+      list_dump(kv.val.data.list);
     } break;
 
     case ValueKindString: {
@@ -142,5 +142,7 @@ void table_dump(Table self, Arena *arena) {
       printf("%s %s\n", k, valuekind_str(kv.val.kind));
     } break;
     }
+
+    free(k);
   }
 }

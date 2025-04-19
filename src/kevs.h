@@ -75,20 +75,6 @@ typedef struct KeyValue {
 } KeyValue;
 
 typedef struct {
-  void *ptr;
-  size_t cap;
-  size_t index;
-} Arena;
-
-typedef struct {
-  Arena tables;
-  Arena lists;
-  Arena tokens;
-  Arena strings;
-} Allocators;
-
-typedef struct {
-  Allocators alls;
   Str file;
   Str content;
   char *err_buf;
@@ -98,11 +84,10 @@ typedef struct {
 
 Str str_from_cstr(const char *s);
 
-void arena_init(Arena *self, void *ptr, size_t len);
-
 Error table_parse_simple(Table *table, Str file, Str content);
 
 Error table_parse(Table *table, Params params);
+void table_free(Table *self);
 
 Error table_string(Table self, const char *key, char **out);
 Error table_int(Table self, const char *key, int64_t *out);

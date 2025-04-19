@@ -6,7 +6,7 @@
 // kevs.c
 
 Str str_from_cstr(const char *s);
-char *str_dup(Str self, Arena *arena);
+char *str_dup(Str self);
 int str_index_char(Str self, char c);
 Str str_slice_low(Str self, size_t low);
 Str str_slice(Str self, size_t low, size_t high);
@@ -16,19 +16,15 @@ Error str_to_int(Str self, uint64_t base, int64_t *out);
 
 int ucs_to_utf8(uint64_t code, char buf[4]);
 
-Error scan(Tokens *tokens, Params params, Allocators *alls);
-Error parse(Table *table, Params params, Tokens tokens, Allocators *alls);
+Error scan(Tokens *tokens, Params params);
+Error parse(Table *table, Params params, Tokens tokens);
 
 const char *tokenkind_str(TokenKind v);
 
-void *arena_alloc(Arena *self, size_t size);
-void *arena_extend(Arena *self, void *old_ptr, size_t old_size,
-                   size_t new_size);
-
 // util.c
 
-void table_dump(Table self, Arena *arena);
-void list_dump(List self, Arena *arena);
+void table_dump(Table self);
+void list_dump(List self);
 Error read_file(Str path, char **out, size_t *out_len);
 
 #endif
