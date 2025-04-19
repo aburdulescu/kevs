@@ -1,11 +1,8 @@
-#include <stdlib.h>
-
 #include "kevs.h"
 
 static char err_buf[8193] = {};
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-
   Table t = {};
 
   const Params params = {
@@ -17,5 +14,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 
   table_parse(&t, params);
 
+  table_free(&t);
   return 0;
 }
