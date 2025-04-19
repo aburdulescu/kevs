@@ -84,8 +84,6 @@ typedef struct {
 
 Str str_from_cstr(const char *s);
 
-Error table_parse_simple(Table *table, Str file, Str content);
-
 Error table_parse(Table *table, Params params);
 void table_free(Table *self);
 

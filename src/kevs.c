@@ -366,12 +366,14 @@ static Error str_norm(Str self, char **out) {
         i++;
 
         if ((i + 4) > self.len) {
+          free(dst.ptr);
           return "\\u must be followed by 4 hex digits: \\uXXXX";
         }
 
         uint64_t code = 0;
         const Error err = str_to_uint(str_slice(self, i, i + 4), 16, &code);
         if (err != NULL) {
+          free(dst.ptr);
           return err;
         }
         i += 4;
@@ -379,6 +381,7 @@ static Error str_norm(Str self, char **out) {
         char utf8[4] = {};
         const int n = ucs_to_utf8(code, utf8);
         if (n == 0) {
+          free(dst.ptr);
           return "could not encode Unicode code point to UTF-8";
         }
 
@@ -390,12 +393,14 @@ static Error str_norm(Str self, char **out) {
         i++;
 
         if ((i + 8) > self.len) {
+          free(dst.ptr);
           return "\\U must be followed by 8 hex digits: \\UXXXXXXXX";
         }
 
         uint64_t code = 0;
         const Error err = str_to_uint(str_slice(self, i, i + 8), 16, &code);
         if (err != NULL) {
+          free(dst.ptr);
           return err;
         }
         i += 8;
@@ -403,6 +408,7 @@ static Error str_norm(Str self, char **out) {
         char utf8[4] = {};
         const int n = ucs_to_utf8(code, utf8);
         if (n == 0) {
+          free(dst.ptr);
           return "could not encode Unicode code point to UTF-8";
         }
 
@@ -411,6 +417,7 @@ static Error str_norm(Str self, char **out) {
         }
       } break;
       default: {
+        free(dst.ptr);
         return "unknown escape sequence";
       }
       }
@@ -468,6 +475,38 @@ static void tokens_append(Tokens *self, Token v) {
   }
   memcpy(self->ptr + self->len, &v, sizeof(v));
   self->len += 1;
+}
+
+static void list_free(List *self);
+
+static void value_free(Value *self) {
+  switch (self->kind) {
+  case ValueKindString:
+    free(self->data.string);
+    break;
+
+  case ValueKindList:
+    list_free(&self->data.list);
+    break;
+
+  case ValueKindTable:
+    table_free(&self->data.table);
+    break;
+
+  default:
+    break;
+  }
+
+  *self = (Value){};
+}
+
+static void list_free(List *self) {
+  for (size_t i = 0; i < self->len; i++) {
+    value_free(&self->ptr[i]);
+  }
+
+  free(self->ptr);
+  *self = (List){};
 }
 
 typedef struct {
@@ -992,11 +1031,13 @@ static bool parse_value(Parser *self, Value *out) {
     ok = parse_simple_value(self, out);
   }
   if (!ok) {
+    value_free(out);
     return false;
   }
 
   if (!parse_delim(self, kKeyValEnd)) {
     parse_errorf(self, "missing key value end");
+    value_free(out);
     return false;
   }
 
@@ -1092,38 +1133,6 @@ Error table_parse(Table *table, Params params) {
   return err;
 }
 
-static void list_free(List *self);
-
-static void value_free(Value *self) {
-  switch (self->kind) {
-  case ValueKindString:
-    free(self->data.string);
-    break;
-
-  case ValueKindList:
-    list_free(&self->data.list);
-    break;
-
-  case ValueKindTable:
-    table_free(&self->data.table);
-    break;
-
-  default:
-    break;
-  }
-
-  *self = (Value){};
-}
-
-static void list_free(List *self) {
-  for (size_t i = 0; i < self->len; i++) {
-    value_free(&self->ptr[i]);
-  }
-
-  free(self->ptr);
-  *self = (List){};
-}
-
 void table_free(Table *self) {
   for (size_t i = 0; i < self->len; i++) {
     value_free(&self->ptr[i].val);
@@ -1131,14 +1140,6 @@ void table_free(Table *self) {
 
   free(self->ptr);
   *self = (Table){};
-}
-
-Error table_parse_simple(Table *table, Str file, Str content) {
-  // TODO: simple wrapper over table_parse which uses defaults for Params
-  (void)table;
-  (void)file;
-  (void)content;
-  return "todo";
 }
 
 static bool value_is(Value self, ValueKind kind) { return self.kind == kind; }
