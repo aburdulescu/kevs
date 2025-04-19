@@ -5,26 +5,26 @@
 
 // kevs.c
 
-Str str_from_cstr(const char *s);
-char *str_dup(Str self);
-int str_index_char(Str self, char c);
-Str str_slice_low(Str self, size_t low);
-Str str_slice(Str self, size_t low, size_t high);
-Str str_trim_left(Str self, Str cutset);
-Str str_trim_right(Str self, Str cutset);
-Error str_to_int(Str self, uint64_t base, int64_t *out);
+KevsStr str_from_cstr(const char *s);
+char *str_dup(KevsStr self);
+int str_index_char(KevsStr self, char c);
+KevsStr str_slice_low(KevsStr self, size_t low);
+KevsStr str_slice(KevsStr self, size_t low, size_t high);
+KevsStr str_trim_left(KevsStr self, KevsStr cutset);
+KevsStr str_trim_right(KevsStr self, KevsStr cutset);
+KevsError str_to_int(KevsStr self, uint64_t base, int64_t *out);
 
 int ucs_to_utf8(uint64_t code, char buf[4]);
 
-Error scan(Tokens *tokens, Params params);
-Error parse(Table *table, Params params, Tokens tokens);
+KevsError scan(KevsTokens *tokens, KevsParams params);
+KevsError parse(KevsTable *table, KevsParams params, KevsTokens tokens);
 
-const char *tokenkind_str(TokenKind v);
+const char *tokenkind_str(KevsTokenKind v);
 
 // util.c
 
-void table_dump(Table self);
-void list_dump(List self);
-Error read_file(Str path, char **out, size_t *out_len);
+void table_dump(KevsTable self);
+void list_dump(KevsList self);
+KevsError read_file(KevsStr path, char **out, size_t *out_len);
 
 #endif

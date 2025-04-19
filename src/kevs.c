@@ -14,7 +14,7 @@ static inline bool is_letter(char c) {
   return lower(c) >= 'a' && lower(c) <= 'z';
 }
 
-static bool is_identifier(Str s) {
+static bool is_identifier(KevsStr s) {
   char c = s.ptr[0];
   if (c != '_' && !is_letter(c)) {
     return false;
@@ -48,30 +48,30 @@ static void string_append(String *self, char v) {
   self->ptr[self->len] = 0;
 }
 
-Str str_from_cstr(const char *s) {
+KevsStr kevs_str_from_cstr(const char *s) {
   assert(s != NULL);
-  Str self = {
+  KevsStr self = {
       .ptr = s,
       .len = strlen(s),
   };
   return self;
 }
 
-char *str_dup(Str self) {
+char *str_dup(KevsStr self) {
   char *ptr = malloc(self.len + 1);
   ptr[self.len] = 0;
   memcpy(ptr, self.ptr, self.len);
   return ptr;
 }
 
-static bool str_starts_with_char(Str self, char c) {
+static bool str_starts_with_char(KevsStr self, char c) {
   if (self.len < 1) {
     return false;
   }
   return self.ptr[0] == c;
 }
 
-int str_index_char(Str self, char c) {
+int str_index_char(KevsStr self, char c) {
   const char *ptr = memchr(self.ptr, c, self.len);
   if (ptr == NULL) {
     return -1;
@@ -79,7 +79,7 @@ int str_index_char(Str self, char c) {
   return (int)(ptr - self.ptr);
 }
 
-static size_t str_count_char(Str self, char c) {
+static size_t str_count_char(KevsStr self, char c) {
   size_t count = 0;
   for (size_t i = 0; i < self.len; i++) {
     if (self.ptr[i] == c) {
@@ -89,7 +89,7 @@ static size_t str_count_char(Str self, char c) {
   return count;
 }
 
-static int str_index_any(Str self, Str chars, char *c) {
+static int str_index_any(KevsStr self, KevsStr chars, char *c) {
   for (size_t i = 0; i < self.len; i++) {
     const int j = str_index_char(chars, self.ptr[i]);
     if (j != -1) {
@@ -100,21 +100,21 @@ static int str_index_any(Str self, Str chars, char *c) {
   return -1;
 }
 
-static bool str_equals(Str self, Str other) {
+static bool str_equals(KevsStr self, KevsStr other) {
   if (self.len != other.len) {
     return false;
   }
   return memcmp(self.ptr, other.ptr, self.len) == 0;
 }
 
-static bool str_equals_char(Str self, char c) {
+static bool str_equals_char(KevsStr self, char c) {
   if (self.len != 1) {
     return false;
   }
   return self.ptr[0] == c;
 }
 
-Str str_slice_low(Str self, size_t low) {
+KevsStr str_slice_low(KevsStr self, size_t low) {
   assert(self.ptr != NULL);
   assert(self.len != 0);
   assert(low <= self.len);
@@ -123,7 +123,7 @@ Str str_slice_low(Str self, size_t low) {
   return self;
 }
 
-Str str_slice(Str self, size_t low, size_t high) {
+KevsStr str_slice(KevsStr self, size_t low, size_t high) {
   assert(self.ptr != NULL);
   assert(self.len != 0);
   assert(low <= self.len);
@@ -133,7 +133,7 @@ Str str_slice(Str self, size_t low, size_t high) {
   return self;
 }
 
-Str str_trim_left(Str self, Str cutset) {
+KevsStr str_trim_left(KevsStr self, KevsStr cutset) {
   size_t i = 0;
   for (; i < self.len; i++) {
     if (str_index_char(cutset, self.ptr[i]) == -1) {
@@ -145,7 +145,7 @@ Str str_trim_left(Str self, Str cutset) {
   return self;
 }
 
-Str str_trim_right(Str self, Str cutset) {
+KevsStr str_trim_right(KevsStr self, KevsStr cutset) {
   for (int i = (int)self.len - 1; i >= 0; i--) {
     if (str_index_char(cutset, self.ptr[i]) == -1) {
       break;
@@ -155,7 +155,7 @@ Str str_trim_right(Str self, Str cutset) {
   return self;
 }
 
-static Error str_to_uint(Str self, uint64_t base, uint64_t *out) {
+static KevsError str_to_uint(KevsStr self, uint64_t base, uint64_t *out) {
   if (self.len == 0) {
     return "empty input";
   }
@@ -234,7 +234,7 @@ static Error str_to_uint(Str self, uint64_t base, uint64_t *out) {
   return NULL;
 }
 
-Error str_to_int(Str self, uint64_t base, int64_t *out) {
+KevsError str_to_int(KevsStr self, uint64_t base, int64_t *out) {
   if (self.len == 0) {
     return "empty input";
   }
@@ -248,7 +248,7 @@ Error str_to_int(Str self, uint64_t base, int64_t *out) {
   }
 
   uint64_t un = 0;
-  Error err = str_to_uint(self, base, &un);
+  KevsError err = str_to_uint(self, base, &un);
   if (err != NULL) {
     return err;
   }
@@ -316,7 +316,7 @@ uint8_t ucs_to_utf8(uint64_t code, char out[4]) {
   return 0;
 }
 
-static Error str_norm(Str self, char **out) {
+static KevsError str_norm(KevsStr self, char **out) {
   String dst = {};
   string_reserve(&dst, self.len);
 
@@ -371,7 +371,7 @@ static Error str_norm(Str self, char **out) {
         }
 
         uint64_t code = 0;
-        const Error err = str_to_uint(str_slice(self, i, i + 4), 16, &code);
+        const KevsError err = str_to_uint(str_slice(self, i, i + 4), 16, &code);
         if (err != NULL) {
           free(dst.ptr);
           return err;
@@ -398,7 +398,7 @@ static Error str_norm(Str self, char **out) {
         }
 
         uint64_t code = 0;
-        const Error err = str_to_uint(str_slice(self, i, i + 8), 16, &code);
+        const KevsError err = str_to_uint(str_slice(self, i, i + 8), 16, &code);
         if (err != NULL) {
           free(dst.ptr);
           return err;
@@ -435,15 +435,15 @@ static Error str_norm(Str self, char **out) {
   return NULL;
 }
 
-const char *tokenkind_str(TokenKind v) {
+const char *tokenkind_str(KevsTokenKind v) {
   switch (v) {
-  case TokenKindUndefined:
+  case KevsTokenKindUndefined:
     return "undefined";
-  case TokenKindKey:
+  case KevsTokenKindKey:
     return "key";
-  case TokenKindDelim:
+  case KevsTokenKindDelim:
     return "delim";
-  case TokenKindValue:
+  case KevsTokenKindValue:
     return "value";
   default:
     return "unknown";
@@ -462,14 +462,14 @@ static const char kTableEnd = '}';
 
 static const char *spaces = " \t";
 
-static void tokens_reserve(Tokens *self, size_t cap) {
+static void tokens_reserve(KevsTokens *self, size_t cap) {
   self->cap = cap;
-  Token *ptr = realloc(self->ptr, cap * sizeof(Token));
+  KevsToken *ptr = realloc(self->ptr, cap * sizeof(KevsToken));
   assert(ptr != NULL);
   self->ptr = ptr;
 }
 
-static void tokens_append(Tokens *self, Token v) {
+static void tokens_append(KevsTokens *self, KevsToken v) {
   if (self->len == self->cap) {
     tokens_reserve(self, (self->cap + 1) * 2);
   }
@@ -477,41 +477,41 @@ static void tokens_append(Tokens *self, Token v) {
   self->len += 1;
 }
 
-static void list_free(List *self);
+static void list_free(KevsList *self);
 
-static void value_free(Value *self) {
+static void value_free(KevsValue *self) {
   switch (self->kind) {
-  case ValueKindString:
+  case KevsValueKindString:
     free(self->data.string);
     break;
 
-  case ValueKindList:
+  case KevsValueKindList:
     list_free(&self->data.list);
     break;
 
-  case ValueKindTable:
-    table_free(&self->data.table);
+  case KevsValueKindTable:
+    kevs_table_free(&self->data.table);
     break;
 
   default:
     break;
   }
 
-  *self = (Value){};
+  *self = (KevsValue){};
 }
 
-static void list_free(List *self) {
+static void list_free(KevsList *self) {
   for (size_t i = 0; i < self->len; i++) {
     value_free(&self->ptr[i]);
   }
 
   free(self->ptr);
-  *self = (List){};
+  *self = (KevsList){};
 }
 
 typedef struct {
-  Params params;
-  Tokens *tokens;
+  KevsParams params;
+  KevsTokens *tokens;
   int line;
 } Scanner;
 
@@ -559,14 +559,14 @@ static void scanner_advance(Scanner *self, size_t n) {
 
 static void scanner_trim_space(Scanner *self) {
   self->params.content =
-      str_trim_left(self->params.content, str_from_cstr(spaces));
+      str_trim_left(self->params.content, kevs_str_from_cstr(spaces));
 }
 
-static void scanner_append(Scanner *self, TokenKind kind, size_t end) {
-  Str val = str_slice(self->params.content, 0, end);
-  val = str_trim_right(val, str_from_cstr(spaces));
+static void scanner_append(Scanner *self, KevsTokenKind kind, size_t end) {
+  KevsStr val = str_slice(self->params.content, 0, end);
+  val = str_trim_right(val, kevs_str_from_cstr(spaces));
 
-  const Token t = {
+  const KevsToken t = {
       .kind = kind,
       .value = val,
       .line = self->line,
@@ -578,8 +578,8 @@ static void scanner_append(Scanner *self, TokenKind kind, size_t end) {
 }
 
 static void scanner_append_delim(Scanner *self) {
-  const Token t = {
-      .kind = TokenKindDelim,
+  const KevsToken t = {
+      .kind = KevsTokenKindDelim,
       .value = str_slice(self->params.content, 0, 1),
       .line = self->line,
   };
@@ -605,12 +605,13 @@ static bool scan_comment(Scanner *self) {
 
 static bool scan_key(Scanner *self) {
   char c = 0;
-  const int end = str_index_any(self->params.content, str_from_cstr("=\n"), &c);
+  const int end =
+      str_index_any(self->params.content, kevs_str_from_cstr("=\n"), &c);
   if (end == -1 || c != kKeyValSep) {
     scan_errorf(self, "key-value pair is missing separator");
     return false;
   }
-  scanner_append(self, TokenKindKey, end);
+  scanner_append(self, KevsTokenKindKey, end);
   if (self->tokens->ptr[self->tokens->len - 1].value.len == 0) {
     scan_errorf(self, "empty key");
     return false;
@@ -628,7 +629,7 @@ static bool scan_delim(Scanner *self, char c) {
 
 static bool scan_string_value(Scanner *self) {
   // advance past leading quote
-  Str s = str_slice_low(self->params.content, 1);
+  KevsStr s = str_slice_low(self->params.content, 1);
 
   while (true) {
     // search for trailing quote
@@ -655,7 +656,7 @@ static bool scan_string_value(Scanner *self) {
   const size_t end = s.ptr - self->params.content.ptr - 1;
 
   // +1 for leading quote
-  scanner_append(self, TokenKindValue, end + 1);
+  scanner_append(self, KevsTokenKindValue, end + 1);
 
   return true;
 }
@@ -669,7 +670,7 @@ static bool scan_raw_string(Scanner *self) {
   }
 
   // +2 for leading and trailing quotes
-  scanner_append(self, TokenKindValue, end + 2);
+  scanner_append(self, KevsTokenKindValue, end + 2);
 
   // count newlines in raw string to keep line count accurate
   self->line +=
@@ -683,12 +684,12 @@ static bool scan_int_or_bool_value(Scanner *self) {
   // if semicolon(or none of them) is not found => error
   char c = 0;
   const int end =
-      str_index_any(self->params.content, str_from_cstr(";]}\n"), &c);
+      str_index_any(self->params.content, kevs_str_from_cstr(";]}\n"), &c);
   if (end == -1 || c != kKeyValEnd) {
     scan_errorf(self, "integer or boolean value does not end with semicolon");
     return false;
   }
-  scanner_append(self, TokenKindValue, end);
+  scanner_append(self, KevsTokenKindValue, end);
   return true;
 }
 
@@ -801,7 +802,7 @@ static bool scan_key_value(Scanner *self) {
   return true;
 }
 
-Error scan(Tokens *tokens, Params params) {
+KevsError scan(KevsTokens *tokens, KevsParams params) {
   Scanner s = {
       .params = params,
       .tokens = tokens,
@@ -824,14 +825,14 @@ Error scan(Tokens *tokens, Params params) {
   return NULL;
 }
 
-static void list_reserve(List *self, size_t cap) {
+static void list_reserve(KevsList *self, size_t cap) {
   self->cap = cap;
-  Value *ptr = realloc(self->ptr, cap * sizeof(Value));
+  KevsValue *ptr = realloc(self->ptr, cap * sizeof(KevsValue));
   assert(ptr != NULL);
   self->ptr = ptr;
 }
 
-static void list_append(List *self, Value v) {
+static void list_append(KevsList *self, KevsValue v) {
   if (self->len == self->cap) {
     list_reserve(self, (self->cap + 1) * 2);
   }
@@ -839,14 +840,14 @@ static void list_append(List *self, Value v) {
   self->len += 1;
 }
 
-static void table_reserve(Table *self, size_t cap) {
+static void table_reserve(KevsTable *self, size_t cap) {
   self->cap = cap;
-  KeyValue *ptr = realloc(self->ptr, cap * sizeof(KeyValue));
+  KevsKeyValue *ptr = realloc(self->ptr, cap * sizeof(KevsKeyValue));
   assert(ptr != NULL);
   self->ptr = ptr;
 }
 
-static void table_append(Table *self, KeyValue v) {
+static void table_append(KevsTable *self, KevsKeyValue v) {
   if (self->len == self->cap) {
     table_reserve(self, (self->cap + 1) * 2);
   }
@@ -855,16 +856,16 @@ static void table_append(Table *self, KeyValue v) {
 }
 
 typedef struct {
-  Params params;
-  Tokens tokens;
-  Table *table;
+  KevsParams params;
+  KevsTokens tokens;
+  KevsTable *table;
   size_t i;
 } Parser;
 
-static bool parse_value(Parser *self, Value *out);
-static bool parse_key_value(Parser *self, Table parent, KeyValue *out);
+static bool parse_value(Parser *self, KevsValue *out);
+static bool parse_key_value(Parser *self, KevsTable parent, KevsKeyValue *out);
 
-static Token parser_get(const Parser *self) {
+static KevsToken parser_get(const Parser *self) {
   return self->tokens.ptr[self->i];
 }
 
@@ -897,7 +898,7 @@ static void parse_errorf(const Parser *self, const char *fmt, ...) {
   }
 }
 
-static bool parser_expect(const Parser *self, TokenKind kind) {
+static bool parser_expect(const Parser *self, KevsTokenKind kind) {
   if (self->i >= self->tokens.len) {
     parse_errorf(self, "expected token '%s', have nothing",
                  tokenkind_str(kind));
@@ -907,7 +908,7 @@ static bool parser_expect(const Parser *self, TokenKind kind) {
 }
 
 static bool parser_expect_delim(const Parser *self, char delim) {
-  if (!parser_expect(self, TokenKindDelim)) {
+  if (!parser_expect(self, KevsTokenKindDelim)) {
     return false;
   }
   return str_equals_char(parser_get(self).value, delim);
@@ -921,8 +922,8 @@ static bool parse_delim(Parser *self, char c) {
   return true;
 }
 
-static bool parse_list_value(Parser *self, Value *out) {
-  out->kind = ValueKindList;
+static bool parse_list_value(Parser *self, KevsValue *out) {
+  out->kind = KevsValueKindList;
 
   parser_pop(self);
 
@@ -931,7 +932,7 @@ static bool parse_list_value(Parser *self, Value *out) {
       return true;
     }
 
-    Value v = {};
+    KevsValue v = {};
     if (!parse_value(self, &v)) {
       return false;
     }
@@ -945,8 +946,8 @@ static bool parse_list_value(Parser *self, Value *out) {
   return true;
 }
 
-static bool parse_table_value(Parser *self, Value *out) {
-  out->kind = ValueKindTable;
+static bool parse_table_value(Parser *self, KevsValue *out) {
+  out->kind = KevsValueKindTable;
 
   parser_pop(self);
 
@@ -955,7 +956,7 @@ static bool parse_table_value(Parser *self, Value *out) {
       return true;
     }
 
-    KeyValue kv = {};
+    KevsKeyValue kv = {};
     if (!parse_key_value(self, out->data.table, &kv)) {
       return false;
     }
@@ -969,49 +970,49 @@ static bool parse_table_value(Parser *self, Value *out) {
   return true;
 }
 
-static bool parse_simple_value(Parser *self, Value *out) {
-  if (!parser_expect(self, TokenKindValue)) {
+static bool parse_simple_value(Parser *self, KevsValue *out) {
+  if (!parser_expect(self, KevsTokenKindValue)) {
     parse_errorf(self, "expected value token");
     return false;
   }
 
-  const Str val = parser_get(self).value;
+  const KevsStr val = parser_get(self).value;
 
   bool ok = true;
 
   if (str_starts_with_char(val, kStringBegin)) {
     char *data = NULL;
-    Error err = str_norm(str_slice(val, 1, val.len - 1), &data);
+    KevsError err = str_norm(str_slice(val, 1, val.len - 1), &data);
     if (err != NULL) {
       parse_errorf(self, "could not normalize string: %s", err);
       free(data);
       return false;
     }
-    out->kind = ValueKindString;
+    out->kind = KevsValueKindString;
     out->data.string = data;
 
   } else if (str_starts_with_char(val, kRawStringBegin)) {
-    out->kind = ValueKindString;
+    out->kind = KevsValueKindString;
     out->data.string = str_dup(str_slice(val, 1, val.len - 1));
 
-  } else if (str_equals(val, str_from_cstr("true"))) {
-    out->kind = ValueKindBoolean;
+  } else if (str_equals(val, kevs_str_from_cstr("true"))) {
+    out->kind = KevsValueKindBoolean;
     out->data.boolean = true;
 
-  } else if (str_equals(val, str_from_cstr("false"))) {
-    out->kind = ValueKindBoolean;
+  } else if (str_equals(val, kevs_str_from_cstr("false"))) {
+    out->kind = KevsValueKindBoolean;
     out->data.boolean = false;
 
   } else {
     int64_t i = 0;
-    Error err = str_to_int(val, 0, &i);
+    KevsError err = str_to_int(val, 0, &i);
     if (err != NULL) {
       char *s = str_dup(val);
       parse_errorf(self, "value '%s' is not an integer: %s", s, err);
       free(s);
       ok = false;
     } else {
-      out->kind = ValueKindInteger;
+      out->kind = KevsValueKindInteger;
       out->data.integer = i;
     }
   }
@@ -1021,7 +1022,7 @@ static bool parse_simple_value(Parser *self, Value *out) {
   return ok;
 }
 
-static bool parse_value(Parser *self, Value *out) {
+static bool parse_value(Parser *self, KevsValue *out) {
   bool ok = false;
   if (parser_expect_delim(self, kListBegin)) {
     ok = parse_list_value(self, out);
@@ -1044,13 +1045,13 @@ static bool parse_value(Parser *self, Value *out) {
   return true;
 }
 
-static bool parse_key(Parser *self, Table parent, Str *key) {
-  if (!parser_expect(self, TokenKindKey)) {
+static bool parse_key(Parser *self, KevsTable parent, KevsStr *key) {
+  if (!parser_expect(self, KevsTokenKindKey)) {
     parse_errorf(self, "expected key token");
     return false;
   }
 
-  const Token tok = parser_get(self);
+  const KevsToken tok = parser_get(self);
 
   if (!is_identifier(tok.value)) {
     char *s = str_dup(tok.value);
@@ -1076,8 +1077,8 @@ static bool parse_key(Parser *self, Table parent, Str *key) {
   return true;
 }
 
-static bool parse_key_value(Parser *self, Table parent, KeyValue *out) {
-  Str key = {};
+static bool parse_key_value(Parser *self, KevsTable parent, KevsKeyValue *out) {
+  KevsStr key = {};
   if (!parse_key(self, parent, &key)) {
     return false;
   }
@@ -1087,7 +1088,7 @@ static bool parse_key_value(Parser *self, Table parent, KeyValue *out) {
     return false;
   }
 
-  Value val = {};
+  KevsValue val = {};
   if (!parse_value(self, &val)) {
     return false;
   }
@@ -1098,7 +1099,7 @@ static bool parse_key_value(Parser *self, Table parent, KeyValue *out) {
   return true;
 }
 
-Error parse(Table *table, Params params, Tokens tokens) {
+KevsError parse(KevsTable *table, KevsParams params, KevsTokens tokens) {
   Parser p = {
       .params = params,
       .tokens = tokens,
@@ -1107,7 +1108,7 @@ Error parse(Table *table, Params params, Tokens tokens) {
   };
 
   while (p.i < tokens.len) {
-    KeyValue kv = {};
+    KevsKeyValue kv = {};
     if (!parse_key_value(&p, *table, &kv)) {
       return params.err_buf;
     }
@@ -1117,13 +1118,13 @@ Error parse(Table *table, Params params, Tokens tokens) {
   return NULL;
 }
 
-Error table_parse(Table *table, Params params) {
+KevsError kevs_table_parse(KevsTable *table, KevsParams params) {
   assert(params.err_buf_len != 0);
   assert(params.err_buf != NULL);
 
-  Tokens tokens = {};
+  KevsTokens tokens = {};
 
-  Error err = scan(&tokens, params);
+  KevsError err = scan(&tokens, params);
   if (err == NULL) {
     err = parse(table, params, tokens);
   }
@@ -1133,19 +1134,21 @@ Error table_parse(Table *table, Params params) {
   return err;
 }
 
-void table_free(Table *self) {
+void kevs_table_free(KevsTable *self) {
   for (size_t i = 0; i < self->len; i++) {
     value_free(&self->ptr[i].val);
   }
 
   free(self->ptr);
-  *self = (Table){};
+  *self = (KevsTable){};
 }
 
-static bool value_is(Value self, ValueKind kind) { return self.kind == kind; }
+static bool value_is(KevsValue self, KevsValueKind kind) {
+  return self.kind == kind;
+}
 
-static Error table_get(Table self, const char *key, Value *val) {
-  Str key_str = str_from_cstr(key);
+static KevsError table_get(KevsTable self, const char *key, KevsValue *val) {
+  KevsStr key_str = kevs_str_from_cstr(key);
   for (size_t i = 0; i < self.len; i++) {
     if (str_equals(self.ptr[i].key, key_str)) {
       *val = self.ptr[i].val;
@@ -1155,72 +1158,72 @@ static Error table_get(Table self, const char *key, Value *val) {
   return "key not found";
 }
 
-Error table_string(Table self, const char *key, char **out) {
-  Value val = {};
-  Error err = table_get(self, key, &val);
+KevsError kevs_table_string(KevsTable self, const char *key, char **out) {
+  KevsValue val = {};
+  KevsError err = table_get(self, key, &val);
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, ValueKindString)) {
+  if (!value_is(val, KevsValueKindString)) {
     return "value is not string";
   }
   *out = val.data.string;
   return NULL;
 }
 
-Error table_int(Table self, const char *key, int64_t *out) {
-  Value val = {};
-  Error err = table_get(self, key, &val);
+KevsError kevs_table_int(KevsTable self, const char *key, int64_t *out) {
+  KevsValue val = {};
+  KevsError err = table_get(self, key, &val);
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, ValueKindInteger)) {
+  if (!value_is(val, KevsValueKindInteger)) {
     return "value is not integer";
   }
   *out = val.data.integer;
   return NULL;
 }
 
-Error table_bool(Table self, const char *key, bool *out) {
-  Value val = {};
-  Error err = table_get(self, key, &val);
+KevsError kevs_table_bool(KevsTable self, const char *key, bool *out) {
+  KevsValue val = {};
+  KevsError err = table_get(self, key, &val);
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, ValueKindBoolean)) {
+  if (!value_is(val, KevsValueKindBoolean)) {
     return "value is not boolean";
   }
   *out = val.data.boolean;
   return NULL;
 }
 
-Error table_list(Table self, const char *key, List *out) {
-  Value val = {};
-  Error err = table_get(self, key, &val);
+KevsError kevs_table_list(KevsTable self, const char *key, KevsList *out) {
+  KevsValue val = {};
+  KevsError err = table_get(self, key, &val);
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, ValueKindList)) {
+  if (!value_is(val, KevsValueKindList)) {
     return "value is not list";
   }
   *out = val.data.list;
   return NULL;
 }
 
-Error table_table(Table self, const char *key, Table *out) {
-  Value val = {};
-  Error err = table_get(self, key, &val);
+KevsError kevs_table_table(KevsTable self, const char *key, KevsTable *out) {
+  KevsValue val = {};
+  KevsError err = table_get(self, key, &val);
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, ValueKindTable)) {
+  if (!value_is(val, KevsValueKindTable)) {
     return "value is not table";
   }
   *out = val.data.table;
   return NULL;
 }
 
-static Error list_get(List self, size_t i, Value *val) {
+static KevsError list_get(KevsList self, size_t i, KevsValue *val) {
   if (i >= self.len) {
     return "index out of bounds";
   }
@@ -1228,65 +1231,65 @@ static Error list_get(List self, size_t i, Value *val) {
   return NULL;
 }
 
-Error list_string(List self, size_t i, char **out) {
-  Value val = {};
-  Error err = list_get(self, i, &val);
+KevsError kevs_list_string(KevsList self, size_t i, char **out) {
+  KevsValue val = {};
+  KevsError err = list_get(self, i, &val);
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, ValueKindString)) {
+  if (!value_is(val, KevsValueKindString)) {
     return "value is not string";
   }
   *out = val.data.string;
   return NULL;
 }
 
-Error list_int(List self, size_t i, int64_t *out) {
-  Value val = {};
-  Error err = list_get(self, i, &val);
+KevsError kevs_list_int(KevsList self, size_t i, int64_t *out) {
+  KevsValue val = {};
+  KevsError err = list_get(self, i, &val);
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, ValueKindInteger)) {
+  if (!value_is(val, KevsValueKindInteger)) {
     return "value is not integer";
   }
   *out = val.data.integer;
   return NULL;
 }
 
-Error list_bool(List self, size_t i, bool *out) {
-  Value val = {};
-  Error err = list_get(self, i, &val);
+KevsError kevs_list_bool(KevsList self, size_t i, bool *out) {
+  KevsValue val = {};
+  KevsError err = list_get(self, i, &val);
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, ValueKindBoolean)) {
+  if (!value_is(val, KevsValueKindBoolean)) {
     return "value is not boolean";
   }
   *out = val.data.boolean;
   return NULL;
 }
 
-Error list_list(List self, size_t i, List *out) {
-  Value val = {};
-  Error err = list_get(self, i, &val);
+KevsError kevs_list_list(KevsList self, size_t i, KevsList *out) {
+  KevsValue val = {};
+  KevsError err = list_get(self, i, &val);
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, ValueKindList)) {
+  if (!value_is(val, KevsValueKindList)) {
     return "value is not list";
   }
   *out = val.data.list;
   return NULL;
 }
 
-Error list_table(List self, size_t i, Table *out) {
-  Value val = {};
-  Error err = list_get(self, i, &val);
+KevsError kevs_list_table(KevsList self, size_t i, KevsTable *out) {
+  KevsValue val = {};
+  KevsError err = list_get(self, i, &val);
   if (err != NULL) {
     return err;
   }
-  if (!value_is(val, ValueKindTable)) {
+  if (!value_is(val, KevsValueKindTable)) {
     return "value is not table";
   }
   *out = val.data.table;

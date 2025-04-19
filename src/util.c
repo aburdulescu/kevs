@@ -9,13 +9,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-Error read_file(Str path, char **out, size_t *out_len) {
+KevsError read_file(KevsStr path, char **out, size_t *out_len) {
   int fd = open(path.ptr, O_RDONLY);
   if (fd == -1) {
     return strerror(errno);
   }
 
-  Error err = NULL;
+  KevsError err = NULL;
   char *ptr = NULL;
 
   struct stat stbuf = {};
@@ -53,50 +53,50 @@ cleanup:
   return err;
 }
 
-static const char *valuekind_str(ValueKind v) {
+static const char *valuekind_str(KevsValueKind v) {
   switch (v) {
-  case ValueKindUndefined:
+  case KevsValueKindUndefined:
     return "undefined";
-  case ValueKindString:
+  case KevsValueKindString:
     return "string";
-  case ValueKindInteger:
+  case KevsValueKindInteger:
     return "integer";
-  case ValueKindBoolean:
+  case KevsValueKindBoolean:
     return "boolean";
-  case ValueKindList:
+  case KevsValueKindList:
     return "list";
-  case ValueKindTable:
+  case KevsValueKindTable:
     return "table";
   default:
     return "unknown";
   }
 }
 
-void list_dump(List self) {
+void list_dump(KevsList self) {
   for (size_t i = 0; i < self.len; i++) {
-    const Value v = self.ptr[i];
+    const KevsValue v = self.ptr[i];
 
     switch (v.kind) {
-    case ValueKindTable: {
+    case KevsValueKindTable: {
       printf("%s\n", valuekind_str(v.kind));
       table_dump(v.data.table);
     } break;
 
-    case ValueKindList: {
+    case KevsValueKindList: {
       printf("%s\n", valuekind_str(v.kind));
       list_dump(v.data.list);
     } break;
 
-    case ValueKindString: {
+    case KevsValueKindString: {
       printf("%s '%s'\n", valuekind_str(v.kind), v.data.string);
     } break;
 
-    case ValueKindBoolean: {
+    case KevsValueKindBoolean: {
       printf("%s %s\n", valuekind_str(v.kind),
              (v.data.boolean ? "true" : "false"));
     } break;
 
-    case ValueKindInteger: {
+    case KevsValueKindInteger: {
       printf("%s %" PRId64 "\n", valuekind_str(v.kind), v.data.integer);
     } break;
 
@@ -107,33 +107,33 @@ void list_dump(List self) {
   }
 }
 
-void table_dump(Table self) {
+void table_dump(KevsTable self) {
   for (size_t i = 0; i < self.len; i++) {
-    const KeyValue kv = self.ptr[i];
+    const KevsKeyValue kv = self.ptr[i];
 
     char *k = str_dup(kv.key);
 
     switch (kv.val.kind) {
-    case ValueKindTable: {
+    case KevsValueKindTable: {
       printf("%s %s\n", k, valuekind_str(kv.val.kind));
       table_dump(kv.val.data.table);
     } break;
 
-    case ValueKindList: {
+    case KevsValueKindList: {
       printf("%s %s\n", k, valuekind_str(kv.val.kind));
       list_dump(kv.val.data.list);
     } break;
 
-    case ValueKindString: {
+    case KevsValueKindString: {
       printf("%s %s '%s'\n", k, valuekind_str(kv.val.kind), kv.val.data.string);
     } break;
 
-    case ValueKindBoolean: {
+    case KevsValueKindBoolean: {
       printf("%s %s %s\n", k, valuekind_str(kv.val.kind),
              (kv.val.data.boolean ? "true" : "false"));
     } break;
 
-    case ValueKindInteger: {
+    case KevsValueKindInteger: {
       printf("%s %s %" PRId64 "\n", k, valuekind_str(kv.val.kind),
              kv.val.data.integer);
     } break;

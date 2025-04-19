@@ -74,11 +74,11 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  Str file = str_from_cstr(args[args_index]);
+  KevsStr file = kevs_str_from_cstr(args[args_index]);
 
   char *data = NULL;
   size_t data_len = 0;
-  Error err = read_file(file, &data, &data_len);
+  KevsError err = read_file(file, &data, &data_len);
   if (err != NULL) {
     fprintf(stderr, "error: failed to read file: %s\n", err);
     return 1;
@@ -86,10 +86,10 @@ int main(int argc, char **argv) {
 
   int rc = 0;
 
-  Tokens tokens = {};
-  Table table = {};
+  KevsTokens tokens = {};
+  KevsTable table = {};
   char err_buf[8193] = {};
-  const Params params = {
+  const KevsParams params = {
       .file = file,
       .content = {.ptr = data, .len = data_len},
       .err_buf = err_buf,
@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
   }
 
   if (free_heap) {
-    table_free(&table);
+    kevs_table_free(&table);
     free(tokens.ptr);
     free(data);
   }

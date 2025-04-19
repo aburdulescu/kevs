@@ -6,11 +6,11 @@
 #include "util.h"
 
 int main() {
-  Str file = str_from_cstr("examples/example.kevs");
+  KevsStr file = kevs_str_from_cstr("examples/example.kevs");
 
   char *data = NULL;
   size_t data_len = 0;
-  Error err = read_file(file, &data, &data_len);
+  KevsError err = read_file(file, &data, &data_len);
   if (err != NULL) {
     fprintf(stderr, "error: failed to read file: %s\n", err);
     return 1;
@@ -18,16 +18,16 @@ int main() {
 
   int rc = 0;
 
-  Table table = {};
+  KevsTable table = {};
   char err_buf[8193] = {};
-  const Params params = {
+  const KevsParams params = {
       .file = file,
       .content = {.ptr = data, .len = data_len},
       .err_buf = err_buf,
       .err_buf_len = sizeof(err_buf) - 1,
   };
 
-  err = table_parse(&table, params);
+  err = kevs_table_parse(&table, params);
   if (err != NULL) {
     fprintf(stderr, "error: failed parse root table: %s\n", err);
     rc = 1;
@@ -36,7 +36,7 @@ int main() {
   // string
   {
     char *val = NULL;
-    Error err = table_string(table, "string_escaped", &val);
+    KevsError err = kevs_table_string(table, "string_escaped", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
@@ -48,7 +48,7 @@ int main() {
   // integer
   {
     int64_t val = 0;
-    Error err = table_int(table, "int", &val);
+    KevsError err = kevs_table_int(table, "int", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
@@ -60,7 +60,7 @@ int main() {
   // boolean
   {
     bool val = false;
-    Error err = table_bool(table, "bool", &val);
+    KevsError err = kevs_table_bool(table, "bool", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
@@ -71,8 +71,8 @@ int main() {
 
   // list with elements of different types
   {
-    List val = {};
-    Error err = table_list(table, "list1", &val);
+    KevsList val = {};
+    KevsError err = kevs_table_list(table, "list1", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
@@ -80,7 +80,7 @@ int main() {
       // 1st is int
       {
         int64_t v = 0;
-        Error err = list_int(val, 0, &v);
+        KevsError err = kevs_list_int(val, 0, &v);
         if (err != NULL) {
           fprintf(stderr, "error: %s\n", err);
           rc = 1;
@@ -91,7 +91,7 @@ int main() {
       // 2nd is string
       {
         char *v = NULL;
-        Error err = list_string(val, 1, &v);
+        KevsError err = kevs_list_string(val, 1, &v);
         if (err != NULL) {
           fprintf(stderr, "error: %s\n", err);
           rc = 1;
@@ -102,7 +102,7 @@ int main() {
       // 3rd is boolean
       {
         bool v = false;
-        Error err = list_bool(val, 2, &v);
+        KevsError err = kevs_list_bool(val, 2, &v);
         if (err != NULL) {
           fprintf(stderr, "error: %s\n", err);
           rc = 1;
@@ -115,15 +115,15 @@ int main() {
 
   // list with elements of same types
   {
-    List val = {};
-    Error err = table_list(table, "list2", &val);
+    KevsList val = {};
+    KevsError err = kevs_table_list(table, "list2", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
     } else {
       for (size_t i = 0; i < val.len; i++) {
         char *v = NULL;
-        Error err = list_string(val, i, &v);
+        KevsError err = kevs_list_string(val, i, &v);
         if (err != NULL) {
           fprintf(stderr, "error: %s\n", err);
           rc = 1;
@@ -136,14 +136,14 @@ int main() {
 
   // table
   {
-    Table val = {};
-    Error err = table_table(table, "table2", &val);
+    KevsTable val = {};
+    KevsError err = kevs_table_table(table, "table2", &val);
     if (err != NULL) {
       fprintf(stderr, "error: %s\n", err);
       rc = 1;
     } else {
       char *name = NULL;
-      Error err = table_string(val, "name", &name);
+      KevsError err = kevs_table_string(val, "name", &name);
       if (err != NULL) {
         fprintf(stderr, "error: %s\n", err);
         rc = 1;
@@ -152,7 +152,7 @@ int main() {
       }
 
       int64_t age = 0;
-      err = table_int(val, "age", &age);
+      err = kevs_table_int(val, "age", &age);
       if (err != NULL) {
         fprintf(stderr, "error: %s\n", err);
         rc = 1;
@@ -162,7 +162,7 @@ int main() {
     }
   }
 
-  table_free(&table);
+  kevs_table_free(&table);
   free(data);
 
   return rc;

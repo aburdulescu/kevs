@@ -6,97 +6,97 @@
 #include <stdint.h>
 
 // Error: static null terminated string
-typedef const char *Error;
+typedef const char *KevsError;
 
 // Str: non owning string without null terminator
 typedef struct {
   const char *ptr;
   size_t len;
-} Str;
+} KevsStr;
 
 typedef enum {
-  TokenKindUndefined = 0,
-  TokenKindKey,
-  TokenKindDelim,
-  TokenKindValue,
-} TokenKind;
+  KevsTokenKindUndefined = 0,
+  KevsTokenKindKey,
+  KevsTokenKindDelim,
+  KevsTokenKindValue,
+} KevsTokenKind;
 
 typedef struct {
-  Str value;
-  TokenKind kind;
+  KevsStr value;
+  KevsTokenKind kind;
   int line;
-} Token;
+} KevsToken;
 
 typedef struct {
-  Token *ptr;
+  KevsToken *ptr;
   size_t cap;
   size_t len;
-} Tokens;
+} KevsTokens;
 
 typedef enum {
-  ValueKindUndefined = 0,
-  ValueKindString,
-  ValueKindInteger,
-  ValueKindBoolean,
-  ValueKindList,
-  ValueKindTable,
-} ValueKind;
+  KevsValueKindUndefined = 0,
+  KevsValueKindString,
+  KevsValueKindInteger,
+  KevsValueKindBoolean,
+  KevsValueKindList,
+  KevsValueKindTable,
+} KevsValueKind;
 
-struct Value;
-
-typedef struct {
-  struct Value *ptr;
-  size_t cap;
-  size_t len;
-} List;
-
-struct KeyValue;
+struct KevsValue;
 
 typedef struct {
-  struct KeyValue *ptr;
+  struct KevsValue *ptr;
   size_t cap;
   size_t len;
-} Table;
+} KevsList;
 
-typedef struct Value {
+struct KevsKeyValue;
+
+typedef struct {
+  struct KevsKeyValue *ptr;
+  size_t cap;
+  size_t len;
+} KevsTable;
+
+typedef struct KevsValue {
   union {
     int64_t integer;
     bool boolean;
     char *string;
-    List list;
-    Table table;
+    KevsList list;
+    KevsTable table;
   } data;
-  ValueKind kind;
-} Value;
+  KevsValueKind kind;
+} KevsValue;
 
-typedef struct KeyValue {
-  Str key;
-  Value val;
-} KeyValue;
+typedef struct KevsKeyValue {
+  KevsStr key;
+  KevsValue val;
+} KevsKeyValue;
 
 typedef struct {
-  Str file;
-  Str content;
+  KevsStr file;
+  KevsStr content;
   char *err_buf;
   size_t err_buf_len;
   bool abort_on_error;
-} Params;
+} KevsParams;
 
-Str str_from_cstr(const char *s);
+KevsStr kevs_str_from_cstr(const char *s);
 
-Error table_parse(Table *table, Params params);
-void table_free(Table *self);
+KevsError kevs_table_parse(KevsTable *table, KevsParams params);
+void kevs_table_free(KevsTable *self);
 
-Error table_string(Table self, const char *key, char **out);
-Error table_int(Table self, const char *key, int64_t *out);
-Error table_bool(Table self, const char *key, bool *out);
-Error table_list(Table self, const char *key, List *out);
-Error table_table(Table self, const char *key, Table *out);
+KevsError kevs_table_string(KevsTable self, const char *key, char **out);
+KevsError kevs_table_int(KevsTable self, const char *key, int64_t *out);
+KevsError kevs_table_bool(KevsTable self, const char *key, bool *out);
+KevsError kevs_table_list(KevsTable self, const char *key, KevsList *out);
+KevsError kevs_table_table(KevsTable self, const char *key, KevsTable *out);
 
-Error list_string(List self, size_t i, char **out);
-Error list_int(List self, size_t i, int64_t *out);
-Error list_bool(List self, size_t i, bool *out);
-Error list_list(List self, size_t i, List *out);
-Error list_table(List self, size_t i, Table *out);
+KevsError kevs_list_string(KevsList self, size_t i, char **out);
+KevsError kevs_list_int(KevsList self, size_t i, int64_t *out);
+KevsError kevs_list_bool(KevsList self, size_t i, bool *out);
+KevsError kevs_list_list(KevsList self, size_t i, KevsList *out);
+KevsError kevs_list_table(KevsList self, size_t i, KevsTable *out);
 
 #endif
