@@ -15,13 +15,13 @@ pub fn main() !void {
 
     var err_buf: [8193]u8 = undefined;
 
-    var root: c.Table = .{};
+    var root: c.KevsTable = .{};
     {
-        const err = c.table_parse(
+        const err = c.kevs_table_parse(
             &root,
             .{
-                .file = c.str_from_cstr(file),
-                .content = c.str_from_cstr(content_ptr),
+                .file = c.kevs_str_from_cstr(file),
+                .content = c.kevs_str_from_cstr(content_ptr),
                 .err_buf = &err_buf,
                 .err_buf_len = err_buf.len - 1,
             },
@@ -31,20 +31,20 @@ pub fn main() !void {
             return;
         }
     }
-    defer c.table_free(&root);
+    defer c.kevs_table_free(&root);
 
     var string_escaped: [*c]u8 = null;
     {
-        const err = c.table_string(root, "string_escaped", &string_escaped);
+        const err = c.kevs_table_string(root, "string_escaped", &string_escaped);
         if (err != null) {
             try std.debug.panic("{s}\n", .{err});
             return;
         }
     }
 
-    var table2: c.Table = .{};
+    var table2: c.KevsTable = .{};
     {
-        const err = c.table_table(root, "table2", &table2);
+        const err = c.kevs_table_table(root, "table2", &table2);
         if (err != null) {
             try std.debug.panic("{s}\n", .{err});
             return;
@@ -53,7 +53,7 @@ pub fn main() !void {
 
     var name: [*c]u8 = null;
     {
-        const err = c.table_string(table2, "name", &name);
+        const err = c.kevs_table_string(table2, "name", &name);
         if (err != null) {
             try std.debug.panic("{s}\n", .{err});
             return;
@@ -62,7 +62,7 @@ pub fn main() !void {
 
     var age: i64 = 0;
     {
-        const err = c.table_int(table2, "age", &age);
+        const err = c.kevs_table_int(table2, "age", &age);
         if (err != null) {
             try std.debug.panic("{s}\n", .{err});
             return;
