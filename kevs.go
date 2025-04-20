@@ -73,7 +73,7 @@ func parse(params Params) (Table, error) {
 	}
 
 	for _, tok := range tokens {
-		fmt.Println(tok)
+		fmt.Println(tok.kind)
 	}
 
 	return nil, nil
@@ -142,7 +142,7 @@ func scan(params Params) ([]token, error) {
 		}
 	}
 
-	return nil, nil
+	return s.tokens, nil
 }
 
 func (self *scanner) trim_space() {
@@ -285,7 +285,7 @@ func (self *scanner) scan_string_value() bool {
 	}
 
 	// calculate the end, includes trailing quote
-	end := len(s)
+	end := len(s) + 1
 
 	self.append(tokenKindValue, end)
 
