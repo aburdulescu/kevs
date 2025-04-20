@@ -15,6 +15,7 @@ func main() {
 }
 
 func mainErr() error {
+	flag.Bool("abort", false, "Abort on error")
 	flag.Parse()
 
 	if flag.NArg() == 0 {
@@ -28,7 +29,11 @@ func mainErr() error {
 		return err
 	}
 
-	t, err := parse(Params{File: file, Content: string(data)})
+	t, err := parse(Params{
+		File:         file,
+		Content:      string(data),
+		AbortOnError: true,
+	})
 	if err != nil {
 		return err
 	}
@@ -90,8 +95,9 @@ type token struct {
 }
 
 type Params struct {
-	File    string
-	Content string
+	File         string
+	Content      string
+	AbortOnError bool
 }
 
 type scanner struct {
@@ -187,6 +193,10 @@ func (self *scanner) scan_key_value() bool {
 
 func (self *scanner) errorf(format string, args ...any) {
 	self.err = fmt.Errorf("%s:%d: error: scan: %s", self.params.File, self.line, fmt.Sprintf(format, args...))
+
+	if self.params.AbortOnError {
+		panic(self.err)
+	}
 }
 
 func indexAny(s, chars string) (rune, int) {
