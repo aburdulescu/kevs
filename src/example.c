@@ -27,7 +27,7 @@ int main() {
       .err_buf_len = sizeof(err_buf) - 1,
   };
 
-  err = kevs_table_parse(&table, params);
+  err = kevs_parse(&table, params);
   if (err != NULL) {
     fprintf(stderr, "error: failed parse root table: %s\n", err);
     rc = 1;
@@ -162,7 +162,7 @@ int main() {
     }
   }
 
-  kevs_table_free(&table);
+  kevs_free(&table);
   free(data);
 
   return rc;

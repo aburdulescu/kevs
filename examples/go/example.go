@@ -19,7 +19,7 @@ func main() {
 	var errBuf [8193]byte
 
 	var root C.KevsTable
-	if err := C.kevs_table_parse(
+	if err := C.kevs_parse(
 		&root,
 		C.KevsParams{
 			file:        C.kevs_str_from_cstr(C.CString(file)),
@@ -30,7 +30,7 @@ func main() {
 	); err != nil {
 		panic(C.GoString(err))
 	}
-	defer C.kevs_table_free(&root)
+	defer C.kevs_free(&root)
 
 	var stringEscaped *C.char
 	if err := C.kevs_table_string(root, C.CString("string_escaped"), &stringEscaped); err != nil {

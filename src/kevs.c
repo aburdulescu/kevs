@@ -490,7 +490,7 @@ static void value_free(KevsValue *self) {
     break;
 
   case KevsValueKindTable:
-    kevs_table_free(&self->data.table);
+    kevs_free(&self->data.table);
     break;
 
   default:
@@ -1118,7 +1118,7 @@ KevsError parse(KevsTable *table, KevsParams params, KevsTokens tokens) {
   return NULL;
 }
 
-KevsError kevs_table_parse(KevsTable *table, KevsParams params) {
+KevsError kevs_parse(KevsTable *table, KevsParams params) {
   assert(params.err_buf_len != 0);
   assert(params.err_buf != NULL);
 
@@ -1134,7 +1134,7 @@ KevsError kevs_table_parse(KevsTable *table, KevsParams params) {
   return err;
 }
 
-void kevs_table_free(KevsTable *self) {
+void kevs_free(KevsTable *self) {
   for (size_t i = 0; i < self->len; i++) {
     value_free(&self->ptr[i].val);
   }

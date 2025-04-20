@@ -84,8 +84,8 @@ typedef struct {
 
 KevsStr kevs_str_from_cstr(const char *s);
 
-KevsError kevs_table_parse(KevsTable *table, KevsParams params);
-void kevs_table_free(KevsTable *self);
+KevsError kevs_parse(KevsTable *table, KevsParams params);
+void kevs_free(KevsTable *self);
 
 KevsError kevs_table_string(KevsTable self, const char *key, char **out);
 KevsError kevs_table_int(KevsTable self, const char *key, int64_t *out);

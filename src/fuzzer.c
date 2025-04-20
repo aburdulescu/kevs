@@ -12,9 +12,9 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
       .err_buf_len = sizeof(err_buf) - 1,
   };
 
-  kevs_table_parse(&t, params);
+  kevs_parse(&t, params);
 
-  kevs_table_free(&t);
+  kevs_free(&t);
 
   return 0;
 }

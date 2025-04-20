@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
   }
 
   if (free_heap) {
-    kevs_table_free(&table);
+    kevs_free(&table);
     free(tokens.ptr);
     free(data);
   }

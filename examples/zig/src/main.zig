@@ -17,7 +17,7 @@ pub fn main() !void {
 
     var root: c.KevsTable = .{};
     {
-        const err = c.kevs_table_parse(
+        const err = c.kevs_parse(
             &root,
             .{
                 .file = c.kevs_str_from_cstr(file),
@@ -31,7 +31,7 @@ pub fn main() !void {
             return;
         }
     }
-    defer c.kevs_table_free(&root);
+    defer c.kevs_free(&root);
 
     var string_escaped: [*c]u8 = null;
     {
