@@ -15,7 +15,9 @@ func main() {
 }
 
 func mainErr() error {
-	flag.Bool("abort", false, "Abort on error")
+	abortOnError := flag.Bool("abort", false, "Abort when encountering an error")
+	dump := flag.Bool("dump", false, "Print keys and values, or tokens if -scan is active")
+	onlyScan := flag.Bool("scan", false, "Run only the scanner")
 	flag.Parse()
 
 	if flag.NArg() == 0 {
@@ -29,16 +31,35 @@ func mainErr() error {
 		return err
 	}
 
-	t, err := parse(Params{
+	params := Params{
 		File:         file,
 		Content:      string(data),
-		AbortOnError: true,
-	})
+		AbortOnError: *abortOnError,
+	}
+
+	tokens, err := scan(params)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("table len:", len(t))
+	if *dump {
+		for _, tok := range tokens {
+			fmt.Println(tok.kind, tok.value)
+		}
+	}
+
+	if *onlyScan {
+		return nil
+	}
+
+	root, err := parse(params, tokens)
+	if err != nil {
+		return err
+	}
+
+	if *dump {
+		fmt.Println(len(root))
+	}
 
 	return nil
 }
@@ -66,16 +87,15 @@ type KeyValue struct {
 
 type Table []KeyValue
 
-func parse(params Params) (Table, error) {
+func Parse(params Params) (Table, error) {
 	tokens, err := scan(params)
 	if err != nil {
 		return nil, err
 	}
+	return parse(params, tokens)
+}
 
-	for _, tok := range tokens {
-		fmt.Println(tok.kind, tok.value)
-	}
-
+func parse(params Params, tokens []token) (Table, error) {
 	return nil, nil
 }
 
