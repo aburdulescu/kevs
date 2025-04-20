@@ -195,6 +195,9 @@ func (self *scanner) errorf(format string, args ...any) {
 	self.err = fmt.Errorf("%s:%d: error: scan: %s", self.params.File, self.line, fmt.Sprintf(format, args...))
 
 	if self.params.AbortOnError {
+		for _, tok := range self.tokens {
+			fmt.Println(tok.kind, tok.value)
+		}
 		panic(self.err)
 	}
 }
@@ -262,32 +265,24 @@ func (self *scanner) scan_delim(c byte) bool {
 func (self *scanner) scan_string_value() bool {
 	// advance past leading quote
 	end := 1
-	s := self.params.Content[end:]
+	s := self.params.Content
 
 	for {
 		// search for trailing quote
-		i := strings.IndexByte(s, kStringBegin)
-
+		i := strings.IndexByte(s[end:], kStringBegin)
 		if i == -1 {
 			self.errorf("string value does not end with quote")
 			return false
 		}
 
-		// get previous char
-		prev := s[i-1]
-
 		// advance
-		s = s[i+1:]
-		end += i
+		end += i + 1
 
 		// stop if quote is not escaped
-		if prev != '\\' {
+		if prev := s[end-2]; prev != '\\' {
 			break
 		}
 	}
-
-	// +1 for trailing quote
-	end += 1
 
 	self.append(tokenKindValue, end)
 
@@ -354,7 +349,6 @@ func (self *scanner) scan_list_value() bool {
 			return true
 		}
 	}
-	return true
 }
 
 func (self *scanner) scan_table_value() bool {
@@ -389,7 +383,6 @@ func (self *scanner) scan_table_value() bool {
 			return true
 		}
 	}
-	return true
 }
 
 func (self *scanner) append_delim() {
