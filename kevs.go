@@ -38,7 +38,7 @@ func mainErr() error {
 		return err
 	}
 
-	fmt.Println(len(t))
+	fmt.Println("table len:", len(t))
 
 	return nil
 }
@@ -73,7 +73,7 @@ func parse(params Params) (Table, error) {
 	}
 
 	for _, tok := range tokens {
-		fmt.Println(tok.kind)
+		fmt.Println(tok.kind, tok.value)
 	}
 
 	return nil, nil
@@ -261,7 +261,8 @@ func (self *scanner) scan_delim(c byte) bool {
 
 func (self *scanner) scan_string_value() bool {
 	// advance past leading quote
-	s := self.params.Content[1:]
+	end := 1
+	s := self.params.Content[end:]
 
 	for {
 		// search for trailing quote
@@ -277,6 +278,7 @@ func (self *scanner) scan_string_value() bool {
 
 		// advance
 		s = s[i+1:]
+		end += i
 
 		// stop if quote is not escaped
 		if prev != '\\' {
@@ -284,8 +286,8 @@ func (self *scanner) scan_string_value() bool {
 		}
 	}
 
-	// calculate the end, includes trailing quote
-	end := len(s) + 1
+	// +1 for trailing quote
+	end += 1
 
 	self.append(tokenKindValue, end)
 
@@ -293,8 +295,7 @@ func (self *scanner) scan_string_value() bool {
 }
 
 func (self *scanner) scan_raw_string() bool {
-	end :=
-		strings.IndexByte(self.params.Content[1:], kRawStringBegin)
+	end := strings.IndexByte(self.params.Content[1:], kRawStringBegin)
 	if end == -1 {
 		self.errorf("raw string value does not end with backtick")
 		return false
