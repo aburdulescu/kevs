@@ -82,7 +82,7 @@ func parse(params Params) (Table, error) {
 type tokenKind uint8
 
 const (
-	tokenKindUndefined tokenKind = 0
+	tokenKindUndefined tokenKind = iota
 	tokenKindKey
 	tokenKindDelim
 	tokenKindValue
