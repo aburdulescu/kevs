@@ -28,7 +28,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
 endif()
 
 add_executable(kevs src/cli.c src/kevs.c src/util.c)
-add_executable(unittests src/unittests.c src/kevs.c)
+add_executable(unittests src/unittests.c src/kevs.c src/util.c)
 add_executable(example src/example.c src/kevs.c src/util.c)
 
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang")

@@ -48,7 +48,7 @@ static void string_append(String *self, char v) {
   self->ptr[self->len] = 0;
 }
 
-KevsStr kevs_str_from_cstr(const char *s) {
+KevsStr str_from_cstr(const char *s) {
   assert(s != NULL);
   KevsStr self = {
       .ptr = s,
@@ -559,12 +559,12 @@ static void scanner_advance(Scanner *self, size_t n) {
 
 static void scanner_trim_space(Scanner *self) {
   self->params.content =
-      str_trim_left(self->params.content, kevs_str_from_cstr(spaces));
+      str_trim_left(self->params.content, str_from_cstr(spaces));
 }
 
 static void scanner_append(Scanner *self, KevsTokenKind kind, size_t end) {
   KevsStr val = str_slice(self->params.content, 0, end);
-  val = str_trim_right(val, kevs_str_from_cstr(spaces));
+  val = str_trim_right(val, str_from_cstr(spaces));
 
   const KevsToken t = {
       .kind = kind,
@@ -605,8 +605,7 @@ static bool scan_comment(Scanner *self) {
 
 static bool scan_key(Scanner *self) {
   char c = 0;
-  const int end =
-      str_index_any(self->params.content, kevs_str_from_cstr("=\n"), &c);
+  const int end = str_index_any(self->params.content, str_from_cstr("=\n"), &c);
   if (end == -1 || c != kKeyValSep) {
     scan_errorf(self, "key-value pair is missing separator");
     return false;
@@ -684,7 +683,7 @@ static bool scan_int_or_bool_value(Scanner *self) {
   // if semicolon(or none of them) is not found => error
   char c = 0;
   const int end =
-      str_index_any(self->params.content, kevs_str_from_cstr(";]}\n"), &c);
+      str_index_any(self->params.content, str_from_cstr(";]}\n"), &c);
   if (end == -1 || c != kKeyValEnd) {
     scan_errorf(self, "integer or boolean value does not end with semicolon");
     return false;
@@ -995,11 +994,11 @@ static bool parse_simple_value(Parser *self, KevsValue *out) {
     out->kind = KevsValueKindString;
     out->data.string = str_dup(str_slice(val, 1, val.len - 1));
 
-  } else if (str_equals(val, kevs_str_from_cstr("true"))) {
+  } else if (str_equals(val, str_from_cstr("true"))) {
     out->kind = KevsValueKindBoolean;
     out->data.boolean = true;
 
-  } else if (str_equals(val, kevs_str_from_cstr("false"))) {
+  } else if (str_equals(val, str_from_cstr("false"))) {
     out->kind = KevsValueKindBoolean;
     out->data.boolean = false;
 
@@ -1148,7 +1147,7 @@ static bool value_is(KevsValue self, KevsValueKind kind) {
 }
 
 static KevsError table_get(KevsTable self, const char *key, KevsValue *val) {
-  KevsStr key_str = kevs_str_from_cstr(key);
+  KevsStr key_str = str_from_cstr(key);
   for (size_t i = 0; i < self.len; i++) {
     if (str_equals(self.ptr[i].key, key_str)) {
       *val = self.ptr[i].val;
