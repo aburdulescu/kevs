@@ -59,7 +59,7 @@ func mainErr() error {
 	}
 
 	if *dump {
-		fmt.Println(len(root))
+		root.dump()
 	}
 
 	return nil
@@ -76,9 +76,11 @@ const (
 	ValueKindTable
 )
 
+type List []Value
+
 type ValueData struct {
-	List    []Value
-	Table   []KeyValue
+	List    List
+	Table   Table
 	String  string
 	Integer int64
 	Boolean bool
@@ -802,5 +804,78 @@ func tokenkind_str(v tokenKind) string {
 		return "value"
 	default:
 		return "unknown"
+	}
+}
+
+func (self Table) dump() {
+	for _, kv := range self {
+		switch kv.Value.Kind {
+		case ValueKindTable:
+			fmt.Printf("%s %s\n", kv.Key, valuekind_str(kv.Value.Kind))
+			kv.Value.Data.Table.dump()
+
+		case ValueKindList:
+			fmt.Printf("%s %s\n", kv.Key, valuekind_str(kv.Value.Kind))
+			kv.Value.Data.List.dump()
+
+		case ValueKindString:
+			fmt.Printf("%s %s '%s'\n", kv.Key, valuekind_str(kv.Value.Kind), kv.Value.Data.String)
+
+		case ValueKindBoolean:
+			fmt.Printf("%s %s %v\n", kv.Key, valuekind_str(kv.Value.Kind), kv.Value.Data.Boolean)
+
+		case ValueKindInteger:
+			fmt.Printf("%s %s %d\n", kv.Key, valuekind_str(kv.Value.Kind), kv.Value.Data.Integer)
+
+		default:
+			fmt.Printf("%s %s\n", kv.Key, valuekind_str(kv.Value.Kind))
+
+		}
+	}
+}
+
+func valuekind_str(v ValueKind) string {
+	switch v {
+	case ValueKindUndefined:
+		return "undefined"
+	case ValueKindString:
+		return "string"
+	case ValueKindInteger:
+		return "integer"
+	case ValueKindBoolean:
+		return "boolean"
+	case ValueKindList:
+		return "list"
+	case ValueKindTable:
+		return "table"
+	default:
+		return "unknown"
+	}
+}
+
+func (self List) dump() {
+	for _, v := range self {
+		switch v.Kind {
+		case ValueKindTable:
+			fmt.Printf("%s\n", valuekind_str(v.Kind))
+			v.Data.Table.dump()
+
+		case ValueKindList:
+			fmt.Printf("%s\n", valuekind_str(v.Kind))
+			v.Data.List.dump()
+
+		case ValueKindString:
+			fmt.Printf("%s '%s'\n", valuekind_str(v.Kind), v.Data.String)
+
+		case ValueKindBoolean:
+			fmt.Printf("%s %v\n", valuekind_str(v.Kind), v.Data.Boolean)
+
+		case ValueKindInteger:
+			fmt.Printf("%s %d\n", valuekind_str(v.Kind), v.Data.Integer)
+
+		default:
+			fmt.Printf("%s\n", valuekind_str(v.Kind))
+
+		}
 	}
 }
