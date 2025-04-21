@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -76,11 +77,11 @@ const (
 )
 
 type ValueData struct {
-	List   []Value
-	Table  []KeyValue
-	String string
-	Int    int64
-	Bool   bool
+	List    []Value
+	Table   []KeyValue
+	String  string
+	Integer int64
+	Boolean bool
 }
 
 type Value struct {
@@ -577,6 +578,54 @@ func (self *parser) parse_table_value() (*Value, bool) {
 	}
 
 	return out, true
+}
+
+func (self *parser) parse_simple_value() (*Value, bool) {
+	if !self.expect(tokenKindValue) {
+		self.errorf("expected value token")
+		return nil, false
+	}
+
+	val := self.get().value
+
+	ok := true
+	out := &Value{}
+
+	if val[0] == kStringBegin {
+		data, err := strconv.Unquote(val[1 : len(val)-1])
+		if err != nil {
+			self.errorf("could not normalize string: %s", err)
+			return nil, false
+		}
+		out.Kind = ValueKindString
+		out.Data.String = data
+
+	} else if val[0] == kRawStringBegin {
+		out.Kind = ValueKindString
+		out.Data.String = val[1 : len(val)-1]
+
+	} else if val == "true" {
+		out.Kind = ValueKindBoolean
+		out.Data.Boolean = true
+
+	} else if val == "false" {
+		out.Kind = ValueKindBoolean
+		out.Data.Boolean = false
+
+	} else {
+		i, err := strconv.ParseInt(val, 0, 64)
+		if err != nil {
+			self.errorf("value '%s' is not an integer: %s", val, err)
+			ok = false
+		} else {
+			out.Kind = ValueKindInteger
+			out.Data.Integer = i
+		}
+	}
+
+	self.pop()
+
+	return out, ok
 }
 
 func (self *parser) parse_delim(c byte) bool {
