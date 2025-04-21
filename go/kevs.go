@@ -44,7 +44,7 @@ func mainErr() error {
 
 	if *dump {
 		for _, tok := range tokens {
-			fmt.Println(tok.kind, tok.value)
+			fmt.Println(tokenkind_str(tok.kind), tok.value)
 		}
 	}
 
@@ -75,9 +75,17 @@ const (
 	ValueKindTable
 )
 
+type ValueData struct {
+	List   []Value
+	Table  []KeyValue
+	String string
+	Int    int64
+	Bool   bool
+}
+
 type Value struct {
 	Kind ValueKind
-	Data any
+	Data ValueData
 }
 
 type KeyValue struct {
@@ -93,10 +101,6 @@ func Parse(params Params) (Table, error) {
 		return nil, err
 	}
 	return parse(params, tokens)
-}
-
-func parse(params Params, tokens []token) (Table, error) {
-	return nil, nil
 }
 
 type tokenKind uint8
@@ -211,13 +215,10 @@ func (self *scanner) scan_key_value() bool {
 	return true
 }
 
-func (self *scanner) errorf(format string, args ...any) {
+func (self scanner) errorf(format string, args ...any) {
 	self.err = fmt.Errorf("%s:%d: error: scan: %s", self.params.File, self.line, fmt.Sprintf(format, args...))
 
 	if self.params.AbortOnError {
-		for _, tok := range self.tokens {
-			fmt.Println(tok.kind, tok.value)
-		}
 		panic(self.err)
 	}
 }
@@ -425,4 +426,228 @@ func (self *scanner) append(kind tokenKind, end int) {
 	})
 
 	self.advance(end)
+}
+
+type parser struct {
+	params Params
+	tokens []token
+	table  Table
+	i      int
+	err    error
+}
+
+func parse(params Params, tokens []token) (Table, error) {
+	p := parser{
+		params: params,
+		tokens: tokens,
+	}
+
+	for p.i < len(tokens) {
+		kv, ok := p.parse_key_value(p.table)
+		if !ok {
+			return nil, p.err
+		}
+		p.table = append(p.table, *kv)
+	}
+
+	return p.table, nil
+}
+
+func (self *parser) parse_key_value(parent Table) (*KeyValue, bool) {
+	key, ok := self.parse_key(parent)
+	if !ok {
+		return nil, false
+	}
+
+	if !self.parse_delim(kKeyValSep) {
+		self.errorf("missing key value separator")
+		return nil, false
+	}
+
+	val, ok := self.parse_value()
+	if !ok {
+		return nil, false
+	}
+
+	out := &KeyValue{
+		Key:   key,
+		Value: *val,
+	}
+
+	return out, true
+}
+
+func (self *parser) parse_key(parent Table) (string, bool) {
+	if !self.expect(tokenKindKey) {
+		self.errorf("expected key token")
+		return "", false
+	}
+
+	tok := self.get()
+
+	if !is_identifier(tok.value) {
+		self.errorf("key is not a valid identifier: '%s'", tok.value)
+		return "", false
+	}
+
+	// check if key is unique
+	for _, kv := range parent {
+		if kv.Key == tok.value {
+			self.errorf("key '%s' is not unique for current table", tok.value)
+			return "", false
+		}
+	}
+
+	key := tok.value
+
+	self.pop()
+
+	return key, false
+}
+
+func (self *parser) parse_value() (*Value, bool) {
+	ok := false
+	out := &Value{}
+	if self.expect_delim(kListBegin) {
+		out, ok = self.parse_list_value()
+	} else if self.expect_delim(kTableBegin) {
+		out, ok = self.parse_table_value()
+	} else {
+		out, ok = self.parse_simple_value()
+	}
+	if !ok {
+		return nil, false
+	}
+
+	if !self.parse_delim(kKeyValEnd) {
+		self.errorf("missing key value end")
+		return nil, false
+	}
+
+	return out, true
+}
+
+func (self *parser) parse_list_value() (*Value, bool) {
+	out := &Value{
+		Kind: ValueKindList,
+	}
+
+	self.pop()
+
+	for {
+		if self.parse_delim(kListEnd) {
+			return out, true
+		}
+
+		v, ok := self.parse_value()
+		if !ok {
+			return nil, false
+		}
+		out.Data.List = append(out.Data.List, *v)
+
+		if self.parse_delim(kListEnd) {
+			return out, true
+		}
+	}
+
+	return out, true
+}
+
+func (self *parser) parse_table_value() (*Value, bool) {
+	out := &Value{
+		Kind: ValueKindTable,
+	}
+
+	self.pop()
+
+	for {
+		if self.parse_delim(kTableEnd) {
+			return out, true
+		}
+
+		kv, ok := self.parse_key_value(out.Data.Table)
+		if !ok {
+			return nil, false
+		}
+		out.Data.Table = append(out.Data.Table, *kv)
+
+		if self.parse_delim(kTableEnd) {
+			return out, true
+		}
+	}
+
+	return out, true
+}
+
+func (self *parser) parse_delim(c byte) bool {
+	if !self.expect_delim(c) {
+		return false
+	}
+	self.pop()
+	return true
+}
+
+func (self parser) expect_delim(delim byte) bool {
+	if !self.expect(tokenKindDelim) {
+		return false
+	}
+	return self.get().value == string(delim)
+}
+
+func (self parser) errorf(format string, args ...any) {
+	self.err = fmt.Errorf("%s:%d: error: parse: %s", self.params.File, self.get().line, fmt.Sprintf(format, args...))
+
+	if self.params.AbortOnError {
+		panic(self.err)
+	}
+}
+
+func is_digit(c byte) bool { return c >= '0' && c <= '9' }
+
+func lower(c byte) byte { return (c | ('x' - 'X')) }
+
+func is_letter(c byte) bool {
+	return lower(c) >= 'a' && lower(c) <= 'z'
+}
+
+func is_identifier(s string) bool {
+	c := s[0]
+	if c != '_' && !is_letter(c) {
+		return false
+	}
+	for i := 1; i < len(s); i++ {
+		if !is_digit(s[i]) && !is_letter(s[i]) && s[i] != '_' {
+			return false
+		}
+	}
+	return true
+}
+
+func (self parser) get() token {
+	return self.tokens[self.i]
+}
+
+func (self *parser) pop() { self.i++ }
+
+func (self parser) expect(kind tokenKind) bool {
+	if self.i >= len(self.tokens) {
+		self.errorf("expected token '%s', have nothing", tokenkind_str(kind))
+		return false
+	}
+	return self.get().kind == kind
+}
+
+func tokenkind_str(v tokenKind) string {
+	switch v {
+	case tokenKindUndefined:
+		return "undefined"
+	case tokenKindKey:
+		return "key"
+	case tokenKindDelim:
+		return "delim"
+	case tokenKindValue:
+		return "value"
+	default:
+		return "unknown"
+	}
 }
