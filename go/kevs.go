@@ -503,7 +503,7 @@ func (self *parser) parse_key(parent Table) (string, bool) {
 
 	self.pop()
 
-	return key, false
+	return key, true
 }
 
 func (self *parser) parse_value() (*Value, bool) {
@@ -550,8 +550,6 @@ func (self *parser) parse_list_value() (*Value, bool) {
 			return out, true
 		}
 	}
-
-	return out, true
 }
 
 func (self *parser) parse_table_value() (*Value, bool) {
@@ -576,8 +574,6 @@ func (self *parser) parse_table_value() (*Value, bool) {
 			return out, true
 		}
 	}
-
-	return out, true
 }
 
 func (self *parser) parse_simple_value() (*Value, bool) {
@@ -592,7 +588,7 @@ func (self *parser) parse_simple_value() (*Value, bool) {
 	out := &Value{}
 
 	if val[0] == kStringBegin {
-		data, err := strconv.Unquote(val[1 : len(val)-1])
+		data, err := normString(val[1 : len(val)-1])
 		if err != nil {
 			self.errorf("could not normalize string: %s", err)
 			return nil, false
@@ -626,6 +622,114 @@ func (self *parser) parse_simple_value() (*Value, bool) {
 	self.pop()
 
 	return out, ok
+}
+
+func normString(s string) (string, error) {
+	dst := strings.Builder{}
+
+	for i := 0; i < len(s); {
+		if s[i] == '\\' {
+			i++
+			switch s[i] {
+			case 'a', 'b', 'f', 'n', 'r', 't', 'v', '"', '\\':
+				dst.WriteByte(s[i])
+				i++
+
+			case 'u':
+				i++
+
+				if (i + 4) > len(s) {
+					return "", fmt.Errorf("\\u must be followed by 4 hex digits: \\uXXXX")
+				}
+
+				code, err := strconv.ParseUint(s[i:i+4], 16, 64)
+				if err != nil {
+					return "", err
+				}
+				i += 4
+
+				utf8 := ucs_to_utf8(code)
+				if utf8 == nil {
+					return "", fmt.Errorf("could not encode Unicode code point to UTF-8")
+				}
+				dst.Write(utf8)
+
+			case 'U':
+				i++
+
+				if (i + 8) > len(s) {
+					return "", fmt.Errorf("\\U must be followed by 8 hex digits: \\UXXXXXXXX")
+				}
+
+				code, err := strconv.ParseUint(s[i:i+8], 16, 64)
+				if err != nil {
+					return "", err
+				}
+				i += 8
+
+				utf8 := ucs_to_utf8(code)
+				if utf8 == nil {
+					return "", fmt.Errorf("could not encode Unicode code point to UTF-8")
+				}
+				dst.Write(utf8)
+
+			default:
+				return "", fmt.Errorf("unknown escape sequence")
+
+			}
+		} else {
+			dst.WriteByte(s[i])
+			i++
+		}
+	}
+
+	return dst.String(), nil
+}
+
+// Convert UCS code point to UTF-8
+func ucs_to_utf8(code uint64) []byte {
+	// Code points in the surrogate range are not valid for UTF-8.
+	if 0xd800 <= code && code <= 0xdfff {
+		return nil
+	}
+
+	var out []byte
+
+	// 0x00000000 - 0x0000007F:
+	// 0xxxxxxx
+	if code <= 0x0000007F {
+		out = append(out, byte(code))
+		return out
+	}
+
+	// 0x00000080 - 0x000007FF:
+	// 110xxxxx 10xxxxxx
+	if code <= 0x000007FF {
+		out = append(out, byte(0xc0|(code>>6)))
+		out = append(out, byte(0x80|(code&0x3f)))
+		return out
+	}
+
+	// 0x00000800 - 0x0000FFFF:
+	// 1110xxxx 10xxxxxx 10xxxxxx
+	if code <= 0x0000FFFF {
+		out = append(out, byte(0xe0|(code>>12)))
+		out = append(out, byte(0x80|((code>>6)&0x3f)))
+		out = append(out, byte(0x80|(code&0x3f)))
+		return out
+	}
+
+	// 0x00010000 - 0x0010FFFF:
+	// 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+	if code <= 0x0010FFFF {
+		out = append(out, byte(0xf0|(code>>18)))
+		out = append(out, byte(0x80|((code>>12)&0x3f)))
+		out = append(out, byte(0x80|((code>>6)&0x3f)))
+		out = append(out, byte(0x80|(code&0x3f)))
+		return out
+	}
+
+	return nil
 }
 
 func (self *parser) parse_delim(c byte) bool {
