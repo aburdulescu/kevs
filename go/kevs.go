@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -653,7 +652,7 @@ func normString(s string) (string, error) {
 					return "", fmt.Errorf("\\u must be followed by 4 hex digits: \\uXXXX")
 				}
 
-				code, err := strconv.ParseUint(s[i:i+4], 16, 64)
+				code, err := str_to_uint(s[i:i+4], 16)
 				if err != nil {
 					return "", err
 				}
@@ -672,7 +671,7 @@ func normString(s string) (string, error) {
 					return "", fmt.Errorf("\\U must be followed by 8 hex digits: \\UXXXXXXXX")
 				}
 
-				code, err := strconv.ParseUint(s[i:i+8], 16, 64)
+				code, err := str_to_uint(s[i:i+8], 16)
 				if err != nil {
 					return "", err
 				}
