@@ -8,17 +8,26 @@ import (
 	"strings"
 )
 
+var (
+	abortOnError = flag.Bool("abort", false, "Abort when encountering an error")
+	dump         = flag.Bool("dump", false, "Print keys and values, or tokens if -scan is active")
+	onlyScan     = flag.Bool("scan", false, "Run only the scanner")
+	free         = flag.Bool("free", false, "dummy")
+	noErr        = flag.Bool("no-err", false, "Exit with code 0 even if an error was encountered")
+)
+
 func main() {
 	if err := mainErr(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		fmt.Println(err)
+		if *noErr {
+			os.Exit(0)
+		} else {
+			os.Exit(1)
+		}
 	}
 }
 
 func mainErr() error {
-	abortOnError := flag.Bool("abort", false, "Abort when encountering an error")
-	dump := flag.Bool("dump", false, "Print keys and values, or tokens if -scan is active")
-	onlyScan := flag.Bool("scan", false, "Run only the scanner")
 	flag.Parse()
 
 	if flag.NArg() == 0 {
@@ -43,7 +52,7 @@ func mainErr() error {
 		return err
 	}
 
-	if *dump {
+	if *dump && *onlyScan {
 		for _, tok := range tokens {
 			fmt.Println(tokenkind_str(tok.kind), tok.value)
 		}
@@ -218,7 +227,7 @@ func (self *scanner) scan_key_value() bool {
 	return true
 }
 
-func (self scanner) errorf(format string, args ...any) {
+func (self *scanner) errorf(format string, args ...any) {
 	self.err = fmt.Errorf("%s:%d: error: scan: %s", self.params.File, self.line, fmt.Sprintf(format, args...))
 
 	if self.params.AbortOnError {
@@ -749,7 +758,7 @@ func (self parser) expect_delim(delim byte) bool {
 	return self.get().value == string(delim)
 }
 
-func (self parser) errorf(format string, args ...any) {
+func (self *parser) errorf(format string, args ...any) {
 	self.err = fmt.Errorf("%s:%d: error: parse: %s", self.params.File, self.get().line, fmt.Sprintf(format, args...))
 
 	if self.params.AbortOnError {
