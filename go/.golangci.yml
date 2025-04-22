@@ -1,0 +1,17 @@
+linters:
+  enable:
+    - errorlint
+    - unconvert
+    - unparam
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - exhaustive
+    - forcetypeassert
+    - goconst
+    - gocritic
+    - gofmt
+    - gosec
+    - nilerr
+    - usestdlibvars

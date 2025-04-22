@@ -620,7 +620,7 @@ func (self *parser) parse_simple_value() (*Value, bool) {
 		out.Data.Boolean = false
 
 	} else {
-		i, err := strconv.ParseInt(val, 0, 64)
+		i, err := str_to_int(val, 0)
 		if err != nil {
 			self.errorf("value '%s' is not an integer: %s", val, err)
 			ok = false
@@ -887,4 +887,112 @@ func (self List) dump() {
 
 		}
 	}
+}
+
+func str_to_uint(s string, base uint64) (uint64, error) {
+	if len(s) == 0 {
+		return 0, fmt.Errorf("empty input")
+	}
+
+	if base == 0 {
+		if s[0] == '0' {
+			// stop if 0
+			if len(s) == 1 {
+				return 0, nil
+			}
+			if len(s) < 3 {
+				return 0, fmt.Errorf("leading 0 requires at least 2 more chars")
+			}
+			switch s[1] {
+			case 'x':
+				base = 16
+				s = s[2:]
+			case 'o':
+				base = 8
+				s = s[2:]
+			case 'b':
+				base = 2
+				s = s[2:]
+			default:
+				return 0, fmt.Errorf("invalid base char, must be 'x', 'o' or 'b'")
+			}
+		} else {
+			base = 10
+		}
+	} else {
+		if base != 2 && base != 8 && base != 16 {
+			return 0, fmt.Errorf("invalid base")
+		}
+	}
+
+	const max = 1<<64 - 1
+
+	// cutoff is the smallest number such that cutoff*base > max.
+	cutoff := max/base + 1
+
+	n := uint64(0)
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+
+		d := uint64(0)
+		if is_digit(c) {
+			d = uint64(c - '0')
+		} else if is_letter(c) {
+			d = uint64(lower(c) - 'a' + 10)
+		} else {
+			return 0, fmt.Errorf("invalid char, must be a letter or a digit")
+		}
+
+		if d >= base {
+			return 0, fmt.Errorf("invalid digit, bigger than base")
+		}
+
+		if n >= cutoff {
+			return 0, fmt.Errorf("invalid input, mul overflows")
+		}
+		n *= base
+
+		n1 := n + d
+		if n1 < n || n1 > max {
+			return 0, fmt.Errorf("invalid input, add overflows")
+		}
+		n = n1
+	}
+
+	return n, nil
+}
+
+func str_to_int(s string, base uint64) (int64, error) {
+	if len(s) == 0 {
+		return 0, fmt.Errorf("empty input")
+	}
+
+	neg := false
+	if s[0] == '+' {
+		s = s[1:]
+	} else if s[0] == '-' {
+		neg = true
+		s = s[1:]
+	}
+
+	un, err := str_to_uint(s, base)
+	if err != nil {
+		return 0, err
+	}
+
+	max := uint64(1) << 63
+
+	if !neg && un >= max {
+		return 0, fmt.Errorf("invalid input, overflows max value")
+	}
+	if neg && un > max {
+		return 0, fmt.Errorf("invalid input, underflows min value")
+	}
+
+	n := int64(un)
+	if neg && n >= 0 {
+		n = -n
+	}
+
+	return n, nil
 }
