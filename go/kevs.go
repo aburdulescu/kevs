@@ -640,8 +640,32 @@ func normString(s string) (string, error) {
 		if s[i] == '\\' {
 			i++
 			switch s[i] {
-			case 'a', 'b', 'f', 'n', 'r', 't', 'v', '"', '\\':
-				dst.WriteByte(s[i])
+			case 'a':
+				dst.WriteByte('\a')
+				i++
+			case 'b':
+				dst.WriteByte('\b')
+				i++
+			case 'f':
+				dst.WriteByte('\f')
+				i++
+			case 'n':
+				dst.WriteByte('\n')
+				i++
+			case 'r':
+				dst.WriteByte('\r')
+				i++
+			case 't':
+				dst.WriteByte('\t')
+				i++
+			case 'v':
+				dst.WriteByte('\v')
+				i++
+			case '"':
+				dst.WriteByte('"')
+				i++
+			case '\\':
+				dst.WriteByte('\\')
 				i++
 
 			case 'u':
