@@ -197,7 +197,7 @@ func (self *scanner) errorf(format string, args ...any) {
 
 func indexAny(s, chars string) (rune, int) {
 	for i, c := range s {
-		if strings.IndexRune(chars, c) >= 0 {
+		if strings.ContainsRune(chars, c) {
 			return c, i
 		}
 	}
