@@ -11,7 +11,7 @@ var (
 	abortOnError = flag.Bool("abort", false, "Abort when encountering an error")
 	dump         = flag.Bool("dump", false, "Print keys and values, or tokens if -scan is active")
 	onlyScan     = flag.Bool("scan", false, "Run only the scanner")
-	_            = flag.Bool("free", false, "dummy")
+	_            = flag.Bool("free", false, "Not used")
 	noErr        = flag.Bool("no-err", false, "Exit with code 0 even if an error was encountered")
 )
 

@@ -18,9 +18,8 @@ class Token:
 
 
 def index_any(s, chars):
-    for c in s:
-        i = chars.find(c)
-        if i != -1:
+    for i, c in enumerate(s):
+        if chars.find(c) != -1:
             return i, c
     return -1, None
 
@@ -39,12 +38,13 @@ kTableEnd = "}"
 
 
 class Scanner:
-    def __init__(self, file: str, content: str):
+    def __init__(self, file: str, content: str, abort: bool):
         self.file = file
         self.content = content
         self.tokens = []
         self.line = 1
         self.error = ""
+        self.abort = abort
 
     def scan(self):
         while len(self.content) != 0:
@@ -223,6 +223,8 @@ class Scanner:
 
     def errorf(self, s: str):
         self.error = f"{self.file}:{self.line}: error: scan: {s}"
+        if self.abort:
+            assert False, self.error
 
     def append(self, kind: TokenKind, end: int):
         val = self.content[:end].rstrip(kSpaces)
@@ -300,12 +302,13 @@ def is_identifier(key: str) -> bool:
 
 
 class Parser:
-    def __init__(self, file: str, content: str, tokens: []):
+    def __init__(self, file: str, content: str, tokens: [], abort: bool):
         self.file = file
         self.content = content
         self.tokens = tokens
         self.i = 0
         self.error = ""
+        self.abort = abort
 
     def parse(self):
         table = []
@@ -486,6 +489,8 @@ class Parser:
 
     def errorf(self, s: str):
         self.error = f"{self.file}:{self.tokens[self.i].line}: error: parse: {s}"
+        if self.abort:
+            assert False, self.error
 
 
 def list_dump(root):

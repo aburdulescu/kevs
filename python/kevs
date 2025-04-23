@@ -11,6 +11,7 @@ parser.add_argument(
     help="Print keys and values, or tokens if --scan is active",
 )
 parser.add_argument("--scan", action="store_true", help="Run only the scanner")
+parser.add_argument("--abort", action="store_true", help="Abort when encountering an error")
 parser.add_argument("--free", action="store_true", help="Not used")
 parser.add_argument("--no-err", action="store_true", help="Exit with code 0 even if an error was encountered")
 args = parser.parse_args()
@@ -19,7 +20,7 @@ content = ""
 with open(args.file, "r") as f:
     content = f.read()
 
-s = kevs.Scanner(args.file, content)
+s = kevs.Scanner(args.file, content, abort=args.abort)
 tokens = s.scan()
 if tokens is None:
     print(s.error)
@@ -29,7 +30,7 @@ else:
             print(token.kind.name, token.value)
 
     if not args.scan:
-        p = kevs.Parser(args.file, content, tokens)
+        p = kevs.Parser(args.file, content, tokens, abort=args.abort)
         table = p.parse()
         if table is None:
             print(p.error)
