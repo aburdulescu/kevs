@@ -55,3 +55,10 @@ func Test_ucs_to_utf8(t *testing.T) {
 		}
 	}
 }
+
+func Test_indexAny(t *testing.T) {
+	s := "b 2;\n"
+
+	c, i := indexAny(s, "=\n")
+	t.Log(c == '=', i)
+}

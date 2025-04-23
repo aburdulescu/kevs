@@ -230,26 +230,21 @@ func (self *scanner) errorf(format string, args ...any) {
 }
 
 func indexAny(s, chars string) (rune, int) {
-	i := strings.IndexAny(s, chars)
-	if i == -1 {
-		return 0, -1
-	}
-	for _, r := range chars {
-		i := strings.IndexRune(s, r)
-		if i != -1 {
-			return r, i
+	for i, c := range s {
+		if strings.IndexRune(chars, c) >= 0 {
+			return c, i
 		}
 	}
 	return 0, -1
 }
 
 func (self *scanner) scan_key() bool {
-	c, end := indexAny(self.params.Content, "=\n")
-	if end == -1 || c != kKeyValSep {
+	c, i := indexAny(self.params.Content, "=;\n")
+	if c != kKeyValSep {
 		self.errorf("key-value pair is missing separator")
 		return false
 	}
-	self.append(tokenKindKey, end)
+	self.append(tokenKindKey, i)
 	if len(self.tokens[len(self.tokens)-1].value) == 0 {
 		self.errorf("empty key")
 		return false

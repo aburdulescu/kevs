@@ -605,12 +605,12 @@ static bool scan_comment(Scanner *self) {
 
 static bool scan_key(Scanner *self) {
   char c = 0;
-  const int end = str_index_any(self->params.content, str_from_cstr("=\n"), &c);
-  if (end == -1 || c != kKeyValSep) {
+  const int i = str_index_any(self->params.content, str_from_cstr("=;\n"), &c);
+  if (c != kKeyValSep) {
     scan_errorf(self, "key-value pair is missing separator");
     return false;
   }
-  scanner_append(self, KevsTokenKindKey, end);
+  scanner_append(self, KevsTokenKindKey, i);
   if (self->tokens->ptr[self->tokens->len - 1].value.len == 0) {
     scan_errorf(self, "empty key");
     return false;
@@ -682,13 +682,12 @@ static bool scan_int_or_bool_value(Scanner *self) {
   // search for all possible value endings
   // if semicolon(or none of them) is not found => error
   char c = 0;
-  const int end =
-      str_index_any(self->params.content, str_from_cstr(";]}\n"), &c);
-  if (end == -1 || c != kKeyValEnd) {
+  const int i = str_index_any(self->params.content, str_from_cstr(";]}\n"), &c);
+  if (c != kKeyValEnd) {
     scan_errorf(self, "integer or boolean value does not end with semicolon");
     return false;
   }
-  scanner_append(self, KevsTokenKindValue, end);
+  scanner_append(self, KevsTokenKindValue, i);
   return true;
 }
 

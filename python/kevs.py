@@ -17,9 +17,9 @@ class Token:
     line: int
 
 
-def str_find_any(s, chars):
-    for c in chars:
-        i = s.find(c)
+def index_any(s, chars):
+    for c in s:
+        i = chars.find(c)
         if i != -1:
             return i, c
     return -1, None
@@ -82,11 +82,11 @@ class Scanner:
         return True
 
     def scan_key(self) -> bool:
-        end, c = str_find_any(self.content, "=\n")
-        if end == -1 or c != kKeyValSep:
+        i, c = index_any(self.content, "=;\n")
+        if c != kKeyValSep:
             self.errorf("key-value pair is missing separator")
             return False
-        self.append(TokenKind.key, end)
+        self.append(TokenKind.key, i)
         if len(self.tokens[-1].value) == 0:
             self.errorf("empty key")
             return False
@@ -208,11 +208,11 @@ class Scanner:
     def scan_int_or_bool_value(self) -> bool:
         # search for all possible value endings
         # if semicolon(or none of them) is not found => error
-        end, c = str_find_any(self.content, ";]}\n")
-        if end == -1 or c != kKeyValEnd:
+        i, c = index_any(self.content, ";]}\n")
+        if c != kKeyValEnd:
             self.errorf("integer or boolean value does not end with semicolon")
             return False
-        self.append(TokenKind.value, end)
+        self.append(TokenKind.value, i)
         return True
 
     def scan_delim(self, c: str) -> bool:
