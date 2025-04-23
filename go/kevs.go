@@ -1,77 +1,9 @@
-package main
+package kevs
 
 import (
-	"flag"
 	"fmt"
-	"os"
 	"strings"
 )
-
-var (
-	abortOnError = flag.Bool("abort", false, "Abort when encountering an error")
-	dump         = flag.Bool("dump", false, "Print keys and values, or tokens if -scan is active")
-	onlyScan     = flag.Bool("scan", false, "Run only the scanner")
-	_            = flag.Bool("free", false, "Not used")
-	noErr        = flag.Bool("no-err", false, "Exit with code 0 even if an error was encountered")
-)
-
-func main() {
-	if err := mainErr(); err != nil {
-		fmt.Println(err)
-		if *noErr {
-			os.Exit(0)
-		} else {
-			os.Exit(1)
-		}
-	}
-}
-
-func mainErr() error {
-	flag.Parse()
-
-	if flag.NArg() == 0 {
-		return fmt.Errorf("need file")
-	}
-
-	file := flag.Arg(0)
-
-	data, err := os.ReadFile(file)
-	if err != nil {
-		return err
-	}
-
-	params := Params{
-		File:         file,
-		Content:      string(data),
-		AbortOnError: *abortOnError,
-	}
-
-	tokens, err := scan(params)
-	if err != nil {
-		return err
-	}
-
-	if *dump && *onlyScan {
-		for _, tok := range tokens {
-			fmt.Println(tokenkind_str(tok.kind), tok.value)
-		}
-	}
-
-	if *onlyScan {
-		return nil
-	}
-
-	root, err := parse(params, tokens)
-	if err != nil {
-		return err
-	}
-
-	if *dump {
-		root.dump()
-	}
-
-	return nil
-}
 
 type ValueKind uint8
 
@@ -83,6 +15,25 @@ const (
 	ValueKindList
 	ValueKindTable
 )
+
+func (self ValueKind) String() string {
+	switch self {
+	case ValueKindUndefined:
+		return "undefined"
+	case ValueKindString:
+		return "string"
+	case ValueKindInteger:
+		return "integer"
+	case ValueKindBoolean:
+		return "boolean"
+	case ValueKindList:
+		return "list"
+	case ValueKindTable:
+		return "table"
+	default:
+		return "unknown"
+	}
+}
 
 type List []Value
 
@@ -107,26 +58,41 @@ type KeyValue struct {
 type Table []KeyValue
 
 func Parse(params Params) (Table, error) {
-	tokens, err := scan(params)
+	tokens, err := Scan(params)
 	if err != nil {
 		return nil, err
 	}
-	return parse(params, tokens)
+	return ParseTokens(params, tokens)
 }
 
-type tokenKind uint8
+type TokenKind uint8
 
 const (
-	tokenKindUndefined tokenKind = iota
-	tokenKindKey
-	tokenKindDelim
-	tokenKindValue
+	TokenKindUndefined TokenKind = iota
+	TokenKindKey
+	TokenKindDelim
+	TokenKindValue
 )
 
-type token struct {
-	value string
-	kind  tokenKind
-	line  int
+func (self TokenKind) String() string {
+	switch self {
+	case TokenKindUndefined:
+		return "undefined"
+	case TokenKindKey:
+		return "key"
+	case TokenKindDelim:
+		return "delim"
+	case TokenKindValue:
+		return "value"
+	default:
+		return "unknown"
+	}
+}
+
+type Token struct {
+	Value string
+	Kind  TokenKind
+	Line  int
 }
 
 type Params struct {
@@ -137,7 +103,7 @@ type Params struct {
 
 type scanner struct {
 	params Params
-	tokens []token
+	tokens []Token
 	line   int
 	err    error
 }
@@ -156,7 +122,7 @@ const (
 	spaces = " \t"
 )
 
-func scan(params Params) ([]token, error) {
+func Scan(params Params) ([]Token, error) {
 	s := scanner{
 		params: params,
 		line:   1,
@@ -244,8 +210,8 @@ func (self *scanner) scan_key() bool {
 		self.errorf("key-value pair is missing separator")
 		return false
 	}
-	self.append(tokenKindKey, i)
-	if len(self.tokens[len(self.tokens)-1].value) == 0 {
+	self.append(TokenKindKey, i)
+	if len(self.tokens[len(self.tokens)-1].Value) == 0 {
 		self.errorf("empty key")
 		return false
 	}
@@ -307,7 +273,7 @@ func (self *scanner) scan_string_value() bool {
 		}
 	}
 
-	self.append(tokenKindValue, end)
+	self.append(TokenKindValue, end)
 
 	return true
 }
@@ -320,10 +286,10 @@ func (self *scanner) scan_raw_string() bool {
 	}
 
 	// +2 for leading and trailing quotes
-	self.append(tokenKindValue, end+2)
+	self.append(TokenKindValue, end+2)
 
 	// count newlines in raw string to keep line count accurate
-	self.line += strings.Count(self.tokens[len(self.tokens)-1].value, "\n")
+	self.line += strings.Count(self.tokens[len(self.tokens)-1].Value, "\n")
 
 	return true
 }
@@ -336,7 +302,7 @@ func (self *scanner) scan_int_or_bool_value() bool {
 		self.errorf("integer or boolean value does not end with semicolon")
 		return false
 	}
-	self.append(tokenKindValue, end)
+	self.append(TokenKindValue, end)
 	return true
 }
 
@@ -409,22 +375,22 @@ func (self *scanner) scan_table_value() bool {
 }
 
 func (self *scanner) append_delim() {
-	self.tokens = append(self.tokens, token{
-		kind:  tokenKindDelim,
-		value: self.params.Content[0:1],
-		line:  self.line,
+	self.tokens = append(self.tokens, Token{
+		Kind:  TokenKindDelim,
+		Value: self.params.Content[0:1],
+		Line:  self.line,
 	})
 	self.advance(1)
 }
 
-func (self *scanner) append(kind tokenKind, end int) {
+func (self *scanner) append(kind TokenKind, end int) {
 	val := self.params.Content[:end]
 	val = strings.TrimRight(val, spaces)
 
-	self.tokens = append(self.tokens, token{
-		kind:  kind,
-		value: val,
-		line:  self.line,
+	self.tokens = append(self.tokens, Token{
+		Kind:  kind,
+		Value: val,
+		Line:  self.line,
 	})
 
 	self.advance(end)
@@ -432,13 +398,13 @@ func (self *scanner) append(kind tokenKind, end int) {
 
 type parser struct {
 	params Params
-	tokens []token
+	tokens []Token
 	table  Table
 	i      int
 	err    error
 }
 
-func parse(params Params, tokens []token) (Table, error) {
+func ParseTokens(params Params, tokens []Token) (Table, error) {
 	p := parser{
 		params: params,
 		tokens: tokens,
@@ -480,27 +446,27 @@ func (self *parser) parse_key_value(parent Table) (*KeyValue, bool) {
 }
 
 func (self *parser) parse_key(parent Table) (string, bool) {
-	if !self.expect(tokenKindKey) {
+	if !self.expect(TokenKindKey) {
 		self.errorf("expected key token")
 		return "", false
 	}
 
 	tok := self.get()
 
-	if !is_identifier(tok.value) {
-		self.errorf("key is not a valid identifier: '%s'", tok.value)
+	if !is_identifier(tok.Value) {
+		self.errorf("key is not a valid identifier: '%s'", tok.Value)
 		return "", false
 	}
 
 	// check if key is unique
 	for _, kv := range parent {
-		if kv.Key == tok.value {
-			self.errorf("key '%s' is not unique for current table", tok.value)
+		if kv.Key == tok.Value {
+			self.errorf("key '%s' is not unique for current table", tok.Value)
 			return "", false
 		}
 	}
 
-	key := tok.value
+	key := tok.Value
 
 	self.pop()
 
@@ -580,12 +546,12 @@ func (self *parser) parse_table_value() (*Value, bool) {
 }
 
 func (self *parser) parse_simple_value() (*Value, bool) {
-	if !self.expect(tokenKindValue) {
+	if !self.expect(TokenKindValue) {
 		self.errorf("expected value token")
 		return nil, false
 	}
 
-	val := self.get().value
+	val := self.get().Value
 
 	ok := true
 	out := &Value{}
@@ -769,14 +735,14 @@ func (self *parser) parse_delim(c byte) bool {
 }
 
 func (self parser) expect_delim(delim byte) bool {
-	if !self.expect(tokenKindDelim) {
+	if !self.expect(TokenKindDelim) {
 		return false
 	}
-	return self.get().value == string(delim)
+	return self.get().Value == string(delim)
 }
 
 func (self *parser) errorf(format string, args ...any) {
-	self.err = fmt.Errorf("%s:%d: error: parse: %s", self.params.File, self.get().line, fmt.Sprintf(format, args...))
+	self.err = fmt.Errorf("%s:%d: error: parse: %s", self.params.File, self.get().Line, fmt.Sprintf(format, args...))
 
 	if self.params.AbortOnError {
 		panic(self.err)
@@ -804,109 +770,75 @@ func is_identifier(s string) bool {
 	return true
 }
 
-func (self parser) get() token {
+func (self parser) get() Token {
 	return self.tokens[self.i]
 }
 
 func (self *parser) pop() { self.i++ }
 
-func (self parser) expect(kind tokenKind) bool {
+func (self parser) expect(kind TokenKind) bool {
 	if self.i >= len(self.tokens) {
-		self.errorf("expected token '%s', have nothing", tokenkind_str(kind))
+		self.errorf("expected token '%s', have nothing", kind)
 		return false
 	}
-	return self.get().kind == kind
+	return self.get().Kind == kind
 }
 
-func tokenkind_str(v tokenKind) string {
-	switch v {
-	case tokenKindUndefined:
-		return "undefined"
-	case tokenKindKey:
-		return "key"
-	case tokenKindDelim:
-		return "delim"
-	case tokenKindValue:
-		return "value"
-	default:
-		return "unknown"
-	}
-}
-
-func (self Table) dump() {
+func (self Table) Dump() {
 	for _, kv := range self {
 		switch kv.Value.Kind {
 		case ValueKindTable:
-			fmt.Printf("%s %s\n", kv.Key, valuekind_str(kv.Value.Kind))
-			kv.Value.Data.Table.dump()
+			fmt.Printf("%s %s\n", kv.Key, kv.Value.Kind)
+			kv.Value.Data.Table.Dump()
 
 		case ValueKindList:
-			fmt.Printf("%s %s\n", kv.Key, valuekind_str(kv.Value.Kind))
-			kv.Value.Data.List.dump()
+			fmt.Printf("%s %s\n", kv.Key, kv.Value.Kind)
+			kv.Value.Data.List.Dump()
 
 		case ValueKindString:
-			fmt.Printf("%s %s '%s'\n", kv.Key, valuekind_str(kv.Value.Kind), kv.Value.Data.String)
+			fmt.Printf("%s %s '%s'\n", kv.Key, kv.Value.Kind, kv.Value.Data.String)
 
 		case ValueKindBoolean:
-			fmt.Printf("%s %s %v\n", kv.Key, valuekind_str(kv.Value.Kind), kv.Value.Data.Boolean)
+			fmt.Printf("%s %s %v\n", kv.Key, kv.Value.Kind, kv.Value.Data.Boolean)
 
 		case ValueKindInteger:
-			fmt.Printf("%s %s %d\n", kv.Key, valuekind_str(kv.Value.Kind), kv.Value.Data.Integer)
+			fmt.Printf("%s %s %d\n", kv.Key, kv.Value.Kind, kv.Value.Data.Integer)
 
 		case ValueKindUndefined:
-			fmt.Printf("%s %s\n", kv.Key, valuekind_str(kv.Value.Kind))
+			fmt.Printf("%s %s\n", kv.Key, kv.Value.Kind)
 
 		default:
-			fmt.Printf("%s %s\n", kv.Key, valuekind_str(kv.Value.Kind))
+			fmt.Printf("%s %s\n", kv.Key, kv.Value.Kind)
 
 		}
 	}
 }
 
-func valuekind_str(v ValueKind) string {
-	switch v {
-	case ValueKindUndefined:
-		return "undefined"
-	case ValueKindString:
-		return "string"
-	case ValueKindInteger:
-		return "integer"
-	case ValueKindBoolean:
-		return "boolean"
-	case ValueKindList:
-		return "list"
-	case ValueKindTable:
-		return "table"
-	default:
-		return "unknown"
-	}
-}
-
-func (self List) dump() {
+func (self List) Dump() {
 	for _, v := range self {
 		switch v.Kind {
 		case ValueKindTable:
-			fmt.Printf("%s\n", valuekind_str(v.Kind))
-			v.Data.Table.dump()
+			fmt.Printf("%s\n", v.Kind)
+			v.Data.Table.Dump()
 
 		case ValueKindList:
-			fmt.Printf("%s\n", valuekind_str(v.Kind))
-			v.Data.List.dump()
+			fmt.Printf("%s\n", v.Kind)
+			v.Data.List.Dump()
 
 		case ValueKindString:
-			fmt.Printf("%s '%s'\n", valuekind_str(v.Kind), v.Data.String)
+			fmt.Printf("%s '%s'\n", v.Kind, v.Data.String)
 
 		case ValueKindBoolean:
-			fmt.Printf("%s %v\n", valuekind_str(v.Kind), v.Data.Boolean)
+			fmt.Printf("%s %v\n", v.Kind, v.Data.Boolean)
 
 		case ValueKindInteger:
-			fmt.Printf("%s %d\n", valuekind_str(v.Kind), v.Data.Integer)
+			fmt.Printf("%s %d\n", v.Kind, v.Data.Integer)
 
 		case ValueKindUndefined:
-			fmt.Printf("%s\n", valuekind_str(v.Kind))
+			fmt.Printf("%s\n", v.Kind)
 
 		default:
-			fmt.Printf("%s\n", valuekind_str(v.Kind))
+			fmt.Printf("%s\n", v.Kind)
 
 		}
 	}

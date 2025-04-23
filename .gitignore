@@ -9,4 +9,4 @@
 /zig-out/
 /testdata/corpus/
 /python/__pycache__/
-/go/kevs
+/go/cmd/kevs/kevs
