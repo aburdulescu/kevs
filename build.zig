@@ -31,9 +31,9 @@ pub fn build(b: *std.Build) void {
     };
 
     const executables = [_]Executable{
-        .{ .name = "kevs", .srcs = &[_][]const u8{ "src/cli.c", "src/util.c", "src/kevs.c" } },
-        .{ .name = "unittests", .srcs = &[_][]const u8{ "src/unittests.c", "src/kevs.c" } },
-        .{ .name = "example", .srcs = &[_][]const u8{ "src/example.c", "src/util.c", "src/kevs.c" } },
+        .{ .name = "kevs", .srcs = &[_][]const u8{ "src/c/cli.c", "src/c/util.c", "src/c/kevs.c" } },
+        .{ .name = "unittests", .srcs = &[_][]const u8{ "src/c/unittests.c", "src/c/kevs.c" } },
+        .{ .name = "example", .srcs = &[_][]const u8{ "src/c/example.c", "src/c/util.c", "src/c/kevs.c" } },
     };
 
     const targets = [_]std.Target.Query{

@@ -8,5 +8,5 @@
 /.zig-cache/
 /zig-out/
 /testdata/corpus/
-/python/__pycache__/
-/go/cmd/kevs/kevs
+/src/python/__pycache__/
+/src/go/cmd/kevs/kevs

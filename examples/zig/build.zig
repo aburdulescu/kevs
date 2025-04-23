@@ -12,11 +12,11 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
     });
     exe.addCSourceFiles(.{
-        .files = &[_][]const u8{"../../src/kevs.c"},
+        .files = &[_][]const u8{"../../src/c/kevs.c"},
         .flags = &.{ "-std=c99", "-g", "-Wall", "-Wextra", "-Werror" },
     });
     exe.addIncludePath(.{
-        .cwd_relative = "../../src/",
+        .cwd_relative = "../../src/c/",
     });
     b.installArtifact(exe);
 

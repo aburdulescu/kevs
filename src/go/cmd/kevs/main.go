@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aburdulescu/kevs/go/kevs"
+	"github.com/aburdulescu/kevs/src/go"
 )
 
 var (
