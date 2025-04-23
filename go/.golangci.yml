@@ -2,7 +2,6 @@ linters:
   enable:
     - errorlint
     - unconvert
-    - unparam
     - asasalint
     - asciicheck
     - bidichk

@@ -11,7 +11,7 @@ var (
 	abortOnError = flag.Bool("abort", false, "Abort when encountering an error")
 	dump         = flag.Bool("dump", false, "Print keys and values, or tokens if -scan is active")
 	onlyScan     = flag.Bool("scan", false, "Run only the scanner")
-	free         = flag.Bool("free", false, "dummy")
+	_            = flag.Bool("free", false, "dummy")
 	noErr        = flag.Bool("no-err", false, "Exit with code 0 even if an error was encountered")
 )
 
@@ -165,11 +165,12 @@ func scan(params Params) ([]token, error) {
 	for len(s.params.Content) != 0 {
 		s.trim_space()
 		ok := false
-		if s.expect('\n') {
+		switch {
+		case s.expect('\n'):
 			ok = s.scan_newline()
-		} else if s.expect(kCommentBegin) {
+		case s.expect(kCommentBegin):
 			ok = s.scan_comment()
-		} else {
+		default:
 			ok = s.scan_key_value()
 		}
 		if !ok {
@@ -215,15 +216,9 @@ func (self *scanner) scan_key_value() bool {
 	if !self.scan_key() {
 		return false
 	}
-
 	// separator check done in scan_key, no need to check again
 	self.append_delim()
-
-	if !self.scan_value() {
-		return false
-	}
-
-	return true
+	return self.scan_value()
 }
 
 func (self *scanner) errorf(format string, args ...any) {
@@ -265,15 +260,16 @@ func (self *scanner) scan_key() bool {
 func (self *scanner) scan_value() bool {
 	self.trim_space()
 	ok := false
-	if self.expect(kListBegin) {
+	switch {
+	case self.expect(kListBegin):
 		ok = self.scan_list_value()
-	} else if self.expect(kTableBegin) {
+	case self.expect(kTableBegin):
 		ok = self.scan_table_value()
-	} else if self.expect(kStringBegin) {
+	case self.expect(kStringBegin):
 		ok = self.scan_string_value()
-	} else if self.expect(kRawStringBegin) {
+	case self.expect(kRawStringBegin):
 		ok = self.scan_raw_string()
-	} else {
+	default:
 		ok = self.scan_int_or_bool_value()
 	}
 	if !ok {
@@ -517,13 +513,15 @@ func (self *parser) parse_key(parent Table) (string, bool) {
 }
 
 func (self *parser) parse_value() (*Value, bool) {
-	ok := false
-	out := &Value{}
-	if self.expect_delim(kListBegin) {
+	var ok bool
+	var out *Value
+
+	switch {
+	case self.expect_delim(kListBegin):
 		out, ok = self.parse_list_value()
-	} else if self.expect_delim(kTableBegin) {
+	case self.expect_delim(kTableBegin):
 		out, ok = self.parse_table_value()
-	} else {
+	default:
 		out, ok = self.parse_simple_value()
 	}
 	if !ok {
@@ -597,7 +595,8 @@ func (self *parser) parse_simple_value() (*Value, bool) {
 	ok := true
 	out := &Value{}
 
-	if val[0] == kStringBegin {
+	switch {
+	case val[0] == kStringBegin:
 		data, err := normString(val[1 : len(val)-1])
 		if err != nil {
 			self.errorf("could not normalize string: %s", err)
@@ -606,19 +605,19 @@ func (self *parser) parse_simple_value() (*Value, bool) {
 		out.Kind = ValueKindString
 		out.Data.String = data
 
-	} else if val[0] == kRawStringBegin {
+	case val[0] == kRawStringBegin:
 		out.Kind = ValueKindString
 		out.Data.String = val[1 : len(val)-1]
 
-	} else if val == "true" {
+	case val == "true":
 		out.Kind = ValueKindBoolean
 		out.Data.Boolean = true
 
-	} else if val == "false" {
+	case val == "false":
 		out.Kind = ValueKindBoolean
 		out.Data.Boolean = false
 
-	} else {
+	default:
 		i, err := str_to_int(val, 0)
 		if err != nil {
 			self.errorf("value '%s' is not an integer: %s", val, err)
@@ -835,6 +834,9 @@ func (self Table) dump() {
 		case ValueKindInteger:
 			fmt.Printf("%s %s %d\n", kv.Key, valuekind_str(kv.Value.Kind), kv.Value.Data.Integer)
 
+		case ValueKindUndefined:
+			fmt.Printf("%s %s\n", kv.Key, valuekind_str(kv.Value.Kind))
+
 		default:
 			fmt.Printf("%s %s\n", kv.Key, valuekind_str(kv.Value.Kind))
 
@@ -880,6 +882,9 @@ func (self List) dump() {
 
 		case ValueKindInteger:
 			fmt.Printf("%s %d\n", valuekind_str(v.Kind), v.Data.Integer)
+
+		case ValueKindUndefined:
+			fmt.Printf("%s\n", valuekind_str(v.Kind))
 
 		default:
 			fmt.Printf("%s\n", valuekind_str(v.Kind))
@@ -934,11 +939,12 @@ func str_to_uint(s string, base uint64) (uint64, error) {
 		c := s[i]
 
 		d := uint64(0)
-		if is_digit(c) {
+		switch {
+		case is_digit(c):
 			d = uint64(c - '0')
-		} else if is_letter(c) {
+		case is_letter(c):
 			d = uint64(lower(c) - 'a' + 10)
-		} else {
+		default:
 			return 0, fmt.Errorf("invalid char, must be a letter or a digit")
 		}
 
@@ -988,6 +994,7 @@ func str_to_int(s string, base uint64) (int64, error) {
 		return 0, fmt.Errorf("invalid input, underflows min value")
 	}
 
+	//nolint overflow checked above
 	n := int64(un)
 	if neg && n >= 0 {
 		n = -n
