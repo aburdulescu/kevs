@@ -22,8 +22,8 @@ func main() {
 	if err := C.kevs_parse(
 		&root,
 		C.KevsParams{
-			file:        C.kevs_str_from_cstr(C.CString(file)),
-			content:     C.kevs_str_from_cstr(C.CString(string(data))),
+			file:        C.str_from_cstr(C.CString(file)),
+			content:     C.str_from_cstr(C.CString(string(data))),
 			err_buf:     C.CString(string(errBuf[:])),
 			err_buf_len: C.size_t(len(errBuf) - 1),
 		},

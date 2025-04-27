@@ -5,7 +5,6 @@
 
 // kevs.c
 
-KevsStr str_from_cstr(const char *s);
 char *str_dup(KevsStr self);
 int str_index_char(KevsStr self, char c);
 KevsStr str_slice_low(KevsStr self, size_t low);

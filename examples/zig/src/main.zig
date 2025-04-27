@@ -20,8 +20,8 @@ pub fn main() !void {
         const err = c.kevs_parse(
             &root,
             .{
-                .file = c.kevs_str_from_cstr(file),
-                .content = c.kevs_str_from_cstr(content_ptr),
+                .file = c.str_from_cstr(file),
+                .content = c.str_from_cstr(content_ptr),
                 .err_buf = &err_buf,
                 .err_buf_len = err_buf.len - 1,
             },
