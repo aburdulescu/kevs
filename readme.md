@@ -105,6 +105,14 @@ y = {foo = true; bar = 0xcafe; };
 - Basic example: [example.kevs](./examples/example.kevs).
 - [TOML example](./examples/toml.toml) from toml.io compared with its [KEVS equivalent](./examples/toml.kevs)
 
+## Implementations
+
+- [C](./src/c)
+- [Python(partial)](./src/py)
+- [Go](https://github.com/aburdulescu/gokevs)
+
+The C implementation can be used by in any language which can interoperate with C(see examples for Go and Zig).
+
 ## Possible FAQ
 
 ### What's with the trailing `;`?
