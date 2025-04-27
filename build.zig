@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 
 pub fn build(b: *std.Build) void {
     comptime {
-        const needed = "0.13.0";
+        const needed = "0.14.0";
         const current = builtin.zig_version;
         const needed_vers = std.SemanticVersion.parse(needed) catch unreachable;
         if (current.order(needed_vers) != .eq) {
