@@ -632,7 +632,7 @@ func generateCoverage(outDir string, profiles []string, binaries []string) error
 			"-show-regions=false",
 		}
 		args = append(args, binaries...)
-		args = append(args, "src/kevs.c")
+		args = append(args, "src/c/kevs.c")
 		cmd := exec.CommandContext(ctx, "llvm-cov", args...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
