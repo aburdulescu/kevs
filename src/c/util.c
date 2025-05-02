@@ -53,55 +53,36 @@ cleanup:
   return err;
 }
 
-const char *valuekind_str(KevsValueKind v) {
-  switch (v) {
-  case KevsValueKindUndefined:
-    return "undefined";
-  case KevsValueKindString:
-    return "string";
-  case KevsValueKindInteger:
-    return "integer";
-  case KevsValueKindBoolean:
-    return "boolean";
-  case KevsValueKindList:
-    return "list";
-  case KevsValueKindTable:
-    return "table";
-  default:
-    return "unknown";
-  }
-}
-
 void list_dump(KevsList self) {
   for (size_t i = 0; i < self.len; i++) {
     const KevsValue v = self.ptr[i];
 
     switch (v.kind) {
     case KevsValueKindTable: {
-      printf("%s\n", valuekind_str(v.kind));
+      printf("%s\n", kevs_valuekind_str(v.kind));
       table_dump(v.data.table);
     } break;
 
     case KevsValueKindList: {
-      printf("%s\n", valuekind_str(v.kind));
+      printf("%s\n", kevs_valuekind_str(v.kind));
       list_dump(v.data.list);
     } break;
 
     case KevsValueKindString: {
-      printf("%s '%s'\n", valuekind_str(v.kind), v.data.string);
+      printf("%s '%s'\n", kevs_valuekind_str(v.kind), v.data.string);
     } break;
 
     case KevsValueKindBoolean: {
-      printf("%s %s\n", valuekind_str(v.kind),
+      printf("%s %s\n", kevs_valuekind_str(v.kind),
              (v.data.boolean ? "true" : "false"));
     } break;
 
     case KevsValueKindInteger: {
-      printf("%s %" PRId64 "\n", valuekind_str(v.kind), v.data.integer);
+      printf("%s %" PRId64 "\n", kevs_valuekind_str(v.kind), v.data.integer);
     } break;
 
     default: {
-      printf("%s\n", valuekind_str(v.kind));
+      printf("%s\n", kevs_valuekind_str(v.kind));
     } break;
     }
   }
@@ -111,35 +92,36 @@ void table_dump(KevsTable self) {
   for (size_t i = 0; i < self.len; i++) {
     const KevsKeyValue kv = self.ptr[i];
 
-    char *k = str_dup(kv.key);
+    char *k = kevs_str_dup(kv.key);
 
     switch (kv.val.kind) {
     case KevsValueKindTable: {
-      printf("%s %s\n", k, valuekind_str(kv.val.kind));
+      printf("%s %s\n", k, kevs_valuekind_str(kv.val.kind));
       table_dump(kv.val.data.table);
     } break;
 
     case KevsValueKindList: {
-      printf("%s %s\n", k, valuekind_str(kv.val.kind));
+      printf("%s %s\n", k, kevs_valuekind_str(kv.val.kind));
       list_dump(kv.val.data.list);
     } break;
 
     case KevsValueKindString: {
-      printf("%s %s '%s'\n", k, valuekind_str(kv.val.kind), kv.val.data.string);
+      printf("%s %s '%s'\n", k, kevs_valuekind_str(kv.val.kind),
+             kv.val.data.string);
     } break;
 
     case KevsValueKindBoolean: {
-      printf("%s %s %s\n", k, valuekind_str(kv.val.kind),
+      printf("%s %s %s\n", k, kevs_valuekind_str(kv.val.kind),
              (kv.val.data.boolean ? "true" : "false"));
     } break;
 
     case KevsValueKindInteger: {
-      printf("%s %s %" PRId64 "\n", k, valuekind_str(kv.val.kind),
+      printf("%s %s %" PRId64 "\n", k, kevs_valuekind_str(kv.val.kind),
              kv.val.data.integer);
     } break;
 
     default: {
-      printf("%s %s\n", k, valuekind_str(kv.val.kind));
+      printf("%s %s\n", k, kevs_valuekind_str(kv.val.kind));
     } break;
     }
 

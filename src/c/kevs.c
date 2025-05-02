@@ -27,6 +27,25 @@ static bool is_identifier(KevsStr s) {
   return true;
 }
 
+const char *kevs_valuekind_str(KevsValueKind v) {
+  switch (v) {
+  case KevsValueKindUndefined:
+    return "undefined";
+  case KevsValueKindString:
+    return "string";
+  case KevsValueKindInteger:
+    return "integer";
+  case KevsValueKindBoolean:
+    return "boolean";
+  case KevsValueKindList:
+    return "list";
+  case KevsValueKindTable:
+    return "table";
+  default:
+    return "unknown";
+  }
+}
+
 typedef struct {
   char *ptr;
   size_t cap;
@@ -57,7 +76,7 @@ KevsStr kevs_str_from_cstr(const char *s) {
   return self;
 }
 
-char *str_dup(KevsStr self) {
+char *kevs_str_dup(KevsStr self) {
   char *ptr = malloc(self.len + 1);
   ptr[self.len] = 0;
   memcpy(ptr, self.ptr, self.len);
@@ -993,7 +1012,7 @@ static bool parse_simple_value(Parser *self, KevsValue *out) {
 
   } else if (str_starts_with_char(val, kRawStringBegin)) {
     out->kind = KevsValueKindString;
-    out->data.string = str_dup(str_slice(val, 1, val.len - 1));
+    out->data.string = kevs_str_dup(str_slice(val, 1, val.len - 1));
 
   } else if (str_equals(val, kevs_str_from_cstr("true"))) {
     out->kind = KevsValueKindBoolean;
@@ -1007,7 +1026,7 @@ static bool parse_simple_value(Parser *self, KevsValue *out) {
     int64_t i = 0;
     KevsError err = str_to_int(val, 0, &i);
     if (err != NULL) {
-      char *s = str_dup(val);
+      char *s = kevs_str_dup(val);
       parse_errorf(self, "value '%s' is not an integer: %s", s, err);
       free(s);
       ok = false;
@@ -1054,7 +1073,7 @@ static bool parse_key(Parser *self, KevsTable parent, KevsStr *key) {
   const KevsToken tok = parser_get(self);
 
   if (!is_identifier(tok.value)) {
-    char *s = str_dup(tok.value);
+    char *s = kevs_str_dup(tok.value);
     parse_errorf(self, "key is not a valid identifier: '%s'", s);
     free(s);
     return false;
@@ -1063,7 +1082,7 @@ static bool parse_key(Parser *self, KevsTable parent, KevsStr *key) {
   // check if key is unique
   for (size_t i = 0; i < parent.len; i++) {
     if (str_equals(parent.ptr[i].key, tok.value)) {
-      char *s = str_dup(tok.value);
+      char *s = kevs_str_dup(tok.value);
       parse_errorf(self, "key '%s' is not unique for current table", s);
       free(s);
       return false;

@@ -36,8 +36,9 @@ int main() {
   // list root table keys and they types
   {
     for (size_t i = 0; i < root.len; i++) {
-      char *k = str_dup(root.ptr[i].key);
-      printf("key '%s', type '%s'\n", k, valuekind_str(root.ptr[i].val.kind));
+      char *k = kevs_str_dup(root.ptr[i].key);
+      printf("key '%s', type '%s'\n", k,
+             kevs_valuekind_str(root.ptr[i].val.kind));
       free(k);
     }
   }

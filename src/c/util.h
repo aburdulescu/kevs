@@ -5,7 +5,6 @@
 
 // kevs.c
 
-char *str_dup(KevsStr self);
 int str_index_char(KevsStr self, char c);
 KevsStr str_slice_low(KevsStr self, size_t low);
 KevsStr str_slice(KevsStr self, size_t low, size_t high);
@@ -25,7 +24,5 @@ const char *tokenkind_str(KevsTokenKind v);
 void table_dump(KevsTable self);
 void list_dump(KevsList self);
 KevsError read_file(KevsStr path, char **out, size_t *out_len);
-
-const char *valuekind_str(KevsValueKind v);
 
 #endif

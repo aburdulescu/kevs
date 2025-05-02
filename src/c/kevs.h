@@ -83,6 +83,9 @@ typedef struct {
 } KevsParams;
 
 KevsStr kevs_str_from_cstr(const char *s);
+char *kevs_str_dup(KevsStr self);
+
+const char *kevs_valuekind_str(KevsValueKind v);
 
 KevsError kevs_parse(KevsTable *table, KevsParams params);
 void kevs_free(KevsTable *self);

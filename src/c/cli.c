@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
   if (dump) {
     if (only_scan) {
       for (size_t i = 0; i < tokens.len; i++) {
-        char *v = str_dup(tokens.ptr[i].value);
+        char *v = kevs_str_dup(tokens.ptr[i].value);
         printf("%s %s\n", tokenkind_str(tokens.ptr[i].kind), v);
         free(v);
       }
