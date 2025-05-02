@@ -6,7 +6,7 @@
 #include "util.h"
 
 int main() {
-  KevsStr file = str_from_cstr("examples/example.kevs");
+  KevsStr file = kevs_str_from_cstr("examples/example.kevs");
 
   char *data = NULL;
   size_t data_len = 0;

@@ -17,7 +17,7 @@ static void print_log(const char *fn, int ln, const char *fmt, ...) {
 #define INFO(...) print_log(__FUNCTION__, __LINE__, __VA_ARGS__)
 
 static void test_str_index_char() {
-  KevsStr s = str_from_cstr("0123456789");
+  KevsStr s = kevs_str_from_cstr("0123456789");
   {
     int i = str_index_char(s, '0');
     const int expected = 0;
@@ -45,7 +45,7 @@ static void test_str_index_char() {
 }
 
 static void test_str_slice_low() {
-  KevsStr s = str_from_cstr("0123456789");
+  KevsStr s = kevs_str_from_cstr("0123456789");
 
   KevsStr s4 = str_slice_low(s, 4);
 
@@ -60,7 +60,7 @@ static void test_str_slice_low() {
 }
 
 static void test_str_slice() {
-  KevsStr s = str_from_cstr("0123456789");
+  KevsStr s = kevs_str_from_cstr("0123456789");
 
   KevsStr s26 = str_slice(s, 2, 6);
 
@@ -75,9 +75,9 @@ static void test_str_slice() {
 }
 
 static void test_str_trim_left() {
-  KevsStr s = str_from_cstr("  aa");
+  KevsStr s = kevs_str_from_cstr("  aa");
 
-  KevsStr t = str_trim_left(s, str_from_cstr(" "));
+  KevsStr t = str_trim_left(s, kevs_str_from_cstr(" "));
 
   const char *expected_ptr = s.ptr + 2;
   const size_t expected_len = 2;
@@ -90,9 +90,9 @@ static void test_str_trim_left() {
 }
 
 static void test_str_trim_right() {
-  KevsStr s = str_from_cstr("aa  ");
+  KevsStr s = kevs_str_from_cstr("aa  ");
 
-  KevsStr t = str_trim_right(s, str_from_cstr(" "));
+  KevsStr t = str_trim_right(s, kevs_str_from_cstr(" "));
 
   const char *expected_ptr = s.ptr;
   const size_t expected_len = 2;
@@ -139,7 +139,7 @@ static void test_str_to_int_negative() {
     INFO("test #%zu: input=%s", i, tests[i]);
 
     int64_t v = 0;
-    KevsError err = str_to_int(str_from_cstr(tests[i]), 0, &v);
+    KevsError err = str_to_int(kevs_str_from_cstr(tests[i]), 0, &v);
 
     INFO("test #%zu: err=%s, value=%ld", i, err, v);
     assert(err != NULL);
@@ -198,7 +198,7 @@ static void test_str_to_int_positive() {
          tests[i].expected);
 
     int64_t v = 0;
-    KevsError err = str_to_int(str_from_cstr(tests[i].input), 0, &v);
+    KevsError err = str_to_int(kevs_str_from_cstr(tests[i].input), 0, &v);
 
     INFO("test #%zu: err=%s, value=%ld", i, err, v);
     assert(err == NULL);

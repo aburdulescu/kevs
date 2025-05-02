@@ -82,7 +82,7 @@ typedef struct {
   bool abort_on_error;
 } KevsParams;
 
-KevsStr str_from_cstr(const char *s);
+KevsStr kevs_str_from_cstr(const char *s);
 
 KevsError kevs_parse(KevsTable *table, KevsParams params);
 void kevs_free(KevsTable *self);

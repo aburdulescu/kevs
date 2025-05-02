@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  KevsStr file = str_from_cstr(args[args_index]);
+  KevsStr file = kevs_str_from_cstr(args[args_index]);
 
   char *data = NULL;
   size_t data_len = 0;

@@ -7,7 +7,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   KevsTable t = {};
 
   const KevsParams params = {
-      .file = str_from_cstr("fuzzer"),
+      .file = kevs_str_from_cstr("fuzzer"),
       .content = {.ptr = (char *)Data, .len = Size},
       .err_buf = err_buf,
       .err_buf_len = sizeof(err_buf) - 1,
