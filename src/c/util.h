@@ -26,4 +26,6 @@ void table_dump(KevsTable self);
 void list_dump(KevsList self);
 KevsError read_file(KevsStr path, char **out, size_t *out_len);
 
+const char *valuekind_str(KevsValueKind v);
+
 #endif

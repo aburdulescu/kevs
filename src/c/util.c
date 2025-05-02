@@ -53,7 +53,7 @@ cleanup:
   return err;
 }
 
-static const char *valuekind_str(KevsValueKind v) {
+const char *valuekind_str(KevsValueKind v) {
   switch (v) {
   case KevsValueKindUndefined:
     return "undefined";
