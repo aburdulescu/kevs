@@ -20,4 +20,4 @@ zip -r kevs-bin-"$version".zip kevs-bin-"$version"
 rm -rf kevs-src-"$version" kevs-src-"$version".zip
 mkdir -p kevs-src-"$version"
 cp src/c/kevs.* kevs-src-"$version"/
-zip kevs-src-"$version".zip kevs-src-"$version"
+zip -r kevs-src-"$version".zip kevs-src-"$version"
