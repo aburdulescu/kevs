@@ -1,1 +1,1 @@
-scan: end of input without table end
+error: testdata/not_valid/empty_table_without_end.kevs:2: scan: end of input without table end

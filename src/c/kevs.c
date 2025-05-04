@@ -529,21 +529,32 @@ static void list_free(KevsList *self) {
 }
 
 typedef struct {
-  KevsParams params;
+  KevsOpts opts;
   KevsTokens *tokens;
   int line;
+  char *err_buf;
+  size_t err_buf_len;
+  KevsStr content;
 } Scanner;
 
 static bool scan_key_value(Scanner *self);
 static bool scan_value(Scanner *self);
 
 static void scan_errorf(const Scanner *self, const char *fmt, ...) {
-  char *ptr = self->params.err_buf;
-  size_t len = self->params.err_buf_len;
+  char *ptr = self->err_buf;
+  size_t len = self->err_buf_len;
 
-  int n = snprintf(ptr, len, "%s:%d: error: scan: ", self->params.file.ptr,
-                   self->line);
+  int n = 0;
 
+  if (self->opts.errors_with_file_and_line) {
+    n = snprintf(ptr, len, "%s:%d: ", self->opts.file.ptr, self->line);
+    assert(n >= 0);
+    assert((size_t)n < len);
+    ptr += n;
+    len -= n;
+  }
+
+  n = snprintf(ptr, len, "scan: ");
   assert(n >= 0);
   assert((size_t)n < len);
   ptr += n;
@@ -559,30 +570,29 @@ static void scan_errorf(const Scanner *self, const char *fmt, ...) {
   ptr += n;
   len -= n;
 
-  if (self->params.abort_on_error) {
-    printf("%s\n", self->params.err_buf);
+  if (self->opts.abort_on_error) {
+    printf("%s\n", self->err_buf);
     abort();
   }
 }
 
 static bool scanner_expect(Scanner *self, char c) {
-  if (self->params.content.len == 0) {
+  if (self->content.len == 0) {
     return false;
   }
-  return self->params.content.ptr[0] == c;
+  return self->content.ptr[0] == c;
 }
 
 static void scanner_advance(Scanner *self, size_t n) {
-  self->params.content = str_slice_low(self->params.content, n);
+  self->content = str_slice_low(self->content, n);
 }
 
 static void scanner_trim_space(Scanner *self) {
-  self->params.content =
-      str_trim_left(self->params.content, kevs_str_from_cstr(spaces));
+  self->content = str_trim_left(self->content, kevs_str_from_cstr(spaces));
 }
 
 static void scanner_append(Scanner *self, KevsTokenKind kind, size_t end) {
-  KevsStr val = str_slice(self->params.content, 0, end);
+  KevsStr val = str_slice(self->content, 0, end);
   val = str_trim_right(val, kevs_str_from_cstr(spaces));
 
   const KevsToken t = {
@@ -599,7 +609,7 @@ static void scanner_append(Scanner *self, KevsTokenKind kind, size_t end) {
 static void scanner_append_delim(Scanner *self) {
   const KevsToken t = {
       .kind = KevsTokenKindDelim,
-      .value = str_slice(self->params.content, 0, 1),
+      .value = str_slice(self->content, 0, 1),
       .line = self->line,
   };
   tokens_append(self->tokens, t);
@@ -613,7 +623,7 @@ static bool scan_newline(Scanner *self) {
 }
 
 static bool scan_comment(Scanner *self) {
-  const int newline = str_index_char(self->params.content, '\n');
+  const int newline = str_index_char(self->content, '\n');
   if (newline == -1) {
     scan_errorf(self, "comment does not end with newline");
     return false;
@@ -624,8 +634,7 @@ static bool scan_comment(Scanner *self) {
 
 static bool scan_key(Scanner *self) {
   char c = 0;
-  const int i =
-      str_index_any(self->params.content, kevs_str_from_cstr("=;\n"), &c);
+  const int i = str_index_any(self->content, kevs_str_from_cstr("=;\n"), &c);
   if (c != kKeyValSep) {
     scan_errorf(self, "key-value pair is missing separator");
     return false;
@@ -648,7 +657,7 @@ static bool scan_delim(Scanner *self, char c) {
 
 static bool scan_string_value(Scanner *self) {
   // advance past leading quote
-  KevsStr s = str_slice_low(self->params.content, 1);
+  KevsStr s = str_slice_low(self->content, 1);
 
   while (true) {
     // search for trailing quote
@@ -672,7 +681,7 @@ static bool scan_string_value(Scanner *self) {
   }
 
   // calculate the end, includes trailing quote
-  const size_t end = s.ptr - self->params.content.ptr - 1;
+  const size_t end = s.ptr - self->content.ptr - 1;
 
   // +1 for leading quote
   scanner_append(self, KevsTokenKindValue, end + 1);
@@ -682,7 +691,7 @@ static bool scan_string_value(Scanner *self) {
 
 static bool scan_raw_string(Scanner *self) {
   const int end =
-      str_index_char(str_slice_low(self->params.content, 1), kRawStringBegin);
+      str_index_char(str_slice_low(self->content, 1), kRawStringBegin);
   if (end == -1) {
     scan_errorf(self, "raw string value does not end with backtick");
     return false;
@@ -702,8 +711,7 @@ static bool scan_int_or_bool_value(Scanner *self) {
   // search for all possible value endings
   // if semicolon(or none of them) is not found => error
   char c = 0;
-  const int i =
-      str_index_any(self->params.content, kevs_str_from_cstr(";]}\n"), &c);
+  const int i = str_index_any(self->content, kevs_str_from_cstr(";]}\n"), &c);
   if (c != kKeyValEnd) {
     scan_errorf(self, "integer or boolean value does not end with semicolon");
     return false;
@@ -716,7 +724,7 @@ static bool scan_list_value(Scanner *self) {
   scanner_append_delim(self);
   while (true) {
     scanner_trim_space(self);
-    if (self->params.content.len == 0) {
+    if (self->content.len == 0) {
       scan_errorf(self, "end of input without list end");
       return false;
     }
@@ -751,7 +759,7 @@ static bool scan_table_value(Scanner *self) {
   scanner_append_delim(self);
   while (true) {
     scanner_trim_space(self);
-    if (self->params.content.len == 0) {
+    if (self->content.len == 0) {
       scan_errorf(self, "end of input without table end");
       return false;
     }
@@ -821,13 +829,17 @@ static bool scan_key_value(Scanner *self) {
   return true;
 }
 
-KevsError scan(KevsTokens *tokens, KevsParams params) {
+KevsError scan(KevsTokens *tokens, KevsStr content, char *err_buf,
+               size_t err_buf_len, KevsOpts opts) {
   Scanner s = {
-      .params = params,
+      .opts = opts,
       .tokens = tokens,
       .line = 1,
+      .err_buf = err_buf,
+      .err_buf_len = err_buf_len,
+      .content = content,
   };
-  while (s.params.content.len != 0) {
+  while (s.content.len != 0) {
     scanner_trim_space(&s);
     bool ok = false;
     if (scanner_expect(&s, '\n')) {
@@ -838,7 +850,7 @@ KevsError scan(KevsTokens *tokens, KevsParams params) {
       ok = scan_key_value(&s);
     }
     if (!ok) {
-      return s.params.err_buf;
+      return s.err_buf;
     }
   }
   return NULL;
@@ -875,10 +887,13 @@ static void table_append(KevsTable *self, KevsKeyValue v) {
 }
 
 typedef struct {
-  KevsParams params;
+  KevsOpts opts;
   KevsTokens tokens;
   KevsTable *table;
   size_t i;
+  char *err_buf;
+  size_t err_buf_len;
+  KevsStr content;
 } Parser;
 
 static bool parse_value(Parser *self, KevsValue *out);
@@ -891,11 +906,21 @@ static KevsToken parser_get(const Parser *self) {
 static void parser_pop(Parser *self) { self->i++; }
 
 static void parse_errorf(const Parser *self, const char *fmt, ...) {
-  char *ptr = self->params.err_buf;
-  size_t len = self->params.err_buf_len;
+  char *ptr = self->err_buf;
+  size_t len = self->err_buf_len;
 
-  int n = snprintf(ptr, len, "%s:%d: error: parse: ", self->params.file.ptr,
-                   parser_get(self).line);
+  int n = 0;
+
+  if (self->opts.errors_with_file_and_line) {
+    n = snprintf(ptr, len, "%s:%d: ", self->opts.file.ptr,
+                 parser_get(self).line);
+    assert(n >= 0);
+    assert((size_t)n < len);
+    ptr += n;
+    len -= n;
+  }
+
+  n = snprintf(ptr, len, "parse: ");
   assert(n >= 0);
   assert((size_t)n < len);
   ptr += n;
@@ -911,8 +936,8 @@ static void parse_errorf(const Parser *self, const char *fmt, ...) {
   ptr += n;
   len -= n;
 
-  if (self->params.abort_on_error) {
-    printf("%s\n", self->params.err_buf);
+  if (self->opts.abort_on_error) {
+    printf("%s\n", self->err_buf);
     abort();
   }
 }
@@ -1118,18 +1143,22 @@ static bool parse_key_value(Parser *self, KevsTable parent, KevsKeyValue *out) {
   return true;
 }
 
-KevsError parse(KevsTable *table, KevsParams params, KevsTokens tokens) {
+KevsError parse(KevsTable *table, KevsStr content, char *err_buf,
+                size_t err_buf_len, KevsOpts opts, KevsTokens tokens) {
   Parser p = {
-      .params = params,
+      .opts = opts,
       .tokens = tokens,
       .table = table,
       .i = 0,
+      .err_buf = err_buf,
+      .err_buf_len = err_buf_len,
+      .content = content,
   };
 
   while (p.i < tokens.len) {
     KevsKeyValue kv = {};
     if (!parse_key_value(&p, *table, &kv)) {
-      return params.err_buf;
+      return err_buf;
     }
     table_append(p.table, kv);
   }
@@ -1137,15 +1166,16 @@ KevsError parse(KevsTable *table, KevsParams params, KevsTokens tokens) {
   return NULL;
 }
 
-KevsError kevs_parse(KevsTable *table, KevsParams params) {
-  assert(params.err_buf_len != 0);
-  assert(params.err_buf != NULL);
+KevsError kevs_parse(KevsTable *table, KevsStr content, char *err_buf,
+                     size_t err_buf_len, KevsOpts opts) {
+  assert(err_buf_len != 0);
+  assert(err_buf != NULL);
 
   KevsTokens tokens = {};
 
-  KevsError err = scan(&tokens, params);
+  KevsError err = scan(&tokens, content, err_buf, err_buf_len, opts);
   if (err == NULL) {
-    err = parse(table, params, tokens);
+    err = parse(table, content, err_buf, err_buf_len, opts, tokens);
   }
 
   free(tokens.ptr);

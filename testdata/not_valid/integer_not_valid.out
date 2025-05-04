@@ -1,1 +1,1 @@
-parse: value 'aa' is not an integer: invalid digit, bigger than base
+error: testdata/not_valid/integer_not_valid.kevs:1: parse: value 'aa' is not an integer: invalid digit, bigger than base

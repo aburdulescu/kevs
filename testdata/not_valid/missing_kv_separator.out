@@ -1,1 +1,1 @@
-scan: key-value pair is missing separator
+error: testdata/not_valid/missing_kv_separator.kevs:1: scan: key-value pair is missing separator

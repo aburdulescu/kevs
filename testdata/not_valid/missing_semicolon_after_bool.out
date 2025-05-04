@@ -1,1 +1,1 @@
-scan: integer or boolean value does not end with semicolon
+error: testdata/not_valid/missing_semicolon_after_bool.kevs:1: scan: integer or boolean value does not end with semicolon

@@ -76,18 +76,17 @@ typedef struct KevsKeyValue {
 
 typedef struct {
   KevsStr file;
-  KevsStr content;
-  char *err_buf;
-  size_t err_buf_len;
   bool abort_on_error;
-} KevsParams;
+  bool errors_with_file_and_line;
+} KevsOpts;
 
 KevsStr kevs_str_from_cstr(const char *s);
 char *kevs_str_dup(KevsStr self);
 
 const char *kevs_valuekind_str(KevsValueKind v);
 
-KevsError kevs_parse(KevsTable *table, KevsParams params);
+KevsError kevs_parse(KevsTable *table, KevsStr content, char *err_buf,
+                     size_t err_buf_len, KevsOpts opts);
 void kevs_free(KevsTable *self);
 
 KevsError kevs_table_string(KevsTable self, const char *key, char **out);

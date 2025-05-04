@@ -500,15 +500,8 @@ func (t IntegrationTest) runValid() error {
 
 	err := cmd.Run()
 
-	if *update {
-		if err == nil {
-			err = os.WriteFile(t.expected, outBuf.Bytes(), 0600)
-			if err != nil {
-				return fmt.Errorf("failed to write output file: %w", err)
-			}
-		}
-	} else {
-		// write logs
+	// write logs
+	{
 		outFile := filepath.Join(devOutDir, "int", "logs", t.name+".out")
 		errFile := filepath.Join(devOutDir, "int", "logs", t.name+".err")
 		os.MkdirAll(filepath.Dir(outFile), 0755)
@@ -517,6 +510,13 @@ func (t IntegrationTest) runValid() error {
 		}
 		if err := os.WriteFile(errFile, errBuf.Bytes(), 0600); err != nil {
 			return fmt.Errorf("failed to write stderr file: %w", err)
+		}
+	}
+
+	if *update {
+		err = os.WriteFile(t.expected, outBuf.Bytes(), 0600)
+		if err != nil {
+			return fmt.Errorf("failed to write output file: %w", err)
 		}
 	}
 
@@ -577,6 +577,13 @@ func (t IntegrationTest) runNotValid() error {
 		}
 		if err := os.WriteFile(errFile, errBuf.Bytes(), 0600); err != nil {
 			return fmt.Errorf("failed to write stderr file: %w", err)
+		}
+	}
+
+	if *update {
+		err = os.WriteFile(t.expected, outBuf.Bytes(), 0600)
+		if err != nil {
+			return fmt.Errorf("failed to write output file: %w", err)
 		}
 	}
 

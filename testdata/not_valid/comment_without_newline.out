@@ -1,1 +1,1 @@
-scan: comment does not end with newline
+error: testdata/not_valid/comment_without_newline.kevs:1: scan: comment does not end with newline

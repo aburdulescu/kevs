@@ -1,1 +1,1 @@
-key_not_uniq.kevs:3: error: parse: key 'x' is not unique for current table
+error: testdata/not_valid/key_not_uniq.kevs:3: parse: key 'x' is not unique for current table

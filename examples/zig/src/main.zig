@@ -19,12 +19,10 @@ pub fn main() !void {
     {
         const err = c.kevs_parse(
             &root,
-            .{
-                .file = c.str_from_cstr(file),
-                .content = c.str_from_cstr(content_ptr),
-                .err_buf = &err_buf,
-                .err_buf_len = err_buf.len - 1,
-            },
+            c.kevs_str_from_cstr(content_ptr),
+            &err_buf,
+            err_buf.len - 1,
+            .{},
         );
         if (err != null) {
             try std.debug.panic("{s}\n", .{err});

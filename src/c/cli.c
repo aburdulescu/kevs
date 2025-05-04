@@ -14,12 +14,13 @@ static void usage() {
           "flags.\n"
           "\n"
           "Flags:\n"
-          "  --help    Print this message\n"
-          "  --abort   Abort when encountering an error\n"
-          "  --scan    Run only the scanner\n"
-          "  --dump    Print keys and values, or tokens if -scan is active\n"
-          "  --no-err  Exit with code 0 even if an error was encountered\n"
-          "  --free    Free memory before exit\n"
+          "  --help       Print this message\n"
+          "  --abort      Abort when encountering an error\n"
+          "  --scan       Run only the scanner\n"
+          "  --dump       Print keys and values, or tokens if -scan is active\n"
+          "  --no-err     Exit with code 0 even if an error was encountered\n"
+          "  --free       Free memory before exit\n"
+          "  --no-file    Don't print file:line for error\n"
 
   );
 }
@@ -38,6 +39,7 @@ int main(int argc, char **argv) {
   bool pass_on_error = false;
   bool free_heap = false;
   bool abort_on_error = false;
+  bool errors_with_file_and_line = true;
 
   int args_index = 0;
   while (args_index < nargs) {
@@ -58,6 +60,9 @@ int main(int argc, char **argv) {
       args_index++;
     } else if (strcmp(args[args_index], "--free") == 0) {
       free_heap = true;
+      args_index++;
+    } else if (strcmp(args[args_index], "--no-file") == 0) {
+      errors_with_file_and_line = false;
       args_index++;
     } else if (strlen(args[args_index]) > 0 && args[args_index][0] == '-') {
       fprintf(stderr, "error: unknown option '%s'\n", args[args_index]);
@@ -89,23 +94,22 @@ int main(int argc, char **argv) {
   KevsTokens tokens = {};
   KevsTable table = {};
   char err_buf[8193] = {};
-  const KevsParams params = {
+  const KevsStr content = {.ptr = data, .len = data_len};
+  const KevsOpts opts = {
       .file = file,
-      .content = {.ptr = data, .len = data_len},
-      .err_buf = err_buf,
-      .err_buf_len = sizeof(err_buf) - 1,
       .abort_on_error = abort_on_error,
+      .errors_with_file_and_line = errors_with_file_and_line,
   };
 
-  err = scan(&tokens, params);
+  err = scan(&tokens, content, err_buf, sizeof(err_buf) - 1, opts);
   if (!only_scan) {
     if (err == NULL) {
-      err = parse(&table, params, tokens);
+      err = parse(&table, content, err_buf, sizeof(err_buf) - 1, opts, tokens);
     }
   }
 
   if (err != NULL) {
-    printf("%s\n", err);
+    printf("error: %s\n", err);
     if (!pass_on_error) {
       rc = 1;
     }

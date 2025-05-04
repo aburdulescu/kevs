@@ -20,14 +20,9 @@ int main() {
 
   KevsTable root = {};
   char err_buf[8193] = {};
-  const KevsParams params = {
-      .file = file,
-      .content = {.ptr = data, .len = data_len},
-      .err_buf = err_buf,
-      .err_buf_len = sizeof(err_buf) - 1,
-  };
-
-  err = kevs_parse(&root, params);
+  const KevsStr content = {.ptr = data, .len = data_len};
+  const KevsOpts opts = {};
+  err = kevs_parse(&root, content, err_buf, sizeof(err_buf) - 1, opts);
   if (err != NULL) {
     fprintf(stderr, "error: failed parse root table: %s\n", err);
     rc = 1;

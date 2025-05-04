@@ -1,1 +1,1 @@
-scan: string value does not end with quote
+error: testdata/not_valid/missing_string_end.kevs:1: scan: string value does not end with quote

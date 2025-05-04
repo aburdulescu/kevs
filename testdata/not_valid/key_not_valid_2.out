@@ -1,1 +1,1 @@
-parse: key is not a valid identifier
+error: testdata/not_valid/key_not_valid_2.kevs:1: parse: key is not a valid identifier: 'xyz()123abc'

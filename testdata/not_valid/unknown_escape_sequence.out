@@ -1,1 +1,1 @@
-parse: could not normalize string: unknown escape sequence
+error: testdata/not_valid/unknown_escape_sequence.kevs:1: parse: could not normalize string: unknown escape sequence

@@ -4,7 +4,7 @@
 
 /perf.data*
 /venv/
-/default.profraw
+default.profraw
 /dev-out/
 
 /.zig-cache/

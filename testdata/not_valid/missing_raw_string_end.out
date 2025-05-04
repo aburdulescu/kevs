@@ -1,1 +1,1 @@
-scan: raw string value does not end with backtick
+error: testdata/not_valid/missing_raw_string_end.kevs:1: scan: raw string value does not end with backtick

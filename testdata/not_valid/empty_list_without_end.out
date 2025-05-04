@@ -1,1 +1,1 @@
-scan: end of input without list end
+error: testdata/not_valid/empty_list_without_end.kevs:2: scan: end of input without list end

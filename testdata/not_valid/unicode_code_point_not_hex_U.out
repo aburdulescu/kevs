@@ -1,1 +1,1 @@
-parse: could not normalize string: invalid digit, bigger than base
+error: testdata/not_valid/unicode_code_point_not_hex_U.kevs:1: parse: could not normalize string: invalid digit, bigger than base

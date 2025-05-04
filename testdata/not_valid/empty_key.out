@@ -1,1 +1,1 @@
-scan: empty key
+error: testdata/not_valid/empty_key.kevs:1: scan: empty key

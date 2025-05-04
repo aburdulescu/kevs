@@ -21,12 +21,10 @@ func main() {
 	var root C.KevsTable
 	if err := C.kevs_parse(
 		&root,
-		C.KevsParams{
-			file:        C.str_from_cstr(C.CString(file)),
-			content:     C.str_from_cstr(C.CString(string(data))),
-			err_buf:     C.CString(string(errBuf[:])),
-			err_buf_len: C.size_t(len(errBuf) - 1),
-		},
+		C.kevs_str_from_cstr(C.CString(string(data))),
+		C.CString(string(errBuf[:])),
+		C.size_t(len(errBuf)-1),
+		C.KevsOpts{},
 	); err != nil {
 		panic(C.GoString(err))
 	}
