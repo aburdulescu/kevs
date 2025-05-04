@@ -33,7 +33,7 @@ int main() {
     rc = 1;
   }
 
-  // list root table keys and they types
+  // list root table keys and their types
   {
     for (size_t i = 0; i < root.len; i++) {
       char *k = kevs_str_dup(root.ptr[i].key);

@@ -95,6 +95,7 @@ KevsError kevs_table_int(KevsTable self, const char *key, int64_t *out);
 KevsError kevs_table_bool(KevsTable self, const char *key, bool *out);
 KevsError kevs_table_list(KevsTable self, const char *key, KevsList *out);
 KevsError kevs_table_table(KevsTable self, const char *key, KevsTable *out);
+bool kevs_table_has(KevsTable self, const char *key);
 
 KevsError kevs_list_string(KevsList self, size_t i, char **out);
 KevsError kevs_list_int(KevsList self, size_t i, int64_t *out);

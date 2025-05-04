@@ -1242,6 +1242,16 @@ KevsError kevs_table_table(KevsTable self, const char *key, KevsTable *out) {
   return NULL;
 }
 
+bool kevs_table_has(KevsTable self, const char *key) {
+  KevsStr key_str = kevs_str_from_cstr(key);
+  for (size_t i = 0; i < self.len; i++) {
+    if (str_equals(self.ptr[i].key, key_str)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 static KevsError list_get(KevsList self, size_t i, KevsValue *val) {
   if (i >= self.len) {
     return "index out of bounds";
