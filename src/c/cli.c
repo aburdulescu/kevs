@@ -14,13 +14,13 @@ static void usage() {
           "flags.\n"
           "\n"
           "Flags:\n"
-          "  --help       Print this message\n"
-          "  --abort      Abort when encountering an error\n"
-          "  --scan       Run only the scanner\n"
-          "  --dump       Print keys and values, or tokens if -scan is active\n"
-          "  --no-err     Exit with code 0 even if an error was encountered\n"
-          "  --free       Free memory before exit\n"
-          "  --no-file    Don't print file:line for error\n"
+          "  -help       Print this message\n"
+          "  -abort      Abort when encountering an error\n"
+          "  -scan       Run only the scanner\n"
+          "  -dump       Print keys and values, or tokens if -scan is active\n"
+          "  -no-err     Exit with code 0 even if an error was encountered\n"
+          "  -free       Free memory before exit\n"
+          "  -no-file    Don't print file:line for error\n"
 
   );
 }
@@ -43,25 +43,32 @@ int main(int argc, char **argv) {
 
   int args_index = 0;
   while (args_index < nargs) {
-    if (strcmp(args[args_index], "--help") == 0) {
+    if (strcmp(args[args_index], "--help") == 0 ||
+        strcmp(args[args_index], "-help") == 0) {
       usage();
       return 0;
-    } else if (strcmp(args[args_index], "--abort") == 0) {
+    } else if (strcmp(args[args_index], "--abort") == 0 ||
+               strcmp(args[args_index], "-abort") == 0) {
       abort_on_error = true;
       args_index++;
-    } else if (strcmp(args[args_index], "--scan") == 0) {
+    } else if (strcmp(args[args_index], "--scan") == 0 ||
+               strcmp(args[args_index], "-scan") == 0) {
       only_scan = true;
       args_index++;
-    } else if (strcmp(args[args_index], "--dump") == 0) {
+    } else if (strcmp(args[args_index], "--dump") == 0 ||
+               strcmp(args[args_index], "-dump") == 0) {
       dump = true;
       args_index++;
-    } else if (strcmp(args[args_index], "--no-err") == 0) {
+    } else if (strcmp(args[args_index], "--no-err") == 0 ||
+               strcmp(args[args_index], "-no-err") == 0) {
       pass_on_error = true;
       args_index++;
-    } else if (strcmp(args[args_index], "--free") == 0) {
+    } else if (strcmp(args[args_index], "--free") == 0 ||
+               strcmp(args[args_index], "-free") == 0) {
       free_heap = true;
       args_index++;
-    } else if (strcmp(args[args_index], "--no-file") == 0) {
+    } else if (strcmp(args[args_index], "--no-file") == 0 ||
+               strcmp(args[args_index], "-no-file") == 0) {
       errors_with_file_and_line = false;
       args_index++;
     } else if (strlen(args[args_index]) > 0 && args[args_index][0] == '-') {
