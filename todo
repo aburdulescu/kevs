@@ -1,1 +1,2 @@
+- rewrite API using opaque pointers?
 - update dev.go to run CLI on fuzzer corpus and generate integration tests?
