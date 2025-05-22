@@ -12,7 +12,7 @@ KevsStr str_trim_left(KevsStr self, KevsStr cutset);
 KevsStr str_trim_right(KevsStr self, KevsStr cutset);
 KevsError str_to_int(KevsStr self, uint64_t base, int64_t *out);
 
-int ucs_to_utf8(uint64_t code, char buf[4]);
+uint8_t ucs_to_utf8(uint64_t code, char buf[4]);
 
 KevsError scan(KevsTokens *tokens, KevsStr content, char *err_buf,
                size_t err_buf_len, KevsOpts opts);
