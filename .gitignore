@@ -19,3 +19,5 @@ default.profraw
 
 /kevs-bin-*.zip
 /kevs-src-*.zip
+
+/zig

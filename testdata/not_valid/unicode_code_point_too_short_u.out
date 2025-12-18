@@ -1,1 +1,0 @@
-error: testdata/not_valid/unicode_code_point_too_short_u.kevs:1: parse: could not normalize string: \u must be followed by 4 hex digits: \uXXXX

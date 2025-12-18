@@ -1,1 +1,0 @@
-error: testdata/not_valid/unicode_code_point_out_of_range_U.kevs:1: parse: could not normalize string: could not encode Unicode code point to UTF-8
